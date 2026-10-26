@@ -1,0 +1,25 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+
+# Dados brutos do TSE (ZIPs grandes) e downloads parciais
+data/
+*.part
+*.zip
+
+# Artefatos pesados / regeneráveis do processamento
+reports/*.parquet
+reports/*.json
+reports/*_summary_*.csv
+reports/catalog_messages_*.csv
+
+# Manter relatórios markdown de viabilidade versionáveis (opcional)
+!reports/.gitkeep
+!reports/viability_*.md
