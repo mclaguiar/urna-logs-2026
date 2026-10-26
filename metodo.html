@@ -201,7 +201,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <ol type="1">
 <li><strong>O que mudou 1º→2º</strong> — Δ abstenção / comparecimento e (quando houver) votos dos finalistas, por UF e depois por seção (<code>join_key</code>).</li>
 <li><strong>Onde olhar</strong> — <code>% sem digital</code> (BU) como indicador de risco, cruzado com Δ atípicos no 2º; até lá, ranking de seções com maior % sem digital no 1º.</li>
-<li><strong>Fluxo do dia</strong> — curva de habilitações no log (pós-17h); overlay do 2º quando existir.</li>
+<li><strong>Fluxo do dia</strong> — curva de habilitações no log (pós-17h em Brasília; exterior = horário local); overlay do 2º quando existir.</li>
 </ol>
 <p><strong>Não dá:</strong> saber <em>quem</em> migrou de candidato entre turnos (sigilo do voto).</p>
 </section>
@@ -224,8 +224,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>KPIs por UF (1º + colunas 2º/Δ)</td>
 </tr>
 <tr class="even">
-<td><code>site/data/horario_por_hora.csv</code></td>
-<td>Habilitações por hora × UF × turno</td>
+<td><code>site/data/curva_horaria.csv</code></td>
+<td>Habilitações por hora (BRT) × UF × turno</td>
 </tr>
 <tr class="odd">
 <td><code>site/data/outliers_sem_digital.csv</code></td>
@@ -275,12 +275,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Liberação do eleitor para votar (<code>Eleitor foi habilitado</code>)</td>
 </tr>
 <tr class="even">
-<td><strong>Sem digital</strong></td>
-<td>Biografia + sem biometria no BU (não é voto em candidato)</td>
+<td><strong>Sem digital (BU)</strong></td>
+<td><strong>Canônico no painel:</strong> biografia + sem biometria no BU (não é voto em candidato)</td>
 </tr>
 <tr class="odd">
+<td><strong>Sem digital (log)</strong></td>
+<td>Proxy no log: <code>sem_biometria</code> + <code>manual_falha</code> (ano de nascimento + digital do mesário). Não misturar com o % do BU</td>
+</tr>
+<tr class="even">
 <td><strong>Pós-17h</strong></td>
-<td>Habilitações ≥ 17:00 no relógio da urna</td>
+<td>Habilitações ≥ 17:00 no <strong>horário de Brasília</strong> (relógio local convertido pelo fuso da UF). <strong>ZZ</strong> (exterior): ≥ 17:00 no horário local do posto. Um único helper: <code>urna_logs.fuso.apos_encerramento_oficial</code></td>
+</tr>
+<tr class="odd">
+<td><strong>Fuso (log)</strong></td>
+<td>Relógio do log = hora local; AC ≈ UTC−5 (−2h vs BRT), AM/MT/MS/RO/RR ≈ UTC−4 (−1h); demais UTC−3</td>
 </tr>
 <tr class="even">
 <td><strong>Abstenção</strong></td>
