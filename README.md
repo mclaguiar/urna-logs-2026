@@ -16,6 +16,7 @@ Foco atual: **cargo presidente** (recontar RDV e comparar com o BU) e **habilita
 | Métricas do log (biometria / após 17h) | OK no AC (fase de viabilidade) |
 | Consolidado nacional / anomalias | Em andamento (audit nacional) |
 | Cruzar totais × resultado oficial divulgado | Planejado (`audit` + CSV Resultados 2026) |
+| Distribuição horária / impacto pós-17h | Planejado (log → Parquet hora × UF) |
 
 ## O que conseguimos auditar (e o que não)
 
@@ -34,6 +35,8 @@ Urna (RDV)  →  BU da urna  →  totalização divulgada (CSV aberto)
 | Totais por município / UF | Agregar os Parquets da `audit` |
 | Cruzar com o **resultado oficial divulgado** | CSV “votação por seção” / mun-zona dos [Resultados 2026](https://dadosabertos.tse.jus.br/dataset/resultados-2026) × nosso Parquet (`join_key`) |
 | Comparar 1º × 2º turno **por seção** (abstenção, mudança de totais) | Quando o 2º turno estiver publicado |
+| Distribuição **hora a hora** das habilitações (por UF / município) | Timestamps do log (`Eleitor foi habilitado`); hora local da UF |
+| Estimar impacto da **ampliação após 17h** | Contar habilitações ≥17h (e faixas 17–18h, 18–19h…) vs total da seção/UF |
 | Ver se o pacote da urna foi adulterado depois (hashes/assinatura `.vsc`) | Planejado |
 
 | Não conseguimos | Por quê |
@@ -69,6 +72,7 @@ O `audit` grava **Parquet por seção** + **Parquet de votos** (uma linha por ca
   - No exterior (ZZ) o BU em geral **não traz** esse detalhe
 - Totais por **município** (código TSE + nome)
 - Viabilidade pelo log: catálogo de mensagens, biometria no log, eventos após 17h
+- **Horário da votação** (planejado): distribuição hora a hora por UF e peso do fluxo após 17h
 
 ## Requisitos
 
@@ -161,8 +165,21 @@ Chave de junção: `join_key` = `UF:municipio:zona:secao` (sem o local — ele p
 
 Antes disso: Parquet de seção nos dois turnos + 2º turno publicado.
 
+### Horário da votação e ampliação após 17h
+Fonte: log da urna (horário de cada `Eleitor foi habilitado`). O BU só traz abertura/encerramento da seção; o RDV não tem hora por voto.
+
+Objetivo: medir **quanto o fluxo depois das 17h** (fila / eventual ampliação do horário) pesou no comparecimento — por UF, município e seção — e se há padrões atípicos.
+
+- [ ] Gerar Parquet de habilitações com `dt` + hora local da UF (respeitar fuso: AC −5, RR/AM −4, etc.)
+- [ ] Comando/relatório: distribuição **hora a hora por UF** (% e contagem)
+- [ ] Indicadores: % habilitações ≥17h; faixas 17–18h, 18h+; seções com encerramento tardio
+- [ ] Cruzar seções com alto % pós-17h × resultado presidente / abstenção (só agregado)
+- [ ] Comparar 1º × 2º turno no mesmo recorte horário (quando o 2º existir)
+
+**Limite:** horário = momento da **habilitação**, não do voto em cada cargo; não dá para saber em quem votou quem chegou depois das 17h.
+
 ### Médio prazo
-- [ ] Alertas de anomalia: seções fora do padrão (% sem digital, após 17h, comparecimento, mudança extrema 1º→2º)
+- [ ] Alertas de anomalia: seções fora do padrão (% sem digital, pós-17h, comparecimento, mudança extrema 1º→2º)
 - [ ] Cruzar log × BU (habilitações do log vs comparecimento)
 - [ ] Validar assinaturas / hashes (`.vsc`) — integridade do pacote
 - [ ] Dashboard ou notebook em cima do Parquet unificado
