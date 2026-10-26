@@ -84,11 +84,25 @@ O `audit` grava **Parquet por seção** + **Parquet de votos** (uma linha por ca
 ```bash
 git clone https://github.com/mclaguiar/urna-logs-2026.git
 cd urna-logs-2026
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-source .venv/bin/activate
+python3 -m venv .venv          # macOS / Linux
+# Windows (use o launcher para não pegar o Python 3.10 da Store):
+#   py -3.12 -m venv .venv
+#   ou: py -3.15 -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
+urna-logs --help
 ```
+
+**Windows — se `urna-logs` quebrar com erro de NumPy / `cp315` vs Python 3.10:** o `.venv` misturou o interpretador da Microsoft Store com pacotes de outra versão. Recrie com o launcher explícito:
+
+```powershell
+Remove-Item -Recurse -Force .venv
+py -3.15 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+```
+
+Confira: `python --version` dentro do venv deve ser 3.12+ (o mesmo que você usou no `py -3.xx -m venv`).
 
 ## Uso
 
@@ -179,16 +193,35 @@ Objetivo: medir **quanto o fluxo depois das 17h** (fila / eventual ampliação d
 **Limite:** horário = momento da **habilitação**, não do voto em cada cargo; não dá para saber em quem votou quem chegou depois das 17h.
 
 ### Médio prazo
+- [x] Site Quarto + GitHub Pages (piloto % sem digital por UF)
+- [ ] Mais páginas: horário / pós-17h, municípios, cruzamento com oficial
 - [ ] Alertas de anomalia: seções fora do padrão (% sem digital, pós-17h, comparecimento, mudança extrema 1º→2º)
 - [ ] Cruzar log × BU (habilitações do log vs comparecimento)
 - [ ] Validar assinaturas / hashes (`.vsc`) — integridade do pacote
-- [ ] Dashboard ou notebook em cima do Parquet unificado
 
 ### Fora de escopo (por enquanto)
 - Recontagem de outros cargos (deputado, governador, …) — o schema já permite; o foco agora é presidente
 - Seguir eleitor individual entre turnos (impossível com os arquivos públicos)
 - Provar que o hardware da urna está correto
 - Afirmar “eleição íntegra” só porque RDV, BU e CSV oficial coincidem
+
+## Site (Quarto → GitHub Pages)
+
+Gráficos públicos a partir de agregados leves (sem subir os ZIPs).
+
+```bash
+# Atualiza CSV do site com base nos reports/by_municipio_*.csv
+python scripts/build_site_data.py
+
+# Render local (requer Quarto: https://quarto.org)
+quarto render site
+```
+
+- Fonte do site: `site/` (`index.qmd`, análises, `data/resumo_uf_1t.csv`)
+- CI: `.github/workflows/quarto-publish.yml` → branch `gh-pages`
+- URL esperada: `https://mclaguiar.github.io/urna-logs-2026/`
+
+No GitHub: **Settings → Pages** com source = branch `gh-pages` (após o primeiro publish). Em **Settings → Actions → General**, permitir write para o workflow (`GITHUB_TOKEN`).
 
 ## Fontes
 
