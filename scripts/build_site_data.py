@@ -215,16 +215,21 @@ def build_painel_uf() -> pd.DataFrame:
     return painel.sort_values("uf").reset_index(drop=True)
 
 
-def build_horario_por_hora() -> pd.DataFrame:
+def build_curva_horaria() -> pd.DataFrame:
     frames: list[pd.DataFrame] = []
     for turno in (1, 2):
-        multi = REPORTS / f"horario_por_hora_MULTI_{turno}t.csv"
+        multi = REPORTS / f"curva_horaria_MULTI_{turno}t.csv"
+        if not multi.exists():
+            multi = REPORTS / f"horario_por_hora_MULTI_{turno}t.csv"
         if multi.exists():
             df = pd.read_csv(multi)
         else:
             parts = [
                 pd.read_csv(p)
-                for p in sorted(REPORTS.glob(f"horario_por_hora_*_{turno}t.csv"))
+                for p in sorted(
+                    list(REPORTS.glob(f"curva_horaria_*_{turno}t.csv"))
+                    + list(REPORTS.glob(f"horario_por_hora_*_{turno}t.csv"))
+                )
                 if "MULTI" not in p.name
             ]
             if not parts:
@@ -304,8 +309,8 @@ def main() -> None:
     painel.to_csv(out_p, index=False)
     print(f"escrito {out_p} ({len(painel)} UFs)")
 
-    horas = build_horario_por_hora()
-    out_h = OUT / "horario_por_hora.csv"
+    horas = build_curva_horaria()
+    out_h = OUT / "curva_horaria.csv"
     horas.to_csv(out_h, index=False)
     n_uf = int(horas["uf"].nunique()) if not horas.empty else 0
     print(f"escrito {out_h} ({n_uf} UFs, turnos={sorted(horas['turno'].unique().tolist()) if not horas.empty else []})")
@@ -319,6 +324,7 @@ def main() -> None:
     for legacy in (
         "resumo_uf_1t.csv",
         "cruzar_oficial_uf_1t.csv",
+        "horario_por_hora.csv",
         "horario_por_hora_1t.csv",
         "horario_uf_1t.csv",
         "comparar_turnos_uf_1t_2t.csv",

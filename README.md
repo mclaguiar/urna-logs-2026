@@ -9,7 +9,7 @@ Foco atual: **cargo presidente** (recontar RDV e comparar com o BU) e **habilita
 | Etapa | Situação |
 |---|---|
 | Download com retomada (1º turno) | OK — URL `…_1t_{UF}.zip` |
-| Download 2º turno | Ainda não publicado no CDN (`…_2t_…` → 404) |
+| Download 2º turno | Ainda não publicado (`…_2t_…` → 404). **Monitorar:** [arquivos transmitidos para totalização 2026](https://dadosabertos.tse.jus.br/dataset/resultados-2026-arquivos-transmitidos-para-totalizacao) |
 | Leitura ASN.1 do BU/RDV (schemas TSE 2026) | OK |
 | `audit` presidente urna a urna | OK — AC, RR, AP, ZZ: **7.013/7.013** RDV ≡ BU |
 | `by-municipio` (votos + % sem digital) | OK — nomes pelo perfil do eleitorado TSE |
@@ -64,8 +64,9 @@ Em resumo: auditar aqui = **consistência da cadeia pública** (RDV ↔ BU ↔ d
 | **Biometria / bio** | Habilitação com reconhecimento da digital do eleitor |
 | **Biografia** | Habilitação por ano de nascimento (sem digital), quando o cadastro permite |
 | **Sem biometria** | Eleitor sem biometria cadastrada |
-| **Sem digital** | Neste projeto: **biografia + sem biometria** (habilitação sem reconhecimento biométrico na urna) |
-| **Pós-17h** | Habilitações com horário ≥ 17:00 no relógio da urna (fila / eventual ampliação) |
+| **Sem digital (BU)** | Canônico: **biografia + sem biometria** no BU (painel / `by-municipio`) |
+| **Sem digital (log)** | Proxy: `sem_biometria` + `manual_falha` no log (`metrics` / `viability`) — não comparar direto com o % do BU |
+| **Pós-17h** | ≥ 17:00 no **horário de Brasília** (ZZ = local do posto); helper `urna_logs.fuso` |
 | **Comparecimento** | Quantidade de eleitores que votaram na seção (no BU) |
 | **Aptos** | Eleitores aptos a votar na seção |
 | **Abstenção** | Aptos − comparecimento |
@@ -160,7 +161,9 @@ urna-logs cruzar-oficial --ufs "AC RR AP ZZ" --turno 1
 urna-logs cruzar-oficial --ufs ALL --turno 1
 
 # Curva horária das habilitações (log) + % pós-17h
-urna-logs horario --ufs "AC RR AP ZZ" --turno 1
+# Padrão = modo rápido (só agregados). --detalhe grava Parquet 1 linha/hab.
+urna-logs horario --ufs ALL --turno 1
+urna-logs horario --ufs AC --turno 1 --detalhe   # cruzamento fino por seção
 
 # Esqueleto 1º × 2º (preenche quando existir audit do 2º)
 urna-logs comparar-turnos --ufs "AC RR AP ZZ"
@@ -215,7 +218,7 @@ Sugestão de escala: comece com UFs pequenas (`AC` → `RR AP ZZ`), confira se R
 - [x] Gravar `audit` em **Parquet** (seções + votos + várias UFs juntas)
 - [ ] Fechar `audit` nacional 1º turno (todas as UFs; SP em andamento)
 - [x] Incorporar cruzamento com o **resultado oficial** (`cruzar-oficial`, presidente × seção)
-- [ ] Testar 2º turno assim que existir `…_2t_*.zip`
+- [ ] Testar 2º turno assim que existir `…_2t_*.zip` — checar publicação em [dados abertos / arquivos transmitidos](https://dadosabertos.tse.jus.br/dataset/resultados-2026-arquivos-transmitidos-para-totalizacao)
 
 ### Comparativo 1º × 2º turno (seção a seção)
 Chave de junção: `join_key` = `UF:municipio:zona:secao` (sem o local — ele pode mudar em contingência).
@@ -265,7 +268,7 @@ Objetivo: medir **quanto o fluxo depois das 17h** (fila / eventual ampliação d
 **Duas páginas:** Painel (1º×2º + sem digital + horário) e Método/glossário. Sem despejo de análises soltas.
 
 ```bash
-python scripts/build_site_data.py   # painel_uf.csv, horario_por_hora.csv, outliers_…
+python scripts/build_site_data.py   # painel_uf.csv, curva_horaria.csv, outliers_…
 quarto render site                  # requer Quarto: https://quarto.org
 quarto preview site
 ```
@@ -278,6 +281,6 @@ No GitHub: **Settings → Pages** com source = branch `gh-pages` (após o primei
 
 ## Fontes
 
-- [Arquivos transmitidos para totalização 2026](https://dadosabertos.tse.jus.br/dataset/resultados-2026-arquivos-transmitidos-para-totalizacao) — BU, RDV, log, assinatura (por UF)
+- **Monitorar 2º turno:** [Resultados 2026 — Arquivos transmitidos para totalização](https://dadosabertos.tse.jus.br/dataset/resultados-2026-arquivos-transmitidos-para-totalizacao) — BU, RDV, log, assinatura por UF (1º e 2º; só situação “Totalizado”). Quando aparecerem pacotes do 2º, rodar `download` / `audit --turno 2`.
 - [Resultados 2026](https://dadosabertos.tse.jus.br/dataset/resultados-2026) — votação oficial por seção / município-zona (para cruzar com a `audit`)
 - Schemas ASN.1 BU/RDV 2026 (em `src/urna_logs/spec/`)

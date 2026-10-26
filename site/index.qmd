@@ -10,7 +10,7 @@ Auditoria da **cadeia pública** (RDV ↔ BU ↔ CSV oficial), com foco em enten
 ```{ojs}
 //| echo: false
 painel = FileAttachment("data/painel_uf.csv").csv({typed: true})
-horas = FileAttachment("data/horario_por_hora.csv").csv({typed: true})
+horas = FileAttachment("data/curva_horaria.csv").csv({typed: true})
 outliers = FileAttachment("data/outliers_sem_digital.csv").csv({typed: true})
 ```
 
@@ -126,40 +126,64 @@ Inputs.table(
 
 ## 3. Fluxo do dia (habilitações)
 
-Horário = momento da **habilitação** no log (não voto em candidato). Série do 2º aparece no mesmo gráfico quando existir.
+Horário = momento da **habilitação** no log (não voto em candidato). O eixo usa **horário de Brasília** (relógio local convertido pelo fuso da UF). Exterior (**ZZ**) permanece em horário local do posto. **Todos** soma as UFs nacionais (sem ZZ).
 
 ```{ojs}
 //| echo: false
 ufsComHora = [...new Set(horas.map(d => d.uf))].sort()
-viewof ufHora = Inputs.select(ufsComHora, {
-  label: "UF (curva horaria)",
-  value: ufsComHora.includes("AC") ? "AC" : ufsComHora[0]
+ufsHoraOpts = ["BR", ...ufsComHora]
+viewof ufHora = Inputs.select(ufsHoraOpts, {
+  label: "UF / agregado",
+  format: d => d === "BR" ? "Todos (BRT, sem ZZ)" : d,
+  value: "BR"
 })
 ```
 
 ```{ojs}
 //| echo: false
-metaUf = rows.find(d => d.uf === ufHora) || {}
-Inputs.table([{
-  UF: ufHora,
-  "% apos 17h 1o": metaUf.pct_apos_17h_1t,
-  "Pico (h)": metaUf.hora_pico_1t,
-  "Status 2o": metaUf.status_2t
-}])
+// Agrega por hora de Brasília (CSV: hora=local, hora_brasilia=ref. oficial).
+aggPorBrt = (subset, turno) => {
+  const m = new Map(d3.range(24).map(h => [h, {hora: h, n: 0, turno, after: h >= 17}]));
+  for (const d of subset) {
+    if (+d.turno !== turno) continue;
+    const h = +d.hora_brasilia;
+    if (!m.has(h)) continue;
+    m.get(h).n += +d.habilitacoes;
+  }
+  return [...m.values()].sort((a, b) => a.hora - b.hora);
+}
+baseHoras = ufHora === "BR"
+  ? horas.filter(d => d.uf !== "ZZ")
+  : horas.filter(d => d.uf === ufHora)
+serie1 = aggPorBrt(baseHoras, 1)
+serie2 = aggPorBrt(baseHoras, 2)
+eixoLabel = ufHora === "ZZ" ? "Hora local (exterior)" : "Hora de Brasilia"
 ```
 
 ```{ojs}
 //| echo: false
-serie = horas
-  .filter(d => d.uf === ufHora)
-  .map(d => ({
-    hora: +d.hora,
-    n: +d.habilitacoes,
-    turno: +d.turno,
-    after: d.after_17h === true || d.after_17h === "True"
-  }))
-serie1 = serie.filter(d => d.turno === 1).sort((a, b) => a.hora - b.hora)
-serie2 = serie.filter(d => d.turno === 2).sort((a, b) => a.hora - b.hora)
+metaUf = (() => {
+  const tot = d3.sum(serie1, d => d.n);
+  const apos = d3.sum(serie1.filter(d => d.after), d => d.n);
+  const pico = serie1.length
+    ? serie1.reduce((a, b) => (a.n >= b.n ? a : b))
+    : null;
+  const r = ufHora === "BR" ? null : rows.find(d => d.uf === ufHora);
+  return {
+    escopo: ufHora === "BR" ? "Todos (BRT, sem ZZ)" : ufHora,
+    pct_apos_17h_1t: tot ? +(100 * apos / tot).toFixed(4) : null,
+    hora_pico_1t: pico ? pico.hora : null,
+    ref: ufHora === "ZZ" ? "hora local" : "Brasilia",
+    status_2t: r ? r.status_2t : (nPronto ? "comparativo ativo" : "pendente")
+  };
+})()
+Inputs.table([{
+  Escopo: metaUf.escopo,
+  "% apos 17h 1o": metaUf.pct_apos_17h_1t,
+  "Pico (h)": metaUf.hora_pico_1t,
+  "Eixo": metaUf.ref,
+  "Status 2o": metaUf.status_2t
+}])
 ```
 
 ```{ojs}
@@ -168,10 +192,11 @@ Plot.plot({
   marginLeft: 50,
   width: 720,
   height: 320,
-  x: {label: "Hora local (relogio da urna)", domain: d3.range(24), ticks: 24},
+  x: {label: eixoLabel, domain: d3.range(24), ticks: 24},
   y: {label: "Habilitacoes", grid: true},
   marks: [
     Plot.ruleY([0]),
+    Plot.ruleX([17], {stroke: "#a51c1c", strokeOpacity: 0.35, strokeDasharray: "4,4"}),
     Plot.lineY(serie1, {x: "hora", y: "n", stroke: "#1f4e79", strokeWidth: 2, curve: "step"}),
     Plot.dot(serie1.filter(d => d.after), {x: "hora", y: "n", fill: "#a51c1c", r: 4}),
     Plot.lineY(serie2, {x: "hora", y: "n", stroke: "#c47d1a", strokeWidth: 2, curve: "step", strokeDasharray: "6,3"}),
@@ -180,7 +205,7 @@ Plot.plot({
 })
 ```
 
-Azul = 1º turno · pontilhado âmbar = 2º (quando houver) · vermelho = horas ≥17h.
+Azul = 1º turno · pontilhado âmbar = 2º (quando houver) · vermelho = ≥17h na referência do eixo · tracejado vertical = 17h.
 
 ## Cadeia pública (rodapé)
 

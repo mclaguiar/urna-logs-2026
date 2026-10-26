@@ -14,7 +14,7 @@ Trabalhamos só com **arquivos públicos** do TSE. Divergência entre camadas é
 
 1. **O que mudou 1º→2º** — Δ abstenção / comparecimento e (quando houver) votos dos finalistas, por UF e depois por seção (`join_key`).
 2. **Onde olhar** — `% sem digital` (BU) como indicador de risco, cruzado com Δ atípicos no 2º; até lá, ranking de seções com maior % sem digital no 1º.
-3. **Fluxo do dia** — curva de habilitações no log (pós-17h); overlay do 2º quando existir.
+3. **Fluxo do dia** — curva de habilitações no log (pós-17h em Brasília; exterior = horário local); overlay do 2º quando existir.
 
 **Não dá:** saber *quem* migrou de candidato entre turnos (sigilo do voto).
 
@@ -23,7 +23,7 @@ Trabalhamos só com **arquivos públicos** do TSE. Divergência entre camadas é
 | Arquivo | Conteúdo |
 |---|---|
 | `site/data/painel_uf.csv` | KPIs por UF (1º + colunas 2º/Δ) |
-| `site/data/horario_por_hora.csv` | Habilitações por hora × UF × turno |
+| `site/data/curva_horaria.csv` | Habilitações por hora (BRT) × UF × turno |
 | `site/data/outliers_sem_digital.csv` | Top seções % sem digital (1º; Δ 2º quando houver) |
 
 ```bash
@@ -42,8 +42,10 @@ quarto render site
 | **RDV** | Registro Digital do Voto — sequência de votos **sem** identificar eleitor; base da recontagem |
 | **Log / logjez** | Eventos da urna; fonte do horário e do tipo de habilitação |
 | **Habilitação** | Liberação do eleitor para votar (`Eleitor foi habilitado`) |
-| **Sem digital** | Biografia + sem biometria no BU (não é voto em candidato) |
-| **Pós-17h** | Habilitações ≥ 17:00 no relógio da urna |
+| **Sem digital (BU)** | **Canônico no painel:** biografia + sem biometria no BU (não é voto em candidato) |
+| **Sem digital (log)** | Proxy no log: `sem_biometria` + `manual_falha` (ano de nascimento + digital do mesário). Não misturar com o % do BU |
+| **Pós-17h** | Habilitações ≥ 17:00 no **horário de Brasília** (relógio local convertido pelo fuso da UF). **ZZ** (exterior): ≥ 17:00 no horário local do posto. Um único helper: `urna_logs.fuso.apos_encerramento_oficial` |
+| **Fuso (log)** | Relógio do log = hora local; AC ≈ UTC−5 (−2h vs BRT), AM/MT/MS/RO/RR ≈ UTC−4 (−1h); demais UTC−3 |
 | **Abstenção** | Aptos − comparecimento |
 | **Votável** | Código no CSV oficial; branco=`95`, nulo=`96` |
 | **`join_key`** | `UF:municipio:zona:secao` — chave 1º×2º e BU×oficial |
