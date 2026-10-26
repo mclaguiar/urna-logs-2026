@@ -67,7 +67,7 @@ def _fetch_uf(uf: str) -> pd.DataFrame:
 
 
 def ensure_municipios(ufs: list[str]) -> pd.DataFrame:
-    """Garante cache local com os municípios das UFs pedidas."""
+    """Garante arquivo local com os municípios das UFs pedidas."""
     cache = _load_cache()
     missing = [u.upper() for u in ufs if u.upper() not in set(cache["uf"].unique())]
     if missing:
@@ -76,5 +76,5 @@ def ensure_municipios(ufs: list[str]) -> pd.DataFrame:
             frames.append(_fetch_uf(uf))
         cache = pd.concat(frames, ignore_index=True)
         _save_cache(cache)
-        console.print(f"[green]Cache municípios:[/green] {MUN_CACHE}")
+        console.print(f"[green]Municípios salvos em:[/green] {MUN_CACHE}")
     return cache

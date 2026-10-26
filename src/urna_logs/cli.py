@@ -48,7 +48,7 @@ def download_cmd(
 ) -> None:
     """Baixa ZIPs do TSE com retomada incremental (HTTP Range)."""
     uf_list = _parse_ufs(ufs)
-    console.print(f"[dim]Destino:[/dim] data/raw/ · retomável se interromper")
+    console.print("[dim]Destino:[/dim] data/raw/ · se interromper, rode de novo para retomar")
     try:
         paths = download_many(uf_list, turno, force=force)
     except FileNotFoundError as exc:
@@ -124,13 +124,13 @@ def audit_cmd(
     ufs: Optional[str] = typer.Option("AC", "--ufs"),
     turno: int = typer.Option(1, "--turno", min=1, max=2),
     verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Lista cada urna divergente durante o processamento"
+        False, "--verbose", "-v", help="Mostra cada urna com divergência durante o processamento"
     ),
 ) -> None:
     """Reconta votos de presidente (RDV) e compara com o BU."""
     uf_list = _parse_ufs(ufs)
     console.print(
-        f"[bold]Auditoria[/bold] — cargo presidente · {turno}º turno · "
+        f"[bold]Auditoria[/bold] — presidente · {turno}º turno · "
         f"{len(uf_list)} UF(s): {', '.join(uf_list)}"
     )
     done: list[str] = []
@@ -144,13 +144,13 @@ def audit_cmd(
         done.append(uf)
         console.print(f"[green]Relatório:[/green] {report}")
         console.print(f"[green]CSV:[/green] {csv_path}")
-        console.print(f"[green]Parquet seções:[/green] {secoes_pq}")
-        console.print(f"[green]Parquet votos:[/green] {votos_pq}")
+        console.print(f"[green]Parquet (seções):[/green] {secoes_pq}")
+        console.print(f"[green]Parquet (votos):[/green] {votos_pq}")
     if len(done) > 1:
         cons = consolidate_audit_parquets(done, turno)
         if cons:
-            console.print(f"\n[green]Consolidado seções:[/green] {cons[0]}")
-            console.print(f"[green]Consolidado votos:[/green] {cons[1]}")
+            console.print(f"\n[green]Arquivo único (seções):[/green] {cons[0]}")
+            console.print(f"[green]Arquivo único (votos):[/green] {cons[1]}")
 
 
 @app.command("by-municipio")
@@ -158,7 +158,7 @@ def by_municipio_cmd(
     ufs: Optional[str] = typer.Option("AC", "--ufs"),
     turno: int = typer.Option(1, "--turno", min=1, max=2),
 ) -> None:
-    """Agrega auditoria por município (votos presidente + % sem digital do BU)."""
+    """Totais por município (votos de presidente + % sem digital do BU)."""
     uf_list = _parse_ufs(ufs)
     try:
         run_by_municipio(uf_list, turno)

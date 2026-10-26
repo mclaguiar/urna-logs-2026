@@ -200,7 +200,7 @@ def audit_zip(zpath: Path, *, verbose: bool = False) -> list[UrnaAudit]:
 
 
 def join_key(uf: str, municipio: int, zona: int, secao: int) -> str:
-    """Chave estável entre turnos (sem local — pode mudar em contingência)."""
+    """Chave estável entre 1º e 2º turno (sem local — pode mudar em contingência)."""
     return f"{uf.upper()}:{municipio:05d}:{zona:04d}:{secao:04d}"
 
 
@@ -212,7 +212,7 @@ def _parse_voto_key(key: str) -> tuple[str, str | None]:
 
 
 def results_to_frame(results: list[UrnaAudit], uf: str, turno: int) -> pd.DataFrame:
-    """Uma linha por seção/urna — grão para join 1t×2t e agregações."""
+    """Uma linha por seção/urna — base para cruzar 1º×2º turno e somar totais."""
     uf = uf.upper()
     rows = []
     for r in results:
@@ -253,7 +253,7 @@ def results_to_frame(results: list[UrnaAudit], uf: str, turno: int) -> pd.DataFr
 
 
 def results_to_votos_frame(results: list[UrnaAudit], uf: str, turno: int) -> pd.DataFrame:
-    """Long format: uma linha por (seção, tipo, número) — base para migração agregada."""
+    """Uma linha por (seção, tipo, número do candidato) — base para comparar turnos."""
     uf = uf.upper()
     rows: list[dict] = []
     for r in results:
@@ -400,7 +400,7 @@ def print_audit_summary(results: list[UrnaAudit], uf: str, turno: int) -> None:
 
 
 def consolidate_audit_parquets(ufs: list[str], turno: int) -> tuple[Path, Path] | None:
-    """Concatena Parquets por UF num consolidado multi-UF do turno."""
+    """Junta os Parquets de várias UFs num arquivo só do turno."""
     ensure_dirs()
     secoes_frames: list[pd.DataFrame] = []
     votos_frames: list[pd.DataFrame] = []
@@ -435,7 +435,7 @@ def run_audit(
         f"[bold]Auditoria presidente[/bold] — {uf} {turno}º turno → {zpath.name}"
     )
     results = audit_zip(zpath, verbose=verbose)
-    console.print("[cyan]Gravando[/cyan] CSV, Parquet (seções) e Parquet (votos)…")
+    console.print("[cyan]Gravando[/cyan] CSV e Parquets (seções e votos)…")
     df = results_to_frame(results, uf, turno)
     votos = results_to_votos_frame(results, uf, turno)
     csv_path = REPORTS_DIR / f"audit_presidente_{uf}_{turno}t.csv"
@@ -446,7 +446,7 @@ def run_audit(
     votos.to_parquet(votos_pq, index=False)
     console.print(
         f"  seções={len(df):,} · linhas de voto={len(votos):,} · "
-        f"join_key pronta para 1t×2t"
+        f"join_key pronta para cruzar 1º e 2º turno"
     )
     report = write_audit_report(results, uf, turno, zpath)
     print_audit_summary(results, uf, turno)

@@ -12,7 +12,7 @@ import asn1tools
 
 CARGO_PRESIDENTE = "presidente"
 
-# RDV TipoVoto → BU TipoVoto (+ se digitação entra na chave)
+# Mapeia TipoVoto do RDV para o do BU (e se a digitação entra na chave)
 _RDV_TIPO_MAP: dict[str, tuple[str, bool]] = {
     "legenda": ("legenda", True),
     "nominal": ("nominal", True),

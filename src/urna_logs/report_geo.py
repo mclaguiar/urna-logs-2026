@@ -1,4 +1,4 @@
-"""Agregados por município: votos presidente + habilitação (BU)."""
+"""Totais por município: votos de presidente e habilitação (BU)."""
 
 from __future__ import annotations
 
@@ -28,12 +28,12 @@ def load_audit(uf: str, turno: int) -> pd.DataFrame:
 
 
 def aggregate_by_municipio(df: pd.DataFrame, nomes: pd.DataFrame) -> pd.DataFrame:
-    """Agrega urnas OK por município (fonte BU)."""
+    """Soma urnas OK por município (dados do BU)."""
     ok = df[df["ok"] == True].copy()  # noqa: E712
     if ok.empty:
         return pd.DataFrame()
 
-    # Exterior (ZZ) e alguns BUs omitem detalhamentoComparecimento → NaN
+    # Exterior (ZZ) e alguns BUs não trazem detalhamentoComparecimento → NaN
     has_bio = ok["bio"].notna() | ok["biografia"].notna() | ok["sem_biometria"].notna()
     ok["bio_detalhe_ok"] = has_bio
 
@@ -56,7 +56,7 @@ def aggregate_by_municipio(df: pd.DataFrame, nomes: pd.DataFrame) -> pd.DataFram
     )
     g = g.merge(all_g, on=["uf", "municipio"], how="left")
 
-    # Soma de NaNs no pandas vira 0 — distinguir "zero real" de "sem dado"
+    # No pandas, soma de NaN vira 0 — separar "zero de verdade" de "sem informação"
     sem_dado = g["urnas_com_bio_detalhe"] == 0
     g.loc[sem_dado, ["bio", "biografia", "sem_biometria"]] = pd.NA
 
@@ -108,7 +108,7 @@ def aggregate_by_municipio(df: pd.DataFrame, nomes: pd.DataFrame) -> pd.DataFram
         "pct_sem_biometria",
         "pct_sem_digital",
     ]
-    # Municípios com dado de biometria primeiro (maior % sem digital); sem dado no fim
+    # Quem tem biometria no BU primeiro (maior % sem digital); sem dado no fim
     g["_sort_sem"] = g["pct_sem_digital"].fillna(-1)
     return g[cols + ["_sort_sem"]].sort_values(
         ["uf", "_sort_sem", "nome"], ascending=[True, False, True]
@@ -153,7 +153,7 @@ def write_municipio_report(agg: pd.DataFrame, uf: str, turno: int) -> tuple[Path
         "- **biografia**: tinham biometria cadastrada, liberados por ano de nascimento",
         "- **sem_biometria**: compareceram sem biometria cadastrada",
         "- **sem digital** = biografia + sem_biometria",
-        "- Exterior (ZZ) e alguns BUs podem omitir o detalhamento → campos `—`",
+        "- Exterior (ZZ) e alguns BUs podem não trazer o detalhamento → campos `—`",
         "",
         "## Ranking por % sem digital",
         "",
