@@ -8,7 +8,8 @@ def test_parse_line_slash_date():
     ev = parse_line(line, source="t")
     assert ev is not None
     assert ev.aplicativo == "VOTA"
-    assert ev.after_17h is True
+    assert ev.after_17h is True  # local
+    assert ev.apos_17h_oficial("SP") is True
     assert "habilitado" in ev.mensagem.lower()
 
 
@@ -17,6 +18,9 @@ def test_parse_line_compact_date():
     ev = parse_line(line)
     assert ev is not None
     assert ev.after_17h is False
+    # AC UTC−5: 16h local = 18h BRT → pós-encerramento
+    assert ev.apos_17h_oficial("AC") is True
+    assert ev.apos_17h_oficial("SP") is False
 
 
 def test_classify_sem_biometria():
@@ -25,10 +29,13 @@ def test_classify_sem_biometria():
         "04/10/2026\t16:52:03\tINFO\t2246399\tVOTA\tEleitor foi habilitado\t0E9B9BD09EDA3A65",
     ]
     events = [parse_line(l, source="x") for l in lines]
-    habs = list(classify_habilitacoes(e for e in events if e))
+    habs = list(classify_habilitacoes((e for e in events if e), uf="SP"))
     assert len(habs) == 1
     assert habs[0].tipo == "sem_biometria"
     assert habs[0].after_17h is False
+
+    habs_ac = list(classify_habilitacoes((e for e in events if e), uf="AC"))
+    assert habs_ac[0].after_17h is True  # 16h AC = 18h BRT
 
 
 def test_classify_biometrica():

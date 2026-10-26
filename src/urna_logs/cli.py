@@ -207,14 +207,32 @@ def cruzar_oficial_cmd(
 def horario_cmd(
     ufs: Optional[str] = typer.Option("AC", "--ufs"),
     turno: int = typer.Option(1, "--turno", min=1, max=2),
+    detalhe: bool = typer.Option(
+        False,
+        "--detalhe",
+        help="Parquet 1 linha/habilitação (lento). Padrão: só curva agregada.",
+    ),
+    force: bool = typer.Option(
+        False, "--force", help="Refaz mesmo se já existir summary/CSV da UF"
+    ),
+    workers: int = typer.Option(
+        0, "--workers", help="Processos paralelos no modo curva (0=auto)"
+    ),
 ) -> None:
     """Curva de habilitações por hora (log) + % pós-17h."""
     uf_list = _parse_ufs(ufs)
     console.print(
         f"[bold]Horário[/bold] — {turno}º turno · "
+        f"{'detalhe' if detalhe else 'curva'} · "
         f"{len(uf_list)} UF(s): {', '.join(uf_list)}"
     )
-    run_horario(uf_list, turno)
+    run_horario(
+        uf_list,
+        turno,
+        detalhe=detalhe,
+        force=force,
+        workers=workers or None,
+    )
 
 
 @app.command("comparar-turnos")

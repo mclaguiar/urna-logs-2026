@@ -92,8 +92,9 @@ def write_viability_report(uf: str, turno: int, catalog: dict, metrics_summary: 
         "## Amostra de métricas (pipeline)",
         "",
         f"- Total habilitações classificadas: {metrics_summary.get('total_habilitacoes', 0):,}",
-        f"- % sem digital (sem_biometria + manual_falha): {metrics_summary.get('pct_sem_digital')}",
-        f"- % após 17h: {metrics_summary.get('pct_apos_17h')}",
+        f"- % sem digital **log** (sem_biometria + manual_falha; ≠ BU): "
+        f"{metrics_summary.get('pct_sem_digital_log', metrics_summary.get('pct_sem_digital'))}",
+        f"- % após 17h (BRT / ZZ local): {metrics_summary.get('pct_apos_17h')}",
         f"- Por tipo: `{metrics_summary.get('por_tipo', {})}`",
         "",
         "## Amostras de mensagens",
@@ -120,7 +121,8 @@ def write_viability_report(uf: str, turno: int, catalog: dict, metrics_summary: 
         "",
         "- Escalar download para demais UFs e 2º turno.",
         "- Cruzar totais do BU (ASN.1/`-bu.dat`) com habilitações por seção.",
-        "- Ajustar fuso (AC UTC-5) se a análise de 17h precisar de hora local oficial vs relógio da urna.",
+        "- Pós-17h: horário de Brasília (ZZ = local do posto); ver `urna_logs.fuso`.",
+        "- Sem digital no **BU** = biografia + sem_biometria; no **log** = sem_biometria + manual_falha.",
         "",
     ]
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -165,11 +167,11 @@ def run_viability(uf: str, turno: int) -> Path:
                         )
             if HABILITADO.search(ev.mensagem):
                 total_habilitados += 1
-                if ev.after_17h:
+                if ev.apos_17h_oficial(uf):
                     after_17_habilitados += 1
             yield ev
 
-    for hab in classify_habilitacoes(event_stream()):
+    for hab in classify_habilitacoes(event_stream(), uf=uf):
         rows.append(
             {
                 "uf": uf,

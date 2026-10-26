@@ -26,6 +26,18 @@ def test_presidente_bu_rdv_match():
     assert result.mismatches == []
 
 
+def test_presidente_bu_rdv_mismatch():
+    bu = parse_bu_bytes((FIXTURES / "sample-bu.dat").read_bytes(), source="sample-bu")
+    rdv = parse_rdv_bytes((FIXTURES / "sample-rdv.dat").read_bytes(), source="sample-rdv")
+    assert bu is not None and rdv is not None
+    # altera um votável do RDV → deve falhar
+    key = next(iter(rdv.votos))
+    rdv.votos[key] = rdv.votos[key] + 1
+    result = compare_presidente(bu, rdv, stem="sample-bad")
+    assert result.ok is False
+    assert result.mismatches
+
+
 def test_presidente_only_keys():
     bu = parse_bu_bytes((FIXTURES / "sample-bu.dat").read_bytes())
     assert bu is not None

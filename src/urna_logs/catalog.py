@@ -97,7 +97,7 @@ def build_catalog(uf: str, turno: int, *, max_events: int | None = None) -> dict
 
         if HABILITADO.search(ev.mensagem):
             total_habilitados += 1
-            if ev.after_17h:
+            if ev.apos_17h_oficial(uf):
                 after_17_habilitados += 1
 
         if max_events and total_events >= max_events:

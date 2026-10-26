@@ -20,11 +20,12 @@ def compute_metrics(uf: str, turno: int) -> pd.DataFrame:
     if not zpath.exists():
         raise FileNotFoundError(f"ZIP não encontrado: {zpath}")
 
+    uf = uf.upper()
     rows = []
-    for hab in classify_habilitacoes(iter_events_from_zip(zpath)):
+    for hab in classify_habilitacoes(iter_events_from_zip(zpath), uf=uf):
         rows.append(
             {
-                "uf": uf.upper(),
+                "uf": uf,
                 "turno": turno,
                 "id_ue": hab.id_ue,
                 "source": hab.source,
@@ -42,28 +43,40 @@ def compute_metrics(uf: str, turno: int) -> pd.DataFrame:
 
 
 def summarize(df: pd.DataFrame) -> dict:
+    """
+    Agrega métricas do **log**.
+
+    - `pct_sem_digital_log` = sem_biometria + manual_falha
+      (proxy; no BU o canônico é biografia + sem_biometria → `pct_sem_digital`)
+    - `pct_apos_17h` = critério oficial BRT (já marcado em `after_17h` na classificação)
+    """
     if df.empty:
         return {
             "total_habilitacoes": 0,
             "por_tipo": {},
-            "pct_sem_digital": None,
+            "pct_sem_digital_log": None,
+            "pct_sem_digital": None,  # alias legado = log
             "pct_apos_17h": None,
             "apos_17h_por_tipo": {},
         }
     total = len(df)
     por_tipo = df["tipo"].value_counts().to_dict()
-    sem_digital = int(
+    # Proxy de log (≠ BU: biografia + sem_biometria)
+    sem_digital_log = int(
         por_tipo.get("sem_biometria", 0) + por_tipo.get("manual_falha", 0)
     )
     apos = int(df["after_17h"].sum())
     apos_por_tipo = (
         df[df["after_17h"]].groupby("tipo").size().to_dict() if apos else {}
     )
+    pct_log = round(100 * sem_digital_log / total, 4) if total else None
     return {
         "total_habilitacoes": total,
         "por_tipo": {str(k): int(v) for k, v in por_tipo.items()},
-        "pct_sem_digital": round(100 * sem_digital / total, 4) if total else None,
-        "sem_digital_count": sem_digital,
+        "pct_sem_digital_log": pct_log,
+        "pct_sem_digital": pct_log,  # compat: nome antigo = métrica do log
+        "sem_digital_log_count": sem_digital_log,
+        "sem_digital_count": sem_digital_log,
         "pct_apos_17h": round(100 * apos / total, 4) if total else None,
         "apos_17h_count": apos,
         "apos_17h_por_tipo": {str(k): int(v) for k, v in apos_por_tipo.items()},
@@ -82,7 +95,13 @@ def save_metrics(df: pd.DataFrame, summary: dict, uf: str, turno: int) -> tuple[
         "turno": turno,
         "total_habilitacoes": summary["total_habilitacoes"],
         "urnas": summary.get("urnas", 0),
-        "pct_sem_digital": summary["pct_sem_digital"],
+        "pct_sem_digital_log": summary.get(
+            "pct_sem_digital_log", summary.get("pct_sem_digital")
+        ),
+        "pct_sem_digital": summary.get("pct_sem_digital"),  # alias legado
+        "sem_digital_log_count": summary.get(
+            "sem_digital_log_count", summary.get("sem_digital_count", 0)
+        ),
         "sem_digital_count": summary.get("sem_digital_count", 0),
         "pct_apos_17h": summary["pct_apos_17h"],
         "apos_17h_count": summary.get("apos_17h_count", 0),
@@ -100,12 +119,13 @@ def print_summary(summary: dict, uf: str, turno: int) -> None:
     table.add_column("Valor", justify="right")
     table.add_row("Habilitações", f"{summary['total_habilitacoes']:,}")
     table.add_row("Urnas", f"{summary.get('urnas', 0):,}")
+    pct_log = summary.get("pct_sem_digital_log", summary.get("pct_sem_digital"))
     table.add_row(
-        "% sem digital",
-        f"{summary['pct_sem_digital']}%" if summary["pct_sem_digital"] is not None else "—",
+        "% sem digital (log)",
+        f"{pct_log}%" if pct_log is not None else "—",
     )
     table.add_row(
-        "% após 17h",
+        "% após 17h (BRT)",
         f"{summary['pct_apos_17h']}%" if summary["pct_apos_17h"] is not None else "—",
     )
     console.print(table)

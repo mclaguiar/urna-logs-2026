@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import re
-from datetime import time
+import zipfile
+from collections.abc import Callable
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
+from typing import TypedDict
 
 import pandas as pd
 from rich.console import Console
@@ -12,21 +16,38 @@ from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, T
 from rich.table import Table
 
 from urna_logs.audit import join_key
-from urna_logs.config import FUSO_UTC_OFFSET, REPORTS_DIR, ensure_dirs, zip_path
-from urna_logs.parse_log import classify_habilitacoes, iter_events_from_zip
+from urna_logs.config import REPORTS_DIR, ensure_dirs, zip_path
+from urna_logs.fuso import (
+    apos_encerramento_oficial,
+    delta_local_para_brt,
+    fuso_offset,
+    hora_brasilia,
+)
+
+# Reexport — testes e callers históricos importavam daqui
+__all__ = [
+    "apos_encerramento_oficial",
+    "delta_local_para_brt",
+    "fuso_offset",
+    "hora_brasilia",
+    "faixa_hora",
+    "run_horario",
+    "compute_horario_curva",
+    "refresh_horario_brt",
+]
+from urna_logs.parse_log import (
+    classify_habilitacoes,
+    count_habilitado_hours_from_jez_bytes,
+    iter_events_from_zip,
+)
+from urna_logs.zip_logs import list_log_members, read_member_from_open_zip
 
 console = Console()
 
-# o03220ac0100700090001  →  UF + mun + zona + seção
 _STEM_RE = re.compile(
     r"(?P<stem>o\d{5}(?P<uf>[a-z]{2})(?P<mun>\d{5})(?P<zona>\d{4})(?P<secao>\d{4}))",
     re.I,
 )
-
-
-def fuso_offset(uf: str) -> int:
-    """Offset UTC usado só como metadado; o relógio do log é tratado como hora local."""
-    return int(FUSO_UTC_OFFSET.get(uf.upper(), -3))
 
 
 def stem_from_source(source: str) -> str | None:
@@ -48,24 +69,217 @@ def join_key_from_stem(stem: str) -> str | None:
     )
 
 
-def faixa_hora(hora: int | None) -> str:
+def faixa_hora(hora: int | None, *, uf: str | None = None) -> str:
+    """Faixas pelo horário de referência do encerramento (BRT, ou local se ZZ)."""
     if hora is None:
         return "sem_hora"
-    if hora < 8:
+    h = hora_brasilia(int(hora), uf) if uf else int(hora)
+    if h < 8:
         return "antes_08h"
-    if hora < 12:
+    if h < 12:
         return "08_12h"
-    if hora < 17:
+    if h < 17:
         return "12_17h"
-    if hora < 18:
+    if h < 18:
         return "17_18h"
-    if hora < 19:
+    if h < 19:
         return "18_19h"
     return "19h_mais"
 
 
+class HorarioSummary(TypedDict, total=False):
+    total_habilitacoes: int
+    com_hora: int
+    urnas: int
+    secoes: int
+    pct_apos_17h: float | None
+    apos_17h_count: int
+    pct_17_18: float | None
+    pct_18_19: float | None
+    pct_19_mais: float | None
+    hora_pico: int | None
+    habilitacoes_pico: int
+    fuso_utc_offset: int
+    delta_para_brt: int | None
+    ref_encerramento: str
+    modo: str
+
+
+def _summary_from_counts_local(
+    counts_local: list[int], uf: str, *, urnas: int, secoes: int, modo: str
+) -> HorarioSummary:
+    """Agrega pós-encerramento usando ≥17h Brasília (ZZ = local)."""
+    total = sum(counts_local)
+    counts_ref = [0] * 24
+    for h_local, c in enumerate(counts_local):
+        counts_ref[hora_brasilia(h_local, uf)] += c
+    apos = sum(counts_ref[17:])
+    f17, f18, f19 = counts_ref[17], counts_ref[18], sum(counts_ref[19:])
+    hora_pico_local = (
+        max(range(24), key=lambda h: counts_local[h]) if total else None
+    )
+    ref = "local" if uf.upper() == "ZZ" else "brasilia"
+    return {
+        "total_habilitacoes": total,
+        "com_hora": total,
+        "urnas": urnas,
+        "secoes": secoes,
+        "pct_apos_17h": round(100 * apos / total, 4) if total else None,
+        "apos_17h_count": apos,
+        "pct_17_18": round(100 * f17 / total, 4) if total else None,
+        "pct_18_19": round(100 * f18 / total, 4) if total else None,
+        "pct_19_mais": round(100 * f19 / total, 4) if total else None,
+        "hora_pico": hora_pico_local,
+        "habilitacoes_pico": counts_local[hora_pico_local]
+        if hora_pico_local is not None
+        else 0,
+        "fuso_utc_offset": fuso_offset(uf),
+        "delta_para_brt": delta_local_para_brt(uf),
+        "ref_encerramento": ref,
+        "modo": modo,
+    }
+
+
+def annotate_por_hora(por_hora: pd.DataFrame, uf: str) -> pd.DataFrame:
+    """Marca after_17h pelo critério oficial (BRT, exceto ZZ)."""
+    out = por_hora.copy()
+    out["hora_brasilia"] = out["hora"].map(lambda h: hora_brasilia(int(h), uf))
+    out["after_17h"] = out["hora"].map(
+        lambda h: apos_encerramento_oficial(int(h), uf)
+    )
+    return out
+
+
+def _count_chunk(payload: tuple[str, list[str]]) -> dict:
+    """
+    Processo filho: abre o ZIP **uma vez** e processa um lote de membros.
+    Evita 1 ZipFile.open por log (matava UFs grandes tipo BA ~35k logs).
+    """
+    zpath_s, members = payload
+    counts = [0] * 24
+    urnas: set[str] = set()
+    stems: set[str] = set()
+    with zipfile.ZipFile(zpath_s) as zf:
+        for member in members:
+            raw = read_member_from_open_zip(zf, member)
+            part, ids = count_habilitado_hours_from_jez_bytes(raw)
+            for h, c in enumerate(part):
+                counts[h] += c
+            urnas.update(ids)
+            st = stem_from_source(member)
+            if st:
+                stems.add(st)
+    return {
+        "counts": counts,
+        "total": sum(counts),
+        "n_logs": len(members),
+        "urnas": list(urnas),
+        "stems": list(stems),
+    }
+
+
+def _chunked_by_size(items: list[str], size: int) -> list[list[str]]:
+    size = max(1, size)
+    return [items[i : i + size] for i in range(0, len(items), size)]
+
+
+def compute_horario_curva(
+    uf: str,
+    turno: int,
+    *,
+    workers: int | None = None,
+    on_progress: Callable[[int, int, int, int, int], None] | None = None,
+) -> tuple[pd.DataFrame, dict]:
+    """
+    Modo rápido: agrega hora→contagem em lotes paralelos (1 ZipFile/lote).
+    Não grava Parquet detalhado (1 linha/habilitação).
+
+    on_progress(done_logs, total_logs, hab, lote_i, n_lotes) — opcional.
+    """
+    ensure_dirs()
+    uf = uf.upper()
+    zpath = zip_path(uf, turno)
+    if not zpath.exists():
+        raise FileNotFoundError(f"ZIP não encontrado: {zpath}")
+
+    zip_mb = zpath.stat().st_size / (1024 * 1024)
+    console.print(
+        f"[dim]  {uf}: lendo índice do ZIP ({zip_mb:,.0f} MB)…[/dim]"
+    )
+    members = list_log_members(zpath)
+    counts = [0] * 24
+    urnas: set[str] = set()
+    stems: set[str] = set()
+    hab_so_far = 0
+    logs_done = 0
+
+    n_workers = workers or min(8, max(1, (os.cpu_count() or 4)))
+    # ~500 logs/lote → barra atualiza com frequência sem reabrir o ZIP demais
+    lote_size = 500 if len(members) >= 64 else max(len(members), 1)
+    chunks = _chunked_by_size(members, lote_size)
+    n_lotes = len(chunks)
+    use_pool = len(members) >= 64 and n_workers > 1 and n_lotes > 1
+
+    console.print(
+        f"[dim]  {uf}: {len(members):,} logs · {n_lotes} lote(s) "
+        f"(~{lote_size}/lote) · "
+        f"{'pool '+str(n_workers)+' workers' if use_pool else 'série'}[/dim]"
+    )
+
+    def _absorb(part: dict, lote_i: int) -> None:
+        nonlocal hab_so_far, logs_done
+        for h, c in enumerate(part["counts"]):
+            counts[h] += c
+        urnas.update(part["urnas"])
+        stems.update(part["stems"])
+        logs_done += int(part["n_logs"])
+        hab_so_far += int(part["total"])
+        if on_progress:
+            on_progress(logs_done, len(members), hab_so_far, lote_i, n_lotes)
+        else:
+            console.print(
+                f"[dim]  {uf}: lote {lote_i}/{n_lotes} · "
+                f"{logs_done:,}/{len(members):,} logs · "
+                f"{hab_so_far:,} hab[/dim]"
+            )
+
+    if use_pool:
+        with ProcessPoolExecutor(max_workers=n_workers) as pool:
+            futures = {
+                pool.submit(_count_chunk, (str(zpath), chunk)): i
+                for i, chunk in enumerate(chunks, start=1)
+            }
+            finished = 0
+            for fut in as_completed(futures):
+                finished += 1
+                _absorb(fut.result(), finished)
+    else:
+        for i, chunk in enumerate(chunks, start=1):
+            _absorb(_count_chunk((str(zpath), chunk)), i)
+
+    total = sum(counts)
+    por_hora = annotate_por_hora(
+        pd.DataFrame(
+            {
+                "uf": uf,
+                "turno": turno,
+                "hora": list(range(24)),
+                "habilitacoes": counts,
+                "pct": [
+                    round(100 * c / total, 4) if total else 0.0 for c in counts
+                ],
+            }
+        ),
+        uf,
+    )
+    summary = _summary_from_counts_local(
+        counts, uf, urnas=len(urnas), secoes=len(stems), modo="curva"
+    )
+    return por_hora, summary
+
+
 def compute_horario(uf: str, turno: int) -> pd.DataFrame:
-    """Uma linha por habilitação, com hora local (relógio da urna) e join_key."""
+    """Modo detalhe: 1 linha por habilitação (mais lento; para cruzamentos finos)."""
     ensure_dirs()
     uf = uf.upper()
     zpath = zip_path(uf, turno)
@@ -73,24 +287,25 @@ def compute_horario(uf: str, turno: int) -> pd.DataFrame:
         raise FileNotFoundError(f"ZIP não encontrado: {zpath}")
 
     rows: list[dict] = []
-    for hab in classify_habilitacoes(iter_events_from_zip(zpath)):
+    for hab in classify_habilitacoes(iter_events_from_zip(zpath), uf=uf):
         stem = stem_from_source(hab.source)
         jk = join_key_from_stem(stem) if stem else None
         hora = hab.dt.hour if hab.dt is not None else None
-        after = bool(hab.dt and hab.dt.time() >= time(17, 0, 0))
         rows.append(
             {
                 "uf": uf,
                 "turno": turno,
                 "fuso_utc_offset": fuso_offset(uf),
+                "delta_para_brt": delta_local_para_brt(uf),
                 "id_ue": hab.id_ue,
                 "stem": stem or "",
                 "join_key": jk or "",
                 "source": hab.source,
                 "dt": hab.dt.isoformat(sep=" ") if hab.dt else None,
                 "hora": hora,
-                "faixa": faixa_hora(hora),
-                "after_17h": after,
+                "hora_brasilia": hora_brasilia(hora, uf) if hora is not None else None,
+                "faixa": faixa_hora(hora, uf=uf),
+                "after_17h": hab.after_17h,
                 "tipo": hab.tipo,
             }
         )
@@ -100,12 +315,14 @@ def compute_horario(uf: str, turno: int) -> pd.DataFrame:
                 "uf",
                 "turno",
                 "fuso_utc_offset",
+                "delta_para_brt",
                 "id_ue",
                 "stem",
                 "join_key",
                 "source",
                 "dt",
                 "hora",
+                "hora_brasilia",
                 "faixa",
                 "after_17h",
                 "tipo",
@@ -115,10 +332,17 @@ def compute_horario(uf: str, turno: int) -> pd.DataFrame:
 
 
 def aggregate_por_hora(df: pd.DataFrame) -> pd.DataFrame:
-    """Contagem e % por hora (0–23) — base da curva."""
     if df.empty or df["hora"].isna().all():
         return pd.DataFrame(
-            columns=["uf", "turno", "hora", "habilitacoes", "pct", "after_17h"]
+            columns=[
+                "uf",
+                "turno",
+                "hora",
+                "habilitacoes",
+                "pct",
+                "hora_brasilia",
+                "after_17h",
+            ]
         )
     uf = str(df["uf"].iloc[0]).upper()
     turno = int(df["turno"].iloc[0])
@@ -129,17 +353,17 @@ def aggregate_por_hora(df: pd.DataFrame) -> pd.DataFrame:
         .size()
         .rename(columns={"size": "habilitacoes"})
     )
-    # completa horas faltantes
     full = pd.DataFrame({"hora": list(range(24))})
     out = full.merge(counts, on="hora", how="left")
     out["habilitacoes"] = out["habilitacoes"].fillna(0).astype(int)
     out["pct"] = out["habilitacoes"].apply(
         lambda n: round(100 * n / total, 4) if total else 0.0
     )
-    out["after_17h"] = out["hora"] >= 17
     out["uf"] = uf
     out["turno"] = turno
-    return out[["uf", "turno", "hora", "habilitacoes", "pct", "after_17h"]]
+    return annotate_por_hora(
+        out[["uf", "turno", "hora", "habilitacoes", "pct"]], uf
+    )
 
 
 def summarize_horario(df: pd.DataFrame) -> dict:
@@ -156,90 +380,117 @@ def summarize_horario(df: pd.DataFrame) -> dict:
             "pct_19_mais": None,
             "hora_pico": None,
             "habilitacoes_pico": 0,
+            "modo": "detalhe",
         }
+    uf = str(df["uf"].iloc[0]).upper()
     com_hora = df[df["hora"].notna()]
-    total = len(com_hora)
-    apos = int(com_hora["after_17h"].sum()) if total else 0
-    f17 = int((com_hora["faixa"] == "17_18h").sum()) if total else 0
-    f18 = int((com_hora["faixa"] == "18_19h").sum()) if total else 0
-    f19 = int((com_hora["faixa"] == "19h_mais").sum()) if total else 0
-    por_hora = com_hora.groupby("hora").size()
-    hora_pico = int(por_hora.idxmax()) if not por_hora.empty else None
-    return {
-        "total_habilitacoes": int(len(df)),
-        "com_hora": total,
-        "urnas": int(df["id_ue"].nunique()),
-        "secoes": int(df.loc[df["join_key"] != "", "join_key"].nunique()),
-        "pct_apos_17h": round(100 * apos / total, 4) if total else None,
-        "apos_17h_count": apos,
-        "pct_17_18": round(100 * f17 / total, 4) if total else None,
-        "pct_18_19": round(100 * f18 / total, 4) if total else None,
-        "pct_19_mais": round(100 * f19 / total, 4) if total else None,
-        "hora_pico": hora_pico,
-        "habilitacoes_pico": int(por_hora.max()) if not por_hora.empty else 0,
-        "fuso_utc_offset": int(df["fuso_utc_offset"].iloc[0]),
-    }
+    counts = [0] * 24
+    for h, n in com_hora.groupby("hora").size().items():
+        counts[int(h)] = int(n)
+    base = _summary_from_counts_local(
+        counts,
+        uf,
+        urnas=int(df["id_ue"].nunique()),
+        secoes=int(df.loc[df["join_key"] != "", "join_key"].nunique()),
+        modo="detalhe",
+    )
+    base["total_habilitacoes"] = int(len(df))
+    base["com_hora"] = int(len(com_hora))
+    return base
 
 
 def write_horario_reports(
-    df: pd.DataFrame, por_hora: pd.DataFrame, summary: dict, uf: str, turno: int
-) -> tuple[Path, Path, Path, Path]:
+    por_hora: pd.DataFrame,
+    summary: dict,
+    uf: str,
+    turno: int,
+    *,
+    detail: pd.DataFrame | None = None,
+) -> tuple[Path, ...]:
     ensure_dirs()
     uf = uf.upper()
-    detail = REPORTS_DIR / f"horario_{uf}_{turno}t.parquet"
-    hora_csv = REPORTS_DIR / f"horario_por_hora_{uf}_{turno}t.csv"
+    hora_csv = REPORTS_DIR / f"curva_horaria_{uf}_{turno}t.csv"
     summary_csv = REPORTS_DIR / f"horario_summary_{uf}_{turno}t.csv"
     md = REPORTS_DIR / f"horario_{uf}_{turno}t.md"
+    outputs: list[Path] = []
 
-    df.to_parquet(detail, index=False)
+    if detail is not None:
+        detail_path = REPORTS_DIR / f"horario_{uf}_{turno}t.parquet"
+        detail.to_parquet(detail_path, index=False)
+        outputs.append(detail_path)
+
     por_hora.to_csv(hora_csv, index=False)
     pd.DataFrame([{**summary, "uf": uf, "turno": turno}]).to_csv(summary_csv, index=False)
 
+    modo = summary.get("modo", "curva")
+    ref = summary.get("ref_encerramento", "local" if uf == "ZZ" else "brasilia")
+    if ref == "local":
+        criterio = "≥17h no **horário local** do posto (exterior)"
+    else:
+        delta = summary.get("delta_para_brt")
+        extra = (
+            f" (local +{delta}h → BRT)"
+            if isinstance(delta, int) and delta
+            else ""
+        )
+        criterio = f"≥17h no **horário de Brasília**{extra}"
     lines = [
         f"# Curva horária — {uf} {turno}º turno",
         "",
-        "Fonte: timestamps de **habilitação** no log da urna (`Eleitor foi habilitado`).",
-        "Não é horário do voto em cada cargo; o RDV não traz timestamp por voto.",
+        f"Modo: **{modo}**"
+        + (" (agregado; sem Parquet detalhado)" if modo == "curva" else " (1 linha/habilitação)"),
         "",
-        f"Relógio do log tratado como **hora local** da UF "
+        "Fonte: timestamps de **habilitação** no log (`Eleitor foi habilitado`).",
+        "Não é horário do voto em cada cargo.",
+        "",
+        f"Relógio do log = **hora local** da urna "
         f"(metadado fuso UTC{summary.get('fuso_utc_offset', -3):+d}).",
+        f"Critério pós-encerramento: {criterio}.",
         "",
         "## Resumo",
         "",
         f"- Habilitações: **{summary['total_habilitacoes']:,}** "
         f"(com hora: **{summary['com_hora']:,}**)",
-        f"- Seções (`join_key`): **{summary['secoes']:,}** · urnas: **{summary['urnas']:,}**",
-        f"- Pico: **{summary['hora_pico']}h** ({summary['habilitacoes_pico']:,} habilitações)",
-        f"- % ≥17h: **{summary['pct_apos_17h']}** · "
+        f"- Seções: **{summary['secoes']:,}** · urnas: **{summary['urnas']:,}**",
+        f"- Pico (hora local): **{summary['hora_pico']}h** "
+        f"({summary['habilitacoes_pico']:,})",
+        f"- % ≥17h (ref. {ref}): **{summary['pct_apos_17h']}** · "
         f"17–18h: **{summary['pct_17_18']}** · "
         f"18–19h: **{summary['pct_18_19']}** · "
         f"19h+: **{summary['pct_19_mais']}**",
         "",
-        "## Contagem por hora",
+        "## Distribuição horária (relógio local)",
         "",
-        "| Hora | Habilitações | % |",
-        "|---:|---:|---:|",
+        "| Hora local | Habilitações | % | ≥17h BRT* |",
+        "|---:|---:|---:|:---:|",
     ]
     for _, row in por_hora.iterrows():
         if int(row["habilitacoes"]) == 0:
             continue
+        flag = "sim" if bool(row.get("after_17h")) else ""
         lines.append(
-            f"| {int(row['hora']):02d}h | {int(row['habilitacoes']):,} | {row['pct']} |"
+            f"| {int(row['hora']):02d}h | {int(row['habilitacoes']):,} | "
+            f"{row['pct']} | {flag} |"
         )
     lines += [
         "",
-        "## Nota sobre forma da curva",
+        f"\\* Exterior (ZZ): coluna marca ≥17h **local**. Demais UFs: ≥17h Brasília.",
         "",
-        "Não se espera distribuição normal: o padrão típico é multimodal "
-        "(manhã / tarde) com cauda após 17h.",
+        "## Nota",
+        "",
+        "Não se espera distribuição normal: multimodal (manhã/tarde) + cauda pós-encerramento.",
         "",
     ]
     md.write_text("\n".join(lines), encoding="utf-8")
-    return detail, hora_csv, summary_csv, md
+    outputs.extend([hora_csv, summary_csv, md])
+    return tuple(outputs)
 
 
 def print_horario_summary(summary: dict, por_hora: pd.DataFrame, uf: str, turno: int) -> None:
-    console.print(f"\n[bold]Horário — {uf.upper()} {turno}º turno[/bold]")
+    console.print(
+        f"\n[bold]Horário — {uf.upper()} {turno}º turno[/bold] "
+        f"[dim]({summary.get('modo', '?')})[/dim]"
+    )
     table = Table()
     table.add_column("Métrica")
     table.add_column("Valor", justify="right")
@@ -269,12 +520,69 @@ def print_horario_summary(summary: dict, por_hora: pd.DataFrame, uf: str, turno:
     console.print(top)
 
 
+def refresh_horario_brt(uf: str, turno: int) -> list[Path] | None:
+    """
+    Reescreve summary/% ≥17h e after_17h a partir da curva horária local
+    já existente (sem reabrir o ZIP).
+    """
+    uf = uf.upper()
+    hora_path = REPORTS_DIR / f"curva_horaria_{uf}_{turno}t.csv"
+    if not hora_path.exists():
+        legacy = REPORTS_DIR / f"horario_por_hora_{uf}_{turno}t.csv"
+        if legacy.exists():
+            hora_path = legacy
+    summary_path = REPORTS_DIR / f"horario_summary_{uf}_{turno}t.csv"
+    if not hora_path.exists() or not summary_path.exists():
+        return None
+
+    por_hora = pd.read_csv(hora_path)
+    if "hora" not in por_hora.columns or "habilitacoes" not in por_hora.columns:
+        return None
+
+    counts = [0] * 24
+    for _, row in por_hora.iterrows():
+        h = int(row["hora"])
+        if 0 <= h < 24:
+            counts[h] = int(row["habilitacoes"])
+
+    old = pd.read_csv(summary_path).iloc[0].to_dict()
+    summary = _summary_from_counts_local(
+        counts,
+        uf,
+        urnas=int(old.get("urnas") or 0),
+        secoes=int(old.get("secoes") or 0),
+        modo=str(old.get("modo") or "curva"),
+    )
+    # preserva totais se o summary antigo tinha com_hora distinto
+    if "total_habilitacoes" in old and pd.notna(old["total_habilitacoes"]):
+        summary["total_habilitacoes"] = int(old["total_habilitacoes"])
+    if "com_hora" in old and pd.notna(old["com_hora"]):
+        summary["com_hora"] = int(old["com_hora"])
+
+    base = por_hora.copy()
+    if "uf" not in base.columns:
+        base["uf"] = uf
+    if "turno" not in base.columns:
+        base["turno"] = turno
+    if "pct" not in base.columns:
+        tot = int(base["habilitacoes"].sum())
+        base["pct"] = base["habilitacoes"].apply(
+            lambda n: round(100 * int(n) / tot, 4) if tot else 0.0
+        )
+    annotated = annotate_por_hora(
+        base[["uf", "turno", "hora", "habilitacoes", "pct"]], uf
+    )
+    return list(write_horario_reports(annotated, summary, uf, turno))
+
+
 def consolidate_horario(ufs: list[str], turno: int) -> tuple[Path, Path] | None:
     horas: list[pd.DataFrame] = []
     sums: list[pd.DataFrame] = []
     for uf in ufs:
         uf = uf.upper()
-        hp = REPORTS_DIR / f"horario_por_hora_{uf}_{turno}t.csv"
+        hp = REPORTS_DIR / f"curva_horaria_{uf}_{turno}t.csv"
+        if not hp.exists():
+            hp = REPORTS_DIR / f"horario_por_hora_{uf}_{turno}t.csv"
         sp = REPORTS_DIR / f"horario_summary_{uf}_{turno}t.csv"
         if hp.exists():
             horas.append(pd.read_csv(hp))
@@ -282,7 +590,7 @@ def consolidate_horario(ufs: list[str], turno: int) -> tuple[Path, Path] | None:
             sums.append(pd.read_csv(sp))
     if not horas:
         return None
-    h_out = REPORTS_DIR / f"horario_por_hora_MULTI_{turno}t.csv"
+    h_out = REPORTS_DIR / f"curva_horaria_MULTI_{turno}t.csv"
     s_out = REPORTS_DIR / f"horario_summary_MULTI_{turno}t.csv"
     pd.concat(horas, ignore_index=True).to_csv(h_out, index=False)
     if sums:
@@ -290,7 +598,14 @@ def consolidate_horario(ufs: list[str], turno: int) -> tuple[Path, Path] | None:
     return h_out, s_out
 
 
-def run_horario(ufs: list[str], turno: int) -> list[Path]:
+def run_horario(
+    ufs: list[str],
+    turno: int,
+    *,
+    detalhe: bool = False,
+    force: bool = False,
+    workers: int | None = None,
+) -> list[Path]:
     outputs: list[Path] = []
     done: list[str] = []
     with Progress(
@@ -304,25 +619,85 @@ def run_horario(ufs: list[str], turno: int) -> list[Path]:
         for uf in ufs:
             uf = uf.upper()
             progress.update(task, description=f"Horário {uf}")
-            console.print(f"\n[bold]Horário {uf} {turno}º turno[/bold]")
+            summary_path = REPORTS_DIR / f"horario_summary_{uf}_{turno}t.csv"
+            hora_path = REPORTS_DIR / f"curva_horaria_{uf}_{turno}t.csv"
+            legacy_hora = REPORTS_DIR / f"horario_por_hora_{uf}_{turno}t.csv"
+            if (
+                not force
+                and summary_path.exists()
+                and (hora_path.exists() or legacy_hora.exists())
+            ):
+                # Reanota pós-17h em BRT sem reparsear o ZIP (contagens locais intactas)
+                refreshed = refresh_horario_brt(uf, turno)
+                if refreshed:
+                    console.print(
+                        f"[dim]Já existe — reanotado BRT {uf} (use --force p/ reparse)[/dim]"
+                    )
+                    outputs.extend(refreshed)
+                else:
+                    console.print(f"[dim]Já existe — pulando {uf} (use --force)[/dim]")
+                done.append(uf)
+                progress.advance(task)
+                continue
+
+            console.print(
+                f"\n[bold]Horário {uf} {turno}º turno[/bold] "
+                f"[dim]({'detalhe' if detalhe else 'curva'})[/dim]"
+            )
             try:
-                df = compute_horario(uf, turno)
+                if detalhe:
+                    df = compute_horario(uf, turno)  # classify já recebe uf
+                    por_hora = aggregate_por_hora(df)
+                    summary = summarize_horario(df)
+                    paths = write_horario_reports(
+                        por_hora, summary, uf, turno, detail=df
+                    )
+                else:
+
+                    def _on_prog(
+                        done_logs: int,
+                        total_logs: int,
+                        hab: int,
+                        lote_i: int,
+                        n_lotes: int,
+                    ) -> None:
+                        progress.update(
+                            task,
+                            description=(
+                                f"{uf} {done_logs:,}/{total_logs:,} logs "
+                                f"· lote {lote_i}/{n_lotes} · {hab:,} hab"
+                            ),
+                        )
+
+                    por_hora, summary = compute_horario_curva(
+                        uf, turno, workers=workers, on_progress=_on_prog
+                    )
+                    paths = write_horario_reports(por_hora, summary, uf, turno)
             except FileNotFoundError as exc:
                 console.print(f"[red]Pulando {uf}:[/red] {exc}")
                 progress.advance(task)
                 continue
-            por_hora = aggregate_por_hora(df)
-            summary = summarize_horario(df)
+
             print_horario_summary(summary, por_hora, uf, turno)
-            paths = write_horario_reports(df, por_hora, summary, uf, turno)
             outputs.extend(paths)
-            console.print(f"[green]Relatório:[/green] {paths[3]}")
+            console.print(f"[green]Relatório:[/green] {paths[-1]}")
             done.append(uf)
             progress.advance(task)
 
-    if len(done) > 1:
-        cons = consolidate_horario(done, turno)
+    # consolida todas as UFs do turno que tenham CSV (não só as desta rodada)
+    all_ufs = sorted(
+        {
+            p.name.replace("curva_horaria_", "")
+            .replace("horario_por_hora_", "")
+            .replace(f"_{turno}t.csv", "")
+            for p in list(REPORTS_DIR.glob(f"curva_horaria_*_{turno}t.csv"))
+            + list(REPORTS_DIR.glob(f"horario_por_hora_*_{turno}t.csv"))
+            if "MULTI" not in p.name
+        }
+    )
+    if len(all_ufs) > 1:
+        cons = consolidate_horario(all_ufs, turno)
         if cons:
-            console.print(f"\n[green]Curva multi-UF:[/green] {cons[0]}")
+            console.print(f"\n[green]Curva multi-UF:[/green] {cons[0]} ({len(all_ufs)} UFs)")
             outputs.extend(cons)
     return outputs

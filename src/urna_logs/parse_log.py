@@ -6,9 +6,25 @@ import io
 import re
 import zipfile
 from dataclasses import dataclass
-from datetime import datetime, time
+from datetime import datetime
 from pathlib import Path
 from typing import Iterator
+
+from urna_logs.fuso import apos_encerramento_oficial
+from urna_logs.zip_logs import is_log_member, list_log_members
+
+# Reexport para callers que importavam daqui
+__all__ = [
+    "LogEvent",
+    "Habilitacao",
+    "parse_line",
+    "list_log_members",
+    "iter_events_from_zip",
+    "classify_habilitacoes",
+    "count_habilitado_hours_from_bytes",
+    "count_habilitado_hours_from_jez_bytes",
+    "_habilitado_hours_from_text",
+]
 
 # Formato documentado pelo TSE (campos TAB):
 # Data Hora Severidade ID_UE Aplicativo Mensagem MAC
@@ -62,9 +78,16 @@ class LogEvent:
 
     @property
     def after_17h(self) -> bool | None:
+        """≥17h no relógio **local** do log (sem conversão de fuso)."""
         if self.dt is None:
             return None
-        return self.dt.time() >= time(17, 0, 0)
+        return self.dt.hour >= 17
+
+    def apos_17h_oficial(self, uf: str) -> bool | None:
+        """≥17h no critério oficial (Brasília; ZZ = local do posto)."""
+        if self.dt is None:
+            return None
+        return apos_encerramento_oficial(self.dt.hour, uf)
 
 
 @dataclass(slots=True)
@@ -155,47 +178,84 @@ def _events_from_jez_bytes(raw: bytes, source: str) -> Iterator[LogEvent]:
                 yield ev
 
 
-def iter_log_text_from_jez(path: Path) -> Iterator[tuple[str, str]]:
-    """Yields (source_label, text) from a .jez/.logjez container or plain .log."""
-    name = path.name.lower()
-    if name.endswith(".log"):
-        yield path.name, _decode_log_bytes(path.read_bytes())
-        return
-
-    try:
-        with zipfile.ZipFile(path) as zf:
-            for info in zf.infolist():
-                if info.is_dir():
-                    continue
-                inner = info.filename.lower()
-                if inner.endswith(".jez") and not inner.endswith(".vsc"):
-                    try:
-                        with zipfile.ZipFile(io.BytesIO(zf.read(info))) as nested:
-                            for ninfo in nested.infolist():
-                                if ninfo.filename.lower().endswith(".log"):
-                                    label = f"{path.name}:{info.filename}:{ninfo.filename}"
-                                    yield label, _decode_log_bytes(nested.read(ninfo))
-                    except zipfile.BadZipFile:
-                        data = zf.read(info)
-                        if b"\t" in data[:500] or b"INFO" in data[:500]:
-                            yield f"{path.name}:{info.filename}", _decode_log_bytes(data)
-                elif inner.endswith(".log") or inner.endswith(".dat"):
-                    data = zf.read(info)
-                    sample = data[:200]
-                    if b"INFO" in sample or b"ALERTA" in sample or b"\t" in sample:
-                        yield f"{path.name}:{info.filename}", _decode_log_bytes(data)
-    except zipfile.BadZipFile:
-        text = _decode_log_bytes(path.read_bytes())
-        if "INFO" in text[:500] or "\t" in text[:200]:
-            yield path.name, text
+# Marcador em bytes (ASCII) — evita decode+lower de cada linha no modo curva.
+_HAB_MARKER_B = b"Eleitor foi habilitado"
+_LINE_HOUR_B = re.compile(
+    rb"(\d{2}/\d{2}/\d{2,4}|\d{8})[\t ]+(\d{2}):(\d{2}):(\d{2})\t"
+)
 
 
-def iter_events_from_file(path: Path) -> Iterator[LogEvent]:
-    for source, text in iter_log_text_from_jez(path):
-        for line in text.splitlines():
-            ev = parse_line(line, source=source)
-            if ev:
-                yield ev
+def count_habilitado_hours_from_bytes(raw: bytes) -> list[int]:
+    """
+    Contagem 0–23h a partir de bytes de .log (sem decode completo).
+    Procura o marcador ASCII e lê a hora no início da mesma linha.
+    """
+    counts = [0] * 24
+    start = 0
+    while True:
+        i = raw.find(_HAB_MARKER_B, start)
+        if i < 0:
+            break
+        # início da linha: último \\n antes do marcador (janela curta)
+        line_start = raw.rfind(b"\n", max(0, i - 220), i) + 1
+        chunk = raw[line_start : i + len(_HAB_MARKER_B)]
+        # evita "Mesário ... habilitou" / outros — exige o texto exato já achado
+        m = _LINE_HOUR_B.match(chunk)
+        if m:
+            counts[int(m.group(2))] += 1
+        start = i + len(_HAB_MARKER_B)
+    return counts
+
+
+def _habilitado_hours_from_text(text: str, source: str) -> Iterator[LogEvent]:
+    """Parse só linhas candidatas a habilitação (filtro barato)."""
+    for line in text.splitlines():
+        if "habilitado" not in line.lower():
+            continue
+        ev = parse_line(line, source=source)
+        if ev and HABILITADO.search(ev.mensagem):
+            yield ev
+
+
+def count_habilitado_hours_from_jez_bytes(raw: bytes) -> tuple[list[int], set[str]]:
+    """
+    Contagem por hora + ids de urna (quando disponíveis) a partir de .jez/.log.
+    Caminho rápido do modo curva — sem montar LogEvent.
+    """
+    counts = [0] * 24
+    urnas: set[str] = set()
+
+    def _add(part: list[int]) -> None:
+        for h, c in enumerate(part):
+            counts[h] += c
+
+    def _walk(blob: bytes) -> None:
+        try:
+            with zipfile.ZipFile(io.BytesIO(blob)) as jez:
+                for info in jez.infolist():
+                    if info.is_dir():
+                        continue
+                    name = info.filename.lower()
+                    data = jez.read(info)
+                    if name.endswith((".log", ".dat")):
+                        _add(count_habilitado_hours_from_bytes(data))
+                        # id_ue: 3º campo TAB na 1ª linha de habilitação (opcional)
+                        j = data.find(_HAB_MARKER_B)
+                        if j >= 0:
+                            ls = data.rfind(b"\n", max(0, j - 220), j) + 1
+                            fields = data[ls:j].split(b"\t")
+                            if len(fields) >= 3 and fields[2].isdigit():
+                                urnas.add(fields[2].decode("ascii", errors="ignore"))
+                    elif name.endswith(".jez") and not name.endswith(".vsc"):
+                        try:
+                            _walk(data)
+                        except zipfile.BadZipFile:
+                            continue
+        except zipfile.BadZipFile:
+            _add(count_habilitado_hours_from_bytes(blob))
+
+    _walk(raw)
+    return counts, urnas
 
 
 def iter_events_from_zip(zip_path: Path) -> Iterator[LogEvent]:
@@ -204,29 +264,26 @@ def iter_events_from_zip(zip_path: Path) -> Iterator[LogEvent]:
         for info in zf.infolist():
             if info.is_dir():
                 continue
-            name = info.filename.lower()
-            if name.endswith(("-log.jez", ".logjez")) or (
-                name.endswith(".jez") and "log" in name
-            ):
-                yield from _events_from_jez_bytes(zf.read(info), info.filename)
-            elif name.endswith(".zip"):
+            name = info.filename
+            if is_log_member(name):
+                yield from _events_from_jez_bytes(zf.read(info), name)
+            elif name.lower().endswith(".zip"):
                 nested_raw = zf.read(info)
                 try:
                     with zipfile.ZipFile(io.BytesIO(nested_raw)) as nested:
                         for ninfo in nested.infolist():
-                            nname = ninfo.filename.lower()
-                            if nname.endswith(("-log.jez", ".logjez")) or (
-                                nname.endswith(".jez") and "log" in nname
-                            ):
+                            if is_log_member(ninfo.filename):
                                 yield from _events_from_jez_bytes(
                                     nested.read(ninfo),
-                                    f"{info.filename}:{ninfo.filename}",
+                                    f"{name}:{ninfo.filename}",
                                 )
                 except zipfile.BadZipFile:
                     continue
 
 
-def classify_habilitacoes(events: Iterator[LogEvent]) -> Iterator[Habilitacao]:
+def classify_habilitacoes(
+    events: Iterator[LogEvent], *, uf: str = "SP"
+) -> Iterator[Habilitacao]:
     """
     Agrupa contexto imediatamente anterior a 'Eleitor foi habilitado'
     para classificar o tipo de habilitação.
@@ -235,6 +292,10 @@ def classify_habilitacoes(events: Iterator[LogEvent]) -> Iterator[Habilitacao]:
     - biometrica: "Tipo de habilitação do eleitor [biométrica]"
     - sem_biometria: eleitor sem biometria cadastral
     - manual_falha: liberação via ano de nascimento + digital do mesário
+      (proxy de log ≈ biografia no BU)
+
+    `after_17h` usa critério oficial (Brasília; ZZ = local) via `uf`.
+    Default `uf=SP` (= BRT) preserva testes sem fuso.
     """
     window: list[LogEvent] = []
     for ev in events:
@@ -267,12 +328,12 @@ def classify_habilitacoes(events: Iterator[LogEvent]) -> Iterator[Habilitacao]:
                 tipo = "manual_falha"
                 msg_tipo = prev.mensagem
                 continue
-        after = bool(ev.dt and ev.dt.time() >= time(17, 0, 0))
+        hora = ev.dt.hour if ev.dt is not None else None
         yield Habilitacao(
             id_ue=ev.id_ue,
             source=ev.source,
             dt=ev.dt,
-            after_17h=after,
+            after_17h=apos_encerramento_oficial(hora, uf),
             tipo=tipo,
             mensagem_tipo=msg_tipo,
         )
