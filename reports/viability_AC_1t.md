@@ -1,6 +1,6 @@
 # Viabilidade — AC 1º turno (Eleições 2026)
 
-ZIP: `/Users/marceloaguiar/Documents/git/urna-logs-2026/data/raw/bu_imgbu_logjez_rdv_vscmr_2026_1t_AC.zip` (393,536,972 bytes)
+ZIP: `E:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_1t_AC.zip` (393,536,972 bytes)
 Eventos parseados: **11,618,809**
 Habilitações no log: **488,718**
 

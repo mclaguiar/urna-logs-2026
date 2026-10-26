@@ -87,12 +87,25 @@ def head_size(url: str, client: httpx.Client) -> int | None:
         return None
 
 
+def _fmt_bytes(n: int | None) -> str:
+    if n is None:
+        return "?"
+    if n >= 1_000_000_000:
+        return f"{n / 1_000_000_000:.2f} GB"
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f} MB"
+    if n >= 1_000:
+        return f"{n / 1_000:.1f} KB"
+    return f"{n} B"
+
+
 def download_zip(
     uf: str,
     turno: int,
     *,
     force: bool = False,
     timeout: float = 120.0,
+    label: str = "",
 ) -> Path:
     """Baixa (ou retoma) o ZIP de uma UF/turno. Idempotente."""
     ensure_dirs()
@@ -103,6 +116,7 @@ def download_zip(
     states = load_states()
     key = _key(uf, turno)
     state = states.get(key) or DownloadState(uf=uf, turno=turno, url=url, path=str(dest))
+    prefix = f"{label} " if label else ""
 
     if dest.exists() and not force:
         state.status = "complete"
@@ -110,19 +124,25 @@ def download_zip(
         state.total_bytes = dest.stat().st_size
         states[key] = state
         save_states(states)
-        console.print(f"[green]Já completo:[/green] {dest.name}")
+        console.print(
+            f"{prefix}[green]Já completo:[/green] {dest.name} "
+            f"({_fmt_bytes(dest.stat().st_size)})"
+        )
         return dest
 
     if force and dest.exists():
+        console.print(f"{prefix}[yellow]--force:[/yellow] removendo {dest.name}")
         dest.unlink()
     if force and part.exists():
         part.unlink()
 
+    console.print(f"{prefix}[cyan]Consultando[/cyan] tamanho em {url}")
     with httpx.Client(timeout=timeout, follow_redirects=True) as client:
         total = head_size(url, client)
         state.total_bytes = total
         state.url = url
         state.path = str(dest)
+        console.print(f"{prefix}Tamanho remoto: [bold]{_fmt_bytes(total)}[/bold]")
 
         existing = part.stat().st_size if part.exists() else 0
         if existing and total and existing >= total:
@@ -131,6 +151,7 @@ def download_zip(
             state.downloaded_bytes = total
             states[key] = state
             save_states(states)
+            console.print(f"{prefix}[green].part já completo — finalizado[/green]")
             return dest
 
         headers: dict[str, str] = {}
@@ -138,7 +159,12 @@ def download_zip(
         if existing > 0:
             headers["Range"] = f"bytes={existing}-"
             mode = "ab"
-            console.print(f"[cyan]Retomando[/cyan] {dest.name} em {existing:,} bytes")
+            console.print(
+                f"{prefix}[cyan]Retomando[/cyan] {dest.name} "
+                f"em {_fmt_bytes(existing)} / {_fmt_bytes(total)}"
+            )
+        else:
+            console.print(f"{prefix}[cyan]Baixando[/cyan] {dest.name}…")
 
         try:
             with client.stream("GET", url, headers=headers) as resp:
@@ -150,6 +176,14 @@ def download_zip(
                     states[key] = state
                     save_states(states)
                     return dest
+                if resp.status_code == 404:
+                    state.status = "missing"
+                    states[key] = state
+                    save_states(states)
+                    raise FileNotFoundError(
+                        f"ZIP ainda não publicado no TSE: {dest.name} "
+                        f"(UF={uf}, turno={turno}). URL: {url}"
+                    )
                 if resp.status_code not in (200, 206):
                     raise httpx.HTTPStatusError(
                         f"HTTP {resp.status_code} ao baixar {url}",
@@ -210,9 +244,16 @@ def download_zip(
 
 
 def download_many(ufs: Iterable[str], turno: int, *, force: bool = False) -> list[Path]:
+    uf_list = [u.upper() for u in ufs]
+    n = len(uf_list)
+    console.print(
+        f"[bold]Download[/bold] — {turno}º turno · {n} UF(s): {', '.join(uf_list)}"
+    )
     paths: list[Path] = []
-    for uf in ufs:
-        paths.append(download_zip(uf, turno, force=force))
+    for i, uf in enumerate(uf_list, start=1):
+        console.print(f"\n[bold][{i}/{n}] {uf}[/bold]")
+        paths.append(download_zip(uf, turno, force=force, label=f"[{i}/{n} {uf}]"))
+    console.print(f"\n[green]Concluído:[/green] {len(paths)}/{n} arquivo(s)")
     return paths
 
 

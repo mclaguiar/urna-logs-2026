@@ -8,10 +8,12 @@ import typer
 from rich.console import Console
 
 from urna_logs import __version__
+from urna_logs.audit import consolidate_audit_parquets, run_audit
 from urna_logs.catalog import build_catalog, print_catalog_summary, save_catalog
 from urna_logs.config import UFS, ensure_dirs
 from urna_logs.download import download_many, extract_logjez, list_zip_members
 from urna_logs.metrics import compute_metrics, print_summary, save_metrics, summarize
+from urna_logs.report_geo import run_by_municipio
 from urna_logs.viability import run_viability
 
 app = typer.Typer(help="Validação de logs das urnas — Eleições 2026", no_args_is_help=True)
@@ -46,9 +48,15 @@ def download_cmd(
 ) -> None:
     """Baixa ZIPs do TSE com retomada incremental (HTTP Range)."""
     uf_list = _parse_ufs(ufs)
-    paths = download_many(uf_list, turno, force=force)
+    console.print(f"[dim]Destino:[/dim] data/raw/ · retomável se interromper")
+    try:
+        paths = download_many(uf_list, turno, force=force)
+    except FileNotFoundError as exc:
+        console.print(f"[red]Indisponível:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
     if extract:
-        for path, uf in zip(paths, uf_list):
+        for i, (path, uf) in enumerate(zip(paths, uf_list), start=1):
+            console.print(f"\n[bold]Extraindo logs [{i}/{len(paths)}] {uf}[/bold]")
             extract_logjez(path, uf, turno, only_logs=True)
 
 
@@ -109,6 +117,54 @@ def viability_cmd(
     for uf in _parse_ufs(ufs):
         report = run_viability(uf, turno)
         console.print(f"[green]Relatório:[/green] {report}")
+
+
+@app.command("audit")
+def audit_cmd(
+    ufs: Optional[str] = typer.Option("AC", "--ufs"),
+    turno: int = typer.Option(1, "--turno", min=1, max=2),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Lista cada urna divergente durante o processamento"
+    ),
+) -> None:
+    """Reconta votos de presidente (RDV) e compara com o BU."""
+    uf_list = _parse_ufs(ufs)
+    console.print(
+        f"[bold]Auditoria[/bold] — cargo presidente · {turno}º turno · "
+        f"{len(uf_list)} UF(s): {', '.join(uf_list)}"
+    )
+    done: list[str] = []
+    for i, uf in enumerate(uf_list, start=1):
+        console.print(f"\n[bold][{i}/{len(uf_list)}] {uf}[/bold]")
+        try:
+            report, csv_path, secoes_pq, votos_pq = run_audit(uf, turno, verbose=verbose)
+        except FileNotFoundError as exc:
+            console.print(f"[red]Pulando {uf}:[/red] {exc}")
+            continue
+        done.append(uf)
+        console.print(f"[green]Relatório:[/green] {report}")
+        console.print(f"[green]CSV:[/green] {csv_path}")
+        console.print(f"[green]Parquet seções:[/green] {secoes_pq}")
+        console.print(f"[green]Parquet votos:[/green] {votos_pq}")
+    if len(done) > 1:
+        cons = consolidate_audit_parquets(done, turno)
+        if cons:
+            console.print(f"\n[green]Consolidado seções:[/green] {cons[0]}")
+            console.print(f"[green]Consolidado votos:[/green] {cons[1]}")
+
+
+@app.command("by-municipio")
+def by_municipio_cmd(
+    ufs: Optional[str] = typer.Option("AC", "--ufs"),
+    turno: int = typer.Option(1, "--turno", min=1, max=2),
+) -> None:
+    """Agrega auditoria por município (votos presidente + % sem digital do BU)."""
+    uf_list = _parse_ufs(ufs)
+    try:
+        run_by_municipio(uf_list, turno)
+    except FileNotFoundError as exc:
+        console.print(f"[red]Faltam dados:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
 
 
 if __name__ == "__main__":

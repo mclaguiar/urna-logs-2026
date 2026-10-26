@@ -1,4 +1,5 @@
 .venv/
+tmp_tse_docs/
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -20,6 +21,10 @@ reports/*.json
 reports/*_summary_*.csv
 reports/catalog_messages_*.csv
 
-# Manter relatórios markdown de viabilidade versionáveis (opcional)
+# Manter relatórios markdown de viabilidade/auditoria versionáveis (opcional)
 !reports/.gitkeep
 !reports/viability_*.md
+!reports/audit_presidente_*.md
+!reports/by_municipio_*.md
+reports/audit_presidente_*.csv
+reports/by_municipio_*.csv
