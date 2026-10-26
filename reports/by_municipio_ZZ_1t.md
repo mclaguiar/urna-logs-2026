@@ -8,7 +8,7 @@ Municípios: **146** · Comparecimento: **341,766** · sem detalhe biométrico n
 - **biografia**: tinham biometria cadastrada, liberados por ano de nascimento
 - **sem_biometria**: compareceram sem biometria cadastrada
 - **sem digital** = biografia + sem_biometria
-- Exterior (ZZ) e alguns BUs podem omitir o detalhamento → campos `—`
+- Exterior (ZZ) e alguns BUs podem não trazer o detalhamento → campos `—`
 
 ## Ranking por % sem digital
 

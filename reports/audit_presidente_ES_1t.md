@@ -1,0 +1,42 @@
+# Auditoria presidente — ES 1º turno
+
+ZIP: `E:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_1t_ES.zip`
+Urnas auditadas: **9,844** · OK: **9,844** · divergentes/erro: **0**
+
+## Escopo
+
+- Cargo: **presidente** apenas
+- Checagem: recontar cada voto do RDV e comparar com totais do BU (por candidato / branco / nulo)
+
+## Totais agregados (BU das urnas OK)
+
+Votos contabilizados: **2,352,282**
+
+| Tipo:número | Votos |
+|---|---:|
+| `nominal:22` | 1,233,194 |
+| `nominal:13` | 850,028 |
+| `nominal:70` | 65,121 |
+| `nulo:-` | 57,872 |
+| `nominal:14` | 53,236 |
+| `branco:-` | 43,211 |
+| `nominal:55` | 39,097 |
+| `nominal:30` | 5,873 |
+| `nominal:80` | 1,973 |
+| `nominal:27` | 974 |
+| `nominal:16` | 638 |
+| `nominal:21` | 388 |
+| `nominal:35` | 311 |
+| `nominal:29` | 245 |
+| `nominal:28` | 121 |
+
+## Divergências / erros
+
+Nenhuma divergência encontrada.
+
+## Método
+
+- Schemas ASN.1 oficiais TSE 2026 (`bu.asn1`, `rdv.asn1`)
+- RDV: cada `Voto` do cargo presidente é contado
+- Tipos especiais RDV (nulo/branco após suspensão etc.) normalizados para o enum do BU
+- Legenda (se houver): digitação do RDV reduzida aos 2 dígitos do partido

@@ -1,0 +1,20 @@
+# Cruzamento oficial — presidente — RJ 1º turno
+
+Camada: **BU (audit)** × **CSV oficial** (`votacao_secao_*_BR`, cargo presidente).
+
+## Resumo
+
+- Seções: **37,675** · OK: **37,675** · divergentes: **0**
+- Linhas (seção × votável): **301,535** · OK: **301,535** · divergentes: **0**
+- Votos BU: **9,859,802** · oficial: **9,859,802**
+- Só na audit: **0** · só no oficial: **0**
+
+## Divergências
+
+Nenhuma divergência encontrada.
+
+## Método
+
+- Chave: `join_key` = UF:municipio:zona:secao
+- Votável: número do candidato; branco=`95`; nulo=`96` (padrão TSE)
+- Fonte oficial: [Resultados 2026 — presidente por seção](https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_secao/votacao_secao_2026_BR.zip)

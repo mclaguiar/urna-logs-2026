@@ -8,7 +8,7 @@ Municípios: **16** · Comparecimento: **476,562** · % sem digital (UF): **8.12
 - **biografia**: tinham biometria cadastrada, liberados por ano de nascimento
 - **sem_biometria**: compareceram sem biometria cadastrada
 - **sem digital** = biografia + sem_biometria
-- Exterior (ZZ) e alguns BUs podem omitir o detalhamento → campos `—`
+- Exterior (ZZ) e alguns BUs podem não trazer o detalhamento → campos `—`
 
 ## Ranking por % sem digital
 

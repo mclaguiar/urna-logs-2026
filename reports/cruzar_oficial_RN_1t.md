@@ -1,0 +1,20 @@
+# Cruzamento oficial — presidente — RN 1º turno
+
+Camada: **BU (audit)** × **CSV oficial** (`votacao_secao_*_BR`, cargo presidente).
+
+## Resumo
+
+- Seções: **8,115** · OK: **8,115** · divergentes: **0**
+- Linhas (seção × votável): **58,164** · OK: **58,164** · divergentes: **0**
+- Votos BU: **2,171,013** · oficial: **2,171,013**
+- Só na audit: **0** · só no oficial: **0**
+
+## Divergências
+
+Nenhuma divergência encontrada.
+
+## Método
+
+- Chave: `join_key` = UF:municipio:zona:secao
+- Votável: número do candidato; branco=`95`; nulo=`96` (padrão TSE)
+- Fonte oficial: [Resultados 2026 — presidente por seção](https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_secao/votacao_secao_2026_BR.zip)
