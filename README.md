@@ -15,8 +15,8 @@ Foco atual: **cargo presidente** (recontar RDV e comparar com o BU) e **habilita
 | `by-municipio` (votos + % sem digital) | OK — nomes pelo perfil do eleitorado TSE |
 | Métricas do log (biometria / após 17h) | OK no AC (fase de viabilidade) |
 | Consolidado nacional / anomalias | Em andamento (audit nacional) |
-| Cruzar totais × resultado oficial divulgado | Planejado (`audit` + CSV Resultados 2026) |
-| Distribuição horária / impacto pós-17h | Planejado (log → Parquet hora × UF) |
+| Cruzar totais × resultado oficial divulgado | OK — `cruzar-oficial` (BU × `votacao_secao_*_BR`) |
+| Distribuição horária / impacto pós-17h | OK no piloto (`horario`); curva por hora + esqueleto 1º×2º |
 
 ## O que conseguimos auditar (e o que não)
 
@@ -48,6 +48,37 @@ Urna (RDV)  →  BU da urna  →  totalização divulgada (CSV aberto)
 | Detectar fraude só pelo fato de RDV ≡ BU ≡ CSV oficial | Se as três camadas forem alteradas de forma coerente, o cruzamento **bate** e não acusa divergência |
 
 Em resumo: auditar aqui = **consistência da cadeia pública** (RDV ↔ BU ↔ divulgação). Divergência é achado forte; concordância total **não** prova ausência de problema antes da publicação.
+
+## Glossário
+
+| Termo | Significado |
+|---|---|
+| **TSE** | Tribunal Superior Eleitoral — publica os arquivos abertos que auditamos |
+| **UF** | Unidade da Federação (`AC`…`TO`); `ZZ` = zonas no exterior |
+| **Seção** | Unidade de votação (urna/local) identificada por município + zona + seção |
+| **Zona** | Circunscrição eleitoral dentro do município (ou agrupamento no exterior) |
+| **BU** | Boletim de Urna — totais oficiais daquela urna (aptos, comparecimento, votos por candidato/branco/nulo, detalhe biométrico quando houver) |
+| **RDV** | Registro Digital do Voto — sequência dos votos da urna **sem** identificar o eleitor; usamos para **recontar** e comparar com o BU |
+| **Log / logjez** | Registro de eventos da urna (abertura, habilitação, etc.); fonte do horário e do tipo de habilitação |
+| **Habilitação** | Momento em que o eleitor é liberado para votar na urna (`Eleitor foi habilitado` no log) |
+| **Biometria / bio** | Habilitação com reconhecimento da digital do eleitor |
+| **Biografia** | Habilitação por ano de nascimento (sem digital), quando o cadastro permite |
+| **Sem biometria** | Eleitor sem biometria cadastrada |
+| **Sem digital** | Neste projeto: **biografia + sem biometria** (habilitação sem reconhecimento biométrico na urna) |
+| **Pós-17h** | Habilitações com horário ≥ 17:00 no relógio da urna (fila / eventual ampliação) |
+| **Comparecimento** | Quantidade de eleitores que votaram na seção (no BU) |
+| **Aptos** | Eleitores aptos a votar na seção |
+| **Abstenção** | Aptos − comparecimento |
+| **Votável** | Código do candidato no CSV oficial; branco=`95`, nulo=`96` (padrão TSE) |
+| **CSV oficial** | Resultado divulgado nos [dados abertos](https://dadosabertos.tse.jus.br/dataset/resultados-2026) (ex.: `votacao_secao_*_BR` para presidente) |
+| **`join_key`** | Chave estável `UF:municipio:zona:secao` para cruzar 1º×2º turno e BU×oficial (sem o “local”, que pode mudar em contingência) |
+| **Stem** | Prefixo do arquivo da urna no ZIP (ex.: `o03220ac0100700090001`) — de onde extraímos município/zona/seção |
+| **ASN.1** | Formato binário dos arquivos `.bu` / `.rdv`; schemas oficiais em `src/urna_logs/spec/` |
+| **Parquet** | Formato colunar dos nossos detalhes (seções, votos, horário) — base para análise |
+| **`.vsc`** | Assinatura/integridade do pacote da urna (validação planejada) |
+| **1º / 2º turno** | Arquivos `…_1t_{UF}.zip` e `…_2t_{UF}.zip` no CDN; o 2º só entra quando publicado |
+
+Glossário completo também em [site/metodo.qmd](site/metodo.qmd) (painel Quarto).
 
 ## Formato dos dados (para montar vários recortes depois)
 
@@ -123,9 +154,20 @@ urna-logs audit --ufs AC --turno 1 -v
 
 # Por município (usa o CSV da audit + nomes do TSE)
 urna-logs by-municipio --ufs "AC RR AP ZZ" --turno 1
+
+# Cruzar BU × resultado oficial (CSV TSE presidente por seção)
+urna-logs cruzar-oficial --ufs "AC RR AP ZZ" --turno 1
+urna-logs cruzar-oficial --ufs ALL --turno 1
+
+# Curva horária das habilitações (log) + % pós-17h
+urna-logs horario --ufs "AC RR AP ZZ" --turno 1
+
+# Esqueleto 1º × 2º (preenche quando existir audit do 2º)
+urna-logs comparar-turnos --ufs "AC RR AP ZZ"
 ```
 
 O download e o `audit` mostram progresso por padrão (UF atual, tamanho, barra OK/falha).
+O `cruzar-oficial` baixa uma vez o ZIP nacional (~160 MB) em `data/ref/` e cacheia Parquet por UF.
 
 ## Arquivos gerados
 
@@ -145,31 +187,42 @@ O download e o `audit` mostram progresso por padrão (UF atual, tamanho, barra O
 | `reports/audit_presidente_MULTI_*t.parquet` | Várias UFs juntas (seções + votos) |
 | `reports/by_municipio_*_Nt.md` | Ranking por município (% sem digital, votos) |
 | `reports/by_municipio_*_Nt.csv` | Totais por município |
+| `data/ref/votacao_secao_*_BR.zip` | CSV oficial presidente × seção (cache) |
+| `data/ref/oficial_presidente_votos_*_Nt.parquet` | Oficial filtrado por UF |
+| `reports/cruzar_oficial_*_Nt.md` | BU × oficial (seções / votáveis) |
+| `reports/cruzar_oficial_*_Nt.parquet` | Detalhe do cruzamento |
 | `src/urna_logs/spec/*.asn1` | Schemas oficiais BU/RDV 2026 |
 
-## Ordem sugerida
+## Passo a passo
 
-1. `download` de UFs pequenas (AC → RR AP ZZ)
-2. `audit` nessas UFs (conferir se RDV ≡ BU)
-3. `by-municipio` (totais e % sem digital por cidade)
-4. Ampliar para outras UFs / `ALL` no 1º turno
-5. Quando o CDN publicar o 2º turno: `audit --turno 2` nas mesmas UFs
-6. Comparar **seção a seção** 1º × 2º (abstenção, mudança de votos, etc.)
-7. Unificar Parquets e caçar anomalias
+Cadeia auditada: **RDV → BU → CSV oficial** (`join_key` = `UF:municipio:zona:secao`).
+
+| # | Comando | O que faz |
+|---|---|---|
+| 1 | `urna-logs download --ufs AC --turno 1` | Baixa o ZIP da UF (retomável). País: `--ufs ALL` (~95 GB). |
+| 2 | `urna-logs audit --ufs AC --turno 1` | Por urna: lê BU + RDV, reconta presidente, compara RDV ≡ BU. `-v` lista divergências. |
+| 3 | `urna-logs by-municipio --ufs AC --turno 1` | Agrega a audit por município (% sem digital, votos). |
+| 4 | `urna-logs cruzar-oficial --ufs AC --turno 1` | Cruza BU × CSV oficial (`votacao_secao_*_BR`). Baixa o ZIP oficial uma vez em `data/ref/`. |
+| 5 | `urna-logs horario --ufs AC --turno 1` | (Opcional) Curva hora a hora das habilitações + % pós-17h (log). |
+| 6 | `urna-logs viability --ufs AC --turno 1` | (Opcional) Catálogo do log + métricas de biometria / pós-17h. |
+| 7 | Quando o CDN publicar o 2º: `download` + `audit --turno 2`, depois `urna-logs comparar-turnos --ufs AC` | Seção a seção 1º × 2º (abstenção, totais). |
+
+Sugestão de escala: comece com UFs pequenas (`AC` → `RR AP ZZ`), confira se RDV ≡ BU, depois amplie para outras UFs / `ALL`.
 
 ## Plano
 
 ### Curto prazo
 - [x] Gravar `audit` em **Parquet** (seções + votos + várias UFs juntas)
-- [ ] Fechar `audit` nacional 1º turno (todas as UFs)
-- [ ] Incorporar na auditoria o cruzamento com o **resultado oficial** (votação por seção / mun-zona)
+- [ ] Fechar `audit` nacional 1º turno (todas as UFs; SP em andamento)
+- [x] Incorporar cruzamento com o **resultado oficial** (`cruzar-oficial`, presidente × seção)
 - [ ] Testar 2º turno assim que existir `…_2t_*.zip`
 
 ### Comparativo 1º × 2º turno (seção a seção)
 Chave de junção: `join_key` = `UF:municipio:zona:secao` (sem o local — ele pode mudar em contingência).
 
 **Dá para medir (só no total da seção — não eleitor a eleitor):**
-- [ ] Aptos, comparecimento e **abstenção** 1º vs 2º (diferença e %)
+- [x] Esqueleto `comparar-turnos` (Parquet/MD com status `pendente_2t`)
+- [ ] Aptos, comparecimento e **abstenção** 1º vs 2º (diferença e %) — quando 2º existir
 - [ ] Votos nos finalistas no 2º vs o que a seção tinha no 1º
 - [ ] Mudança da margem na seção entre os dois finalistas
 - [ ] Saldo aparente dos votos de quem ficou de fora no 1º (só como total da seção)
@@ -184,17 +237,19 @@ Fonte: log da urna (horário de cada `Eleitor foi habilitado`). O BU só traz ab
 
 Objetivo: medir **quanto o fluxo depois das 17h** (fila / eventual ampliação do horário) pesou no comparecimento — por UF, município e seção — e se há padrões atípicos.
 
-- [ ] Gerar Parquet de habilitações com `dt` + hora local da UF (respeitar fuso: AC −5, RR/AM −4, etc.)
-- [ ] Comando/relatório: distribuição **hora a hora por UF** (% e contagem)
-- [ ] Indicadores: % habilitações ≥17h; faixas 17–18h, 18h+; seções com encerramento tardio
+- [x] Gerar Parquet de habilitações com `dt` + hora + `join_key` (`urna-logs horario`)
+- [x] Distribuição **hora a hora por UF** + página Quarto
+- [x] Indicadores: % ≥17h; faixas 17–18h, 18–19h, 19h+
 - [ ] Cruzar seções com alto % pós-17h × resultado presidente / abstenção (só agregado)
-- [ ] Comparar 1º × 2º turno no mesmo recorte horário (quando o 2º existir)
+- [x] Esqueleto `comparar-turnos` (preenche Δ horário quando o 2º existir)
+- [ ] Comparar 1º × 2º no mesmo recorte horário (dados do 2º)
 
 **Limite:** horário = momento da **habilitação**, não do voto em cada cargo; não dá para saber em quem votou quem chegou depois das 17h.
 
 ### Médio prazo
-- [x] Site Quarto + GitHub Pages (piloto % sem digital por UF)
-- [ ] Mais páginas: horário / pós-17h, municípios, cruzamento com oficial
+- [x] Site Quarto consolidado (Painel 1º×2º + Método)
+- [ ] Preencher Δ migração/abstenção no painel quando o 2º turno existir
+- [ ] Scatter seção a seção (% sem digital × Δ) com dados do 2º
 - [ ] Alertas de anomalia: seções fora do padrão (% sem digital, pós-17h, comparecimento, mudança extrema 1º→2º)
 - [ ] Cruzar log × BU (habilitações do log vs comparecimento)
 - [ ] Validar assinaturas / hashes (`.vsc`) — integridade do pacote
@@ -207,19 +262,17 @@ Objetivo: medir **quanto o fluxo depois das 17h** (fila / eventual ampliação d
 
 ## Site (Quarto → GitHub Pages)
 
-Gráficos públicos a partir de agregados leves (sem subir os ZIPs).
+**Duas páginas:** Painel (1º×2º + sem digital + horário) e Método/glossário. Sem despejo de análises soltas.
 
 ```bash
-# Atualiza CSV do site com base nos reports/by_municipio_*.csv
-python scripts/build_site_data.py
-
-# Render local (requer Quarto: https://quarto.org)
-quarto render site
+python scripts/build_site_data.py   # painel_uf.csv, horario_por_hora.csv, outliers_…
+quarto render site                  # requer Quarto: https://quarto.org
+quarto preview site
 ```
 
-- Fonte do site: `site/` (`index.qmd`, análises, `data/resumo_uf_1t.csv`)
+- Fonte: `site/index.qmd` (painel), `site/metodo.qmd`, `site/data/`
 - CI: `.github/workflows/quarto-publish.yml` → branch `gh-pages`
-- URL esperada: `https://mclaguiar.github.io/urna-logs-2026/`
+- URL: `https://mclaguiar.github.io/urna-logs-2026/`
 
 No GitHub: **Settings → Pages** com source = branch `gh-pages` (após o primeiro publish). Em **Settings → Actions → General**, permitir write para o workflow (`GITHUB_TOKEN`).
 
