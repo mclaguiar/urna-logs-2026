@@ -1,7 +1,9 @@
 .venv/
 tmp_tse_docs/
 .quarto/
+site/.quarto/
 site/_site/
+site/site/
 _site/
 **/.jupyter_cache/
 __pycache__/
@@ -13,19 +15,35 @@ build/
 .mypy_cache/
 .ruff_cache/
 .DS_Store
+Thumbs.db
+.env
+.env.*
+
+# IDE / editor (local)
+.vscode/
+.idea/
+*.swp
+*~
 
 # Dados brutos do TSE (ZIPs grandes) e downloads parciais
 data/
 *.part
 *.zip
 
+# Cópia solta de ASN.1 na raiz — canônico é src/urna_logs/spec/
+/spec/
+
 # Artefatos pesados / regeneráveis do processamento
 reports/*.parquet
 reports/*.json
 reports/*_summary_*.csv
 reports/catalog_messages_*.csv
+reports/metrics_*.csv
+reports/metrics_*.parquet
+reports/catalog_*.json
+reports/catalog_*.csv
 
-# Manter relatórios markdown de viabilidade/auditoria versionáveis (opcional)
+# Manter relatórios markdown versionáveis (opcional)
 !reports/.gitkeep
 !reports/viability_*.md
 !reports/audit_presidente_*.md
@@ -39,7 +57,10 @@ reports/cruzar_oficial_*.csv
 reports/cruzar_oficial_*.parquet
 reports/horario_*.csv
 reports/horario_*.parquet
+reports/curva_horaria_*.csv
+reports/curva_horaria_*.parquet
 reports/comparar_turnos_*.csv
 reports/comparar_turnos_*.parquet
-# mas o site/data/*.csv leve fica versionável
+
+# site/data/*.csv leve fica versionável
 !site/data/
