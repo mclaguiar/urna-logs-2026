@@ -2,7 +2,12 @@
 
 Auditoria independente dos arquivos transmitidos para totalização (TSE) — Eleições 2026.
 
-Foco atual: **cargo presidente** (recontar RDV e comparar com o BU) e **habilitação sem digital** (detalhe do BU, por UF e município).
+**Duas análises principais** (cargo presidente):
+
+1. **Seção a seção, 1º × 2º** — o que mudou nos votos/abstenção e **de onde veio a diferença** (saldo agregado da seção; não “quem migrou”).
+2. **Impacto do horário** — curva de habilitações e peso do fluxo **após 17h** (Brasília; ZZ = local), cruzado com resultado e comparecimento.
+
+O resto do pipeline (RDV≡BU, CSV oficial, % sem digital) é **base e cruzamento de risco** para essas duas leituras.
 
 ## Status (piloto)
 
@@ -214,14 +219,12 @@ Sugestão de escala: comece com UFs pequenas (`AC` → `RR AP ZZ`), confira se R
 
 ## Plano
 
-### Curto prazo
-- [x] Gravar `audit` em **Parquet** (seções + votos + várias UFs juntas)
-- [ ] Fechar `audit` nacional 1º turno (todas as UFs; SP em andamento)
-- [x] Incorporar cruzamento com o **resultado oficial** (`cruzar-oficial`, presidente × seção)
-- [ ] Testar 2º turno assim que existir `…_2t_*.zip` — checar publicação em [dados abertos / arquivos transmitidos](https://dadosabertos.tse.jus.br/dataset/resultados-2026-arquivos-transmitidos-para-totalizacao)
+Prioridade: as **duas análises principais** abaixo. Curto prazo / infra só desbloqueiam ou enriquecem essas leituras.
 
-### Comparativo 1º × 2º turno (seção a seção)
+### 1. Comparativo 1º × 2º turno (seção a seção) — análise principal
 Chave de junção: `join_key` = `UF:municipio:zona:secao` (sem o local — ele pode mudar em contingência).
+
+**Objetivo:** analisar **seção a seção** o comportamento dos votos — o que mudou entre turnos, de onde veio a diferença (abstenção, finalistas, eliminados, brancos/nulos, seções novas/sumidas) e cruzar com indicadores de risco (% sem digital, pós-17h). Não é “quem migrou”, e sim **reconstruir o saldo agregado da seção** para explicar o Δ.
 
 **Dá para medir (só no total da seção — não eleitor a eleitor):**
 - [x] Esqueleto `comparar-turnos` (Parquet/MD com status `pendente_2t`)
@@ -230,15 +233,16 @@ Chave de junção: `join_key` = `UF:municipio:zona:secao` (sem o local — ele p
 - [ ] Mudança da margem na seção entre os dois finalistas
 - [ ] Saldo aparente dos votos de quem ficou de fora no 1º (só como total da seção)
 - [ ] Brancos/nulos 1º→2º; seções que aparecem ou somem (contingência, ZZ, etc.)
+- [ ] Relatório/painel por seção: decomposição do Δ (abstenção × transferência aparente × brancos/nulos) + ranking das seções que mais explicam a mudança na UF
 
 **Não dá (sigilo do voto):** saber *quem* mudou de um candidato para outro. O RDV não identifica eleitor entre turnos. Qualquer “migração” é só estimativa pelo total da seção.
 
 Antes disso: Parquet de seção nos dois turnos + 2º turno publicado.
 
-### Horário da votação e ampliação após 17h
-Fonte: log da urna (horário de cada `Eleitor foi habilitado`). O BU só traz abertura/encerramento da seção; o RDV não tem hora por voto.
+### 2. Horário da votação e impacto pós-17h — análise principal
+Fonte: log da urna (horário de cada `Eleitor foi habilitado`). O BU só traz abertura/encerramento da seção; o RDV não tem hora por voto. Critério: ≥17h em **Brasília** (ZZ = horário local do posto).
 
-Objetivo: medir **quanto o fluxo depois das 17h** (fila / eventual ampliação do horário) pesou no comparecimento — por UF, município e seção — e se há padrões atípicos.
+**Objetivo:** medir **quanto o fluxo depois das 17h** (fila / eventual ampliação) pesou no comparecimento — por UF, município e seção — se há padrões atípicos, e como isso se relaciona com o Δ 1º×2º na mesma seção.
 
 - [x] Gerar Parquet de habilitações com `dt` + hora + `join_key` (`urna-logs horario`)
 - [x] Distribuição **hora a hora por UF** + página Quarto
@@ -249,10 +253,17 @@ Objetivo: medir **quanto o fluxo depois das 17h** (fila / eventual ampliação d
 
 **Limite:** horário = momento da **habilitação**, não do voto em cada cargo; não dá para saber em quem votou quem chegou depois das 17h.
 
-### Médio prazo
+### Infra / curto prazo (desbloqueio)
+- [x] Gravar `audit` em **Parquet** (seções + votos + várias UFs juntas)
+- [ ] Fechar `audit` nacional 1º turno (todas as UFs)
+- [x] Cruzamento com o **resultado oficial** (`cruzar-oficial`, presidente × seção)
+- [x] Curva horária nacional 1º turno (`horario`, BRT)
+- [ ] Testar 2º turno assim que existir `…_2t_*.zip` — [monitorar dados abertos](https://dadosabertos.tse.jus.br/dataset/resultados-2026-arquivos-transmitidos-para-totalizacao)
+
+### Médio prazo (painel e cruzamentos)
 - [x] Site Quarto consolidado (Painel 1º×2º + Método)
-- [ ] Preencher Δ migração/abstenção no painel quando o 2º turno existir
-- [ ] Scatter seção a seção (% sem digital × Δ) com dados do 2º
+- [ ] Preencher no painel as duas análises principais quando o 2º existir (Δ seção + horário)
+- [ ] Scatter seção a seção (% sem digital × Δ; pós-17h × Δ)
 - [ ] Alertas de anomalia: seções fora do padrão (% sem digital, pós-17h, comparecimento, mudança extrema 1º→2º)
 - [ ] Cruzar log × BU (habilitações do log vs comparecimento)
 - [ ] Validar assinaturas / hashes (`.vsc`) — integridade do pacote
@@ -265,7 +276,7 @@ Objetivo: medir **quanto o fluxo depois das 17h** (fila / eventual ampliação d
 
 ## Site (Quarto → GitHub Pages)
 
-**Duas páginas:** Painel (1º×2º + sem digital + horário) e Método/glossário. Sem despejo de análises soltas.
+**Duas páginas:** Painel (foco nas duas análises principais + sem digital como risco) e Método/glossário.
 
 ```bash
 python scripts/build_site_data.py   # painel_uf.csv, curva_horaria.csv, outliers_…
