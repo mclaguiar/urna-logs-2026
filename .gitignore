@@ -1,5 +1,9 @@
 .venv/
 tmp_tse_docs/
+.quarto/
+site/_site/
+_site/
+**/.jupyter_cache/
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -26,5 +30,16 @@ reports/catalog_messages_*.csv
 !reports/viability_*.md
 !reports/audit_presidente_*.md
 !reports/by_municipio_*.md
+!reports/cruzar_oficial_*.md
+!reports/horario_*.md
+!reports/comparar_turnos_*.md
 reports/audit_presidente_*.csv
 reports/by_municipio_*.csv
+reports/cruzar_oficial_*.csv
+reports/cruzar_oficial_*.parquet
+reports/horario_*.csv
+reports/horario_*.parquet
+reports/comparar_turnos_*.csv
+reports/comparar_turnos_*.parquet
+# mas o site/data/*.csv leve fica versionável
+!site/data/

@@ -81,22 +81,24 @@ def compare_presidente(
         audit.ok = False
         audit.error = "BU ausente ou sem presidente"
         audit.rdv_total = rdv.total if rdv else None
-        return audit
-    if rdv is None:
-        audit.ok = False
-        audit.error = "RDV ausente ou sem presidente"
-        audit.bu_total = bu.total
-        audit.bu_comparecimento = bu.comparecimento
+        if rdv is not None:
+            audit.rdv_votos = _flat_votos(rdv)
         return audit
 
     audit.bu_total = bu.total
-    audit.rdv_total = rdv.total
     audit.bu_comparecimento = bu.comparecimento
     audit.aptos = bu.aptos
     audit.sem_biometria = bu.sem_biometria
     audit.bio = bu.bio
     audit.biografia = bu.biografia
     audit.bu_votos = _flat_votos(bu)
+
+    if rdv is None:
+        audit.ok = False
+        audit.error = "RDV ausente ou sem presidente"
+        return audit
+
+    audit.rdv_total = rdv.total
     audit.rdv_votos = _flat_votos(rdv)
 
     mismatches: list[str] = []
@@ -257,7 +259,8 @@ def results_to_votos_frame(results: list[UrnaAudit], uf: str, turno: int) -> pd.
     uf = uf.upper()
     rows: list[dict] = []
     for r in results:
-        if not r.ok:
+        # Inclui BU mesmo se RDV faltou — necessário para cruzar com o CSV oficial
+        if not r.bu_votos and not r.rdv_votos:
             continue
         jk = join_key(uf, r.municipio, r.zona, r.secao)
         keys = set(r.bu_votos) | set(r.rdv_votos)

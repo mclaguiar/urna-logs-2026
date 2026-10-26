@@ -1,0 +1,56 @@
+---
+title: "Método e glossário"
+---
+
+## Cadeia auditada
+
+```text
+RDV (recontar votos)  →  BU da urna  →  CSV oficial divulgado
+```
+
+Trabalhamos só com **arquivos públicos** do TSE. Divergência entre camadas é achado forte; concordância total **não** prova ausência de problema antes da publicação nem integridade do hardware.
+
+## O que o painel responde
+
+1. **O que mudou 1º→2º** — Δ abstenção / comparecimento e (quando houver) votos dos finalistas, por UF e depois por seção (`join_key`).
+2. **Onde olhar** — `% sem digital` (BU) como indicador de risco, cruzado com Δ atípicos no 2º; até lá, ranking de seções com maior % sem digital no 1º.
+3. **Fluxo do dia** — curva de habilitações no log (pós-17h); overlay do 2º quando existir.
+
+**Não dá:** saber *quem* migrou de candidato entre turnos (sigilo do voto).
+
+## Dados deste site
+
+| Arquivo | Conteúdo |
+|---|---|
+| `site/data/painel_uf.csv` | KPIs por UF (1º + colunas 2º/Δ) |
+| `site/data/horario_por_hora.csv` | Habilitações por hora × UF × turno |
+| `site/data/outliers_sem_digital.csv` | Top seções % sem digital (1º; Δ 2º quando houver) |
+
+```bash
+python scripts/build_site_data.py
+quarto render site
+```
+
+## Glossário
+
+| Termo | Significado |
+|---|---|
+| **TSE** | Tribunal Superior Eleitoral — publica os arquivos abertos |
+| **UF** | Unidade da Federação; **ZZ** = exterior |
+| **Seção** | Unidade de votação (município + zona + seção) |
+| **BU** | Boletim de Urna — totais da urna (aptos, comparecimento, votos, detalhe biométrico) |
+| **RDV** | Registro Digital do Voto — sequência de votos **sem** identificar eleitor; base da recontagem |
+| **Log / logjez** | Eventos da urna; fonte do horário e do tipo de habilitação |
+| **Habilitação** | Liberação do eleitor para votar (`Eleitor foi habilitado`) |
+| **Sem digital** | Biografia + sem biometria no BU (não é voto em candidato) |
+| **Pós-17h** | Habilitações ≥ 17:00 no relógio da urna |
+| **Abstenção** | Aptos − comparecimento |
+| **Votável** | Código no CSV oficial; branco=`95`, nulo=`96` |
+| **`join_key`** | `UF:municipio:zona:secao` — chave 1º×2º e BU×oficial |
+| **CSV oficial** | [Resultados 2026](https://dadosabertos.tse.jus.br/dataset/resultados-2026) (ex.: presidente por seção) |
+| **Parquet** | Detalhe local da auditoria (não sobe ao GitHub Pages) |
+
+## Publicação
+
+GitHub Actions (`.github/workflows/quarto-publish.yml`) → branch `gh-pages`.  
+README do repositório: [github.com/mclaguiar/urna-logs-2026](https://github.com/mclaguiar/urna-logs-2026).

@@ -1,0 +1,30 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "urna-logs-2026"
+  description: "Auditoria 1º×2º turno — migração agregada, abstenção e sem digital"
+  site-url: https://mclaguiar.github.io/urna-logs-2026/
+  navbar:
+    left:
+      - href: index.qmd
+        text: Painel
+      - href: metodo.qmd
+        text: Método
+    right:
+      - icon: github
+        href: https://github.com/mclaguiar/urna-logs-2026
+        aria-label: GitHub
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    lang: pt-BR
+    link-external-newwindow: true
+    # plain evita MathJax ($) engolir expressões OJS
+    html-math-method: plain
+
+execute:
+  echo: false

@@ -1,0 +1,187 @@
+---
+title: "Painel 1º × 2º turno"
+subtitle: "Migração agregada, abstenção e indicador sem digital — Eleições 2026"
+---
+
+Auditoria da **cadeia pública** (RDV ↔ BU ↔ CSV oficial), com foco em entender o **2º turno seção a seção**: mudança de totais e abstenção, cruzada com **% sem digital** como indicador de risco.
+
+**Limite:** não dá para saber *quem* mudou de candidato. “Migração” = mudança dos totais da seção (`join_key`).
+
+```{ojs}
+//| echo: false
+painel = FileAttachment("data/painel_uf.csv").csv({typed: true})
+horas = FileAttachment("data/horario_por_hora.csv").csv({typed: true})
+outliers = FileAttachment("data/outliers_sem_digital.csv").csv({typed: true})
+```
+
+```{ojs}
+//| echo: false
+rows = painel.map(d => ({
+  uf: d.uf,
+  secoes_1t: d.secoes_1t == null || d.secoes_1t === "" ? null : +d.secoes_1t,
+  secoes_2t: d.secoes_2t == null || d.secoes_2t === "" ? 0 : +d.secoes_2t,
+  pronto_2t: d.pronto_2t === true || d.pronto_2t === "True",
+  status_2t: d.status_2t || "pendente",
+  pct_sem_digital_1t: d.pct_sem_digital_1t == null || d.pct_sem_digital_1t === "" ? null : +d.pct_sem_digital_1t,
+  pct_sem_digital_2t: d.pct_sem_digital_2t == null || d.pct_sem_digital_2t === "" ? null : +d.pct_sem_digital_2t,
+  delta_abstencao_pp: d.delta_abstencao_pp == null || d.delta_abstencao_pp === "" ? null : +d.delta_abstencao_pp,
+  delta_comparecimento: d.delta_comparecimento == null || d.delta_comparecimento === "" ? null : +d.delta_comparecimento,
+  pct_apos_17h_1t: d.pct_apos_17h_1t == null || d.pct_apos_17h_1t === "" ? null : +d.pct_apos_17h_1t,
+  pct_apos_17h_2t: d.pct_apos_17h_2t == null || d.pct_apos_17h_2t === "" ? null : +d.pct_apos_17h_2t,
+  hora_pico_1t: d.hora_pico_1t == null || d.hora_pico_1t === "" ? null : +d.hora_pico_1t,
+  pct_secoes_ok_oficial_1t: d.pct_secoes_ok_oficial_1t == null || d.pct_secoes_ok_oficial_1t === "" ? null : +d.pct_secoes_ok_oficial_1t,
+  secoes_divergentes_1t: d.secoes_divergentes_1t == null || d.secoes_divergentes_1t === "" ? 0 : +d.secoes_divergentes_1t,
+  comparecimento_1t: d.comparecimento_1t == null || d.comparecimento_1t === "" ? null : +d.comparecimento_1t
+}))
+```
+
+```{ojs}
+//| echo: false
+nUfs = rows.length
+nPronto = rows.filter(d => d.pronto_2t).length
+divOfficial = rows.reduce((s, d) => s + (d.secoes_divergentes_1t || 0), 0)
+okOfficial = rows.filter(d => d.pct_secoes_ok_oficial_1t != null)
+meanOk = okOfficial.length
+  ? +(okOfficial.reduce((s, d) => s + d.pct_secoes_ok_oficial_1t, 0) / okOfficial.length).toFixed(2)
+  : null
+statusGeral2t = nPronto ? "comparativo ativo" : "pendente (esqueleto)"
+```
+
+```{ojs}
+//| echo: false
+Inputs.table(
+  [{
+    UFs: nUfs,
+    "2o turno ativo": nPronto,
+    "Status 2o": statusGeral2t,
+    "BU=oficial % medio": meanOk,
+    "Secoes divergentes": divOfficial
+  }]
+)
+```
+
+## 1. O que mudou (1º → 2º)
+
+Colunas de Δ ficam vazias até existir audit/horario do 2º turno.
+
+```{ojs}
+//| echo: false
+Inputs.table(
+  rows.map(d => ({
+    UF: d.uf,
+    "Secoes 1o": d.secoes_1t,
+    "Secoes 2o": d.secoes_2t,
+    "Status 2o": d.status_2t,
+    "% sem dig 1o": d.pct_sem_digital_1t,
+    "% sem dig 2o": d.pct_sem_digital_2t,
+    "Delta abst pp": d.delta_abstencao_pp,
+    "Delta comp": d.delta_comparecimento,
+    "% apos 17h 1o": d.pct_apos_17h_1t,
+    "% apos 17h 2o": d.pct_apos_17h_2t,
+    "BU=oficial %": d.pct_secoes_ok_oficial_1t
+  })),
+  {sort: "UF"}
+)
+```
+
+```{ojs}
+//| echo: false
+Plot.plot({
+  marginLeft: 40,
+  width: 720,
+  height: 280,
+  x: {label: "UF", domain: rows.map(d => d.uf)},
+  y: {label: "% sem digital (1o turno)", grid: true},
+  marks: [
+    Plot.barY(
+      rows.filter(d => d.pct_sem_digital_1t != null),
+      {x: "uf", y: "pct_sem_digital_1t", fill: "#1f4e79"}
+    )
+  ]
+})
+```
+
+## 2. Onde olhar (risco: sem digital × mudança)
+
+**Sem digital** = biografia + sem biometria no BU — indicador operacional; ganha força se coincidir com Δ atípico no 2º.
+
+Com 2º pendente: lista das seções do 1º com maior % sem digital (fila de auditoria). O scatter 1º×2º entra quando houver audit do 2º.
+
+```{ojs}
+//| echo: false
+Inputs.table(
+  outliers.map(d => ({
+    UF: d.uf,
+    Municipio: d.nome,
+    join_key: d.join_key,
+    Comparecimento: +d.bu_comparecimento,
+    "% abst 1o": d.pct_abstencao == null || d.pct_abstencao === "" ? null : +d.pct_abstencao,
+    "% sem digital": +d.pct_sem_digital,
+    "Delta abst": d.delta_abstencao == null || d.delta_abstencao === "" ? null : +d.delta_abstencao,
+    "Delta margem": d.delta_margem == null || d.delta_margem === "" ? null : +d.delta_margem
+  })),
+  {sort: "% sem digital", reverse: true}
+)
+```
+
+## 3. Fluxo do dia (habilitações)
+
+Horário = momento da **habilitação** no log (não voto em candidato). Série do 2º aparece no mesmo gráfico quando existir.
+
+```{ojs}
+//| echo: false
+ufsComHora = [...new Set(horas.map(d => d.uf))].sort()
+viewof ufHora = Inputs.select(ufsComHora, {
+  label: "UF (curva horaria)",
+  value: ufsComHora.includes("AC") ? "AC" : ufsComHora[0]
+})
+```
+
+```{ojs}
+//| echo: false
+metaUf = rows.find(d => d.uf === ufHora) || {}
+Inputs.table([{
+  UF: ufHora,
+  "% apos 17h 1o": metaUf.pct_apos_17h_1t,
+  "Pico (h)": metaUf.hora_pico_1t,
+  "Status 2o": metaUf.status_2t
+}])
+```
+
+```{ojs}
+//| echo: false
+serie = horas
+  .filter(d => d.uf === ufHora)
+  .map(d => ({
+    hora: +d.hora,
+    n: +d.habilitacoes,
+    turno: +d.turno,
+    after: d.after_17h === true || d.after_17h === "True"
+  }))
+serie1 = serie.filter(d => d.turno === 1).sort((a, b) => a.hora - b.hora)
+serie2 = serie.filter(d => d.turno === 2).sort((a, b) => a.hora - b.hora)
+```
+
+```{ojs}
+//| echo: false
+Plot.plot({
+  marginLeft: 50,
+  width: 720,
+  height: 320,
+  x: {label: "Hora local (relogio da urna)", domain: d3.range(24), ticks: 24},
+  y: {label: "Habilitacoes", grid: true},
+  marks: [
+    Plot.ruleY([0]),
+    Plot.lineY(serie1, {x: "hora", y: "n", stroke: "#1f4e79", strokeWidth: 2, curve: "step"}),
+    Plot.dot(serie1.filter(d => d.after), {x: "hora", y: "n", fill: "#a51c1c", r: 4}),
+    Plot.lineY(serie2, {x: "hora", y: "n", stroke: "#c47d1a", strokeWidth: 2, curve: "step", strokeDasharray: "6,3"}),
+    Plot.dot(serie2.filter(d => d.after), {x: "hora", y: "n", fill: "#a51c1c", r: 4, symbol: "square"})
+  ]
+})
+```
+
+Azul = 1º turno · pontilhado âmbar = 2º (quando houver) · vermelho = horas ≥17h.
+
+## Cadeia pública (rodapé)
+
+Concordância **não** prova integridade do hardware. Termos: [Método e glossário](metodo.qmd). Código: [github.com/mclaguiar/urna-logs-2026](https://github.com/mclaguiar/urna-logs-2026).
