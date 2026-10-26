@@ -14,13 +14,37 @@ Foco atual: **cargo presidente** (recontar RDV e comparar com o BU) e **habilita
 | `audit` presidente urna a urna | OK — AC, RR, AP, ZZ: **7.013/7.013** RDV ≡ BU |
 | `by-municipio` (votos + % sem digital) | OK — nomes pelo perfil do eleitorado TSE |
 | Métricas do log (biometria / após 17h) | OK no AC (fase de viabilidade) |
-| Consolidado nacional / anomalias | Planejado |
+| Consolidado nacional / anomalias | Em andamento (audit nacional) |
+| Cruzar totais × resultado oficial divulgado | Planejado (`audit` + CSV Resultados 2026) |
 
-## O que entra na auditoria (e o que não)
+## O que conseguimos auditar (e o que não)
 
-**Entra:** o que está nos pacotes abertos do TSE depois da urna — recontar os votos do RDV, confrontar com o BU, cruzar habilitação biométrica e local (UF, município, zona, seção).
+Trabalhamos só com **arquivos públicos** do TSE. A ideia é encadear três camadas e ver se batem.
 
-**Não entra:** o que aconteceu dentro do hardware antes de gravar o RDV (isso pediria checagem de assinatura de hardware / certificação).
+```text
+Urna (RDV)  →  BU da urna  →  totalização divulgada (CSV aberto)
+     ↑ recontar              ↑ cruzar seção a seção / UF
+```
+
+| Conseguimos | Como |
+|---|---|
+| Recontar votos de **presidente** urna a urna | Somar o RDV e comparar com o BU |
+| Conferir aptos, comparecimento, abstenção, brancos/nulos da urna | Campos do BU |
+| % habilitação **sem digital** (bio / biografia / sem biometria) | Detalhe do BU (faltando no exterior ZZ) |
+| Totais por município / UF | Agregar os Parquets da `audit` |
+| Cruzar com o **resultado oficial divulgado** | CSV “votação por seção” / mun-zona dos [Resultados 2026](https://dadosabertos.tse.jus.br/dataset/resultados-2026) × nosso Parquet (`join_key`) |
+| Comparar 1º × 2º turno **por seção** (abstenção, mudança de totais) | Quando o 2º turno estiver publicado |
+| Ver se o pacote da urna foi adulterado depois (hashes/assinatura `.vsc`) | Planejado |
+
+| Não conseguimos | Por quê |
+|---|---|
+| Saber *quem* votou em quem / migrou entre turnos | Sigilo do voto; RDV sem identificação do eleitor |
+| Provar que o **hardware** da urna não foi comprometido antes de gravar o RDV | Exigiria cadeia de certificação / inspeção além dos arquivos abertos |
+| Garantir que a mídia de resultado é a única cópia “verdadeira” do que saiu da urna | Só vemos o que foi **transmitido e publicado** |
+| Auditar outros cargos neste pipeline (ainda) | Foco deliberado em presidente; o schema ASN.1 já permitiria expandir |
+| Detectar fraude só pelo fato de RDV ≡ BU ≡ CSV oficial | Se as três camadas forem alteradas de forma coerente, o cruzamento **bate** e não acusa divergência |
+
+Em resumo: auditar aqui = **consistência da cadeia pública** (RDV ↔ BU ↔ divulgação). Divergência é achado forte; concordância total **não** prova ausência de problema antes da publicação.
 
 ## Formato dos dados (para montar vários recortes depois)
 
@@ -119,9 +143,9 @@ O download e o `audit` mostram progresso por padrão (UF atual, tamanho, barra O
 
 ### Curto prazo
 - [x] Gravar `audit` em **Parquet** (seções + votos + várias UFs juntas)
-- [ ] Ampliar 1º turno (ondas: pequenas → médias → SP/MG/…)
+- [ ] Fechar `audit` nacional 1º turno (todas as UFs)
+- [ ] Incorporar na auditoria o cruzamento com o **resultado oficial** (votação por seção / mun-zona)
 - [ ] Testar 2º turno assim que existir `…_2t_*.zip`
-- [ ] Conferir totais de presidente com o resultado oficial divulgado
 
 ### Comparativo 1º × 2º turno (seção a seção)
 Chave de junção: `join_key` = `UF:municipio:zona:secao` (sem o local — ele pode mudar em contingência).
@@ -147,8 +171,10 @@ Antes disso: Parquet de seção nos dois turnos + 2º turno publicado.
 - Recontagem de outros cargos (deputado, governador, …) — o schema já permite; o foco agora é presidente
 - Seguir eleitor individual entre turnos (impossível com os arquivos públicos)
 - Provar que o hardware da urna está correto
+- Afirmar “eleição íntegra” só porque RDV, BU e CSV oficial coincidem
 
-## Fonte
+## Fontes
 
-- [Arquivos transmitidos para totalização 2026](https://dadosabertos.tse.jus.br/dataset/resultados-2026-arquivos-transmitidos-para-totalizacao)
+- [Arquivos transmitidos para totalização 2026](https://dadosabertos.tse.jus.br/dataset/resultados-2026-arquivos-transmitidos-para-totalizacao) — BU, RDV, log, assinatura (por UF)
+- [Resultados 2026](https://dadosabertos.tse.jus.br/dataset/resultados-2026) — votação oficial por seção / município-zona (para cruzar com a `audit`)
 - Schemas ASN.1 BU/RDV 2026 (em `src/urna_logs/spec/`)
