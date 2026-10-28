@@ -16,7 +16,7 @@ Divergência entre camadas = achado documental. Concordância = os arquivos publ
 | **B** | Anomalia **operacional** (confluência de flags na mesma seção) | Priorizar revisão |
 | **C** | Padrão ecológico / flag isolada / taxas médias da UF | Contexto de saldos (anexo) |
 
-Caminho principal (**auditoria séria**): A → B, no nível da **seção** (`join_key` = `UF:municipio:zona:secao`).  
+Caminho principal: A → B, no nível da **seção** (`join_key` = `UF:municipio:zona:secao`).  
 Nível C (`fluxo-ecologico`) é opcional — médias de UF, não o saldo individual da urna.
 
 Limiares: `urna_logs.thresholds` (versão no relatório de `achados`). Método: [site/metodo.qmd](site/metodo.qmd).
@@ -73,7 +73,7 @@ py -3.15 -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-## Uso (auditoria séria)
+## Uso
 
 ```bash
 # 1º turno (base documental)
@@ -93,7 +93,7 @@ urna-logs horario --ufs "AC RR AP ZZ" --turno 2 --por-secao
 urna-logs comparar-turnos --ufs "AC RR AP ZZ"
 urna-logs achados --ufs "AC RR AP ZZ"
 
-# Anexo C (opcional — não é o caminho sério)
+# Anexo C (opcional)
 # urna-logs fluxo-ecologico --ufs "AC RR AP ZZ"
 # urna-logs validar-fluxo --ufs "AC RR AP ZZ"
 ```
