@@ -39,6 +39,7 @@ CONFLUENCIA_MIN = 2  # mínimo de flags distintas para Nível B por confluência
 # Versão do protocolo (subir quando limiares ou regras A/B/C mudarem)
 PROTOCOLO_VERSAO = "2026.10.28-a"
 PROTOCOLO_NOTA = (
-    "A=inconsistência documental; B=anomalia operacional (confluência); "
-    "C=padrão ecológico/contexto. C não sustenta indício de fraude sozinho."
+    "A=inconsistência entre arquivos públicos; "
+    "B=dois ou mais sinais no extremo da UF; "
+    "C=sinal isolado ou saldo agregado da seção."
 )

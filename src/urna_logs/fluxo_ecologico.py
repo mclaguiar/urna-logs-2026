@@ -568,7 +568,7 @@ def write_fluxo_reports(
         "- Duncan–Davis: o que é **matematicamente possível** dados só os totais da seção.",
         "- Taxa média + IC: estimativa sob a hipótese de que o ponto médio do intervalo "
         "é um resumo útil e que as seções são trocáveis no bootstrap (troca ecológica).",
-        "- Correlação ≠ fraude; RDV≡BU≡CSV só validam integridade entre arquivos públicos.",
+        "- RDV≡BU≡CSV comparam a integridade entre os arquivos públicos.",
         "",
         "## Arquivos",
         "",

@@ -31,7 +31,7 @@ Cada comando lê o que o anterior gravou em `data/` / `reports/` e escreve Parqu
 | 2 | `audit` | Por urna: reconta presidente no RDV e compara com o BU. |
 | 3 | `by-municipio` | Agrega a audit por município (mapa / % sem digital). |
 | 4 | `cruzar-oficial` | BU × CSV oficial por seção (baixa o ZIP nacional uma vez em `data/ref/`). |
-| 5 | `horario` | Curva de habilitações no log + % ≥17h (BRT; ZZ = local). `--por-secao` grava pós-17h por `join_key`. |
+| 5 | `horario` | Só o **dia oficial** do turno (1º=04/10, 2º=25/10): oficial 8h–17h · pós ≥17h · fora &lt;8h. Outras datas no `.jez` = histórico (diagnóstico; fora dos totais e do comparativo). `--por-secao` + `curva_horaria_dia_*`. |
 | 6 | `comparar-turnos` | Junta 1º×2º na mesma seção: Δ votos/abstenção/margem + flags. |
 | 7 | `achados` | Empacota A/B/C em fichas reproduzíveis. |
 

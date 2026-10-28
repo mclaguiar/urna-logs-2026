@@ -753,8 +753,8 @@ def write_compare_report(
         "- Comparação é **agregada por seção** (`join_key`).",
         "- Não dá para saber *quem* mudou de candidato entre turnos (sigilo do voto).",
         "- “Migração” = mudança dos totais da seção (finalistas, eliminados, abstenção).",
-        "- Correlação ≠ fraude. RDV≡BU e BU≡CSV oficial só validam **integridade "
-        "entre arquivos públicos** disponibilizados.",
+        "- RDV≡BU e BU≡CSV oficial comparam a **integridade entre arquivos públicos** "
+        "disponibilizados.",
         "",
     ]
     md.write_text("\n".join(lines), encoding="utf-8")

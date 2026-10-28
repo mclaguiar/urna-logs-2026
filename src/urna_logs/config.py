@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -9,6 +10,47 @@ EXTRACT_DIR = DATA_DIR / "extract"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 
 ANO = 2026
+
+# Dia oficial da votação (relógio do log = data local da urna).
+# Pacotes do 2º frequentemente trazem histórico do 1º no mesmo .jez —
+# datas fora da tolerância do dia oficial são "historico_outro_dia" (desprezadas
+# nas métricas do turno; ex.: 04/10 dentro do ZIP …_2t_*).
+DATA_TURNO: dict[int, date] = {
+    1: date(2026, 10, 4),
+    2: date(2026, 10, 25),
+}
+# ±N dias em torno de DATA_TURNO ainda contam como “deste turno”
+# (folga de relógio / virada de dia / desencargo). 04/10 vs 25/10 fica bem fora.
+DATA_TURNO_TOLERANCIA_DIAS = 3
+
+# Janela oficial de votação (horário de Brasília; ZZ = local do posto).
+# ≥17h no dia do turno = pós-encerramento (fila). No dia: <8h = fora do previsto.
+HORA_ABERTURA_REF = 8
+HORA_ENCERRAMENTO_REF = 17
+
+
+def data_turno(turno: int) -> date | None:
+    return DATA_TURNO.get(int(turno))
+
+
+def data_pertence_ao_turno(
+    data_evento: date | None,
+    turno: int,
+    *,
+    tolerancia_dias: int | None = None,
+) -> bool:
+    """True se a data do log está na janela do dia oficial deste turno."""
+    if data_evento is None:
+        return False
+    d_of = data_turno(turno)
+    if d_of is None:
+        return False
+    tol = (
+        DATA_TURNO_TOLERANCIA_DIAS
+        if tolerancia_dias is None
+        else int(tolerancia_dias)
+    )
+    return abs((data_evento - d_of).days) <= tol
 
 UFS = [
     "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA",

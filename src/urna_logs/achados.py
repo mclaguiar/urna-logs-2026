@@ -3,7 +3,7 @@ Achados de auditoria — hierarquia de evidência A / B / C.
 
 Nível A — inconsistência documental (cadeia pública).
 Nível B — anomalia operacional (confluência de sinais).
-Nível C — padrão ecológico / contexto (não sustenta fraude sozinho).
+Nível C — padrão ecológico / contexto (saldo agregado da seção).
 
 Gera fichas reproduzíveis por seção (`join_key`) + resumo UF.
 """
@@ -35,7 +35,7 @@ NIVEL_C = "C"
 NIVEL_DESC = {
     NIVEL_A: "Inconsistência documental (cadeia pública)",
     NIVEL_B: "Anomalia operacional (confluência de sinais)",
-    NIVEL_C: "Padrão ecológico / contexto (não é indício de fraude sozinho)",
+    NIVEL_C: "Padrão ecológico / contexto (saldo agregado da seção)",
 }
 
 
@@ -105,9 +105,8 @@ def classify_row(
         return (
             NIVEL_A,
             codes,
-            "Indício documental de inconsistência entre arquivos públicos "
-            "ou cobertura incompleta da seção entre turnos. "
-            "Não prova fraude no hardware; justifica checagem da cadeia.",
+            "Os arquivos públicos desta seção não fecham entre si, "
+            "ou a seção não aparece nos dois turnos.",
         )
 
     # --- Nível B: confluência ou regra composta pré-registrada ---
@@ -125,8 +124,7 @@ def classify_row(
         return (
             NIVEL_B,
             codes,
-            "Anomalia operacional agregada (confluência de sinais). "
-            "Priorizar para revisão; não equivale a fraude comprovada.",
+            "Dois ou mais sinais desta seção estão no extremo da distribuição da própria UF.",
         )
 
     # --- Nível C: flags isoladas / ecológico ---
@@ -145,8 +143,8 @@ def classify_row(
         return (
             NIVEL_C,
             codes,
-            "Padrão agregado / contexto ecológico. "
-            "Útil para narrativa de saldos; não sustenta indício de fraude sozinho.",
+            "Há um sinal isolado, ou um saldo agregado da seção. "
+            "O número é o total da seção.",
         )
 
     return "", [], ""
@@ -287,9 +285,9 @@ def write_fichas(
         "| **A** | Inconsistência entre arquivos públicos / cobertura | "
         "Indício documental — listar e checar cadeia |",
         "| **B** | Confluência de sinais operacionais | "
-        "Priorizar revisão; não = fraude comprovada |",
+        "Dois ou mais sinais no extremo da UF |",
         "| **C** | Flag isolada ou padrão ecológico | "
-        "Contexto / saldos; **não** sustenta fraude sozinho |",
+        "Saldo agregado da seção |",
         "",
         "## Fichas (até {} por UF, A→B→C)".format(max_fichas),
         "",
@@ -309,9 +307,9 @@ def write_fichas(
                 f"- % sem digital 1º: **{row.pct_sem_digital_1t}** · "
                 f"% ≥17h 2º: **{row.pct_apos_17h_2t}**",
                 f"- Flags comparar: `{row.flags_comparar or '—'}`",
-                f"- **Conclusão permitida:** {row.conclusao_permitida}",
-                f"- **Não concluir:** fraude de hardware; migração eleitor a eleitor; "
-                f"intenção a partir só de Nível C.",
+                f"- **Fato:** {row.conclusao_permitida}",
+                "- **Limite:** o número é o total da seção. "
+                "Não identifica o voto de cada eleitor.",
                 "",
             ]
         if len(df) > max_fichas:
