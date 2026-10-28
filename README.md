@@ -1,27 +1,25 @@
 # urna-logs-2026
 
-Auditoria independente dos **arquivos públicos** do TSE (Eleições 2026, cargo **presidente**).
-
-Trabalhamos só com o que foi **transmitido e publicado**. Objetivo: achar inconsistências e anomalias **justificáveis** seção a seção — não “provar fraude” a partir de padrão eleitoral agregado, nem afirmar que a eleição é íntegra só porque os arquivos batem.
+Auditoria independente dos **arquivos públicos** do TSE (Eleições 2026, cargo **presidente**): inconsistências e anomalias **justificáveis** seção a seção.
 
 ```text
 RDV (recontar)  →  BU da urna  →  CSV oficial divulgado
 ```
 
-Divergência entre camadas é achado forte. Concordância total = os arquivos públicos são **consistentes entre si**; não prova hardware intacto nem ausência de problema antes da publicação.
+Divergência entre camadas = achado documental. Concordância = os arquivos publicados são **consistentes entre si**.
 
-## Postura: hierarquia A / B / C
+## Hierarquia A / B / C
 
-| Nível | O quê | O que se pode dizer |
+| Nível | O quê | Uso |
 |---|---|---|
-| **A** | Inconsistência **documental** (RDV≠BU, BU≠oficial, seção só num turno) | Indício documental — checar a cadeia |
-| **B** | Anomalia **operacional** (confluência de flags na mesma seção) | Priorizar revisão; **≠** fraude comprovada |
-| **C** | Padrão ecológico / flag isolada / taxas médias da UF | Contexto de saldos; **não** sustenta fraude sozinho |
+| **A** | Inconsistência **documental** (RDV≠BU, BU≠oficial, seção só num turno) | Abrir a cadeia da seção |
+| **B** | Anomalia **operacional** (confluência de flags na mesma seção) | Priorizar revisão |
+| **C** | Padrão ecológico / flag isolada / taxas médias da UF | Contexto de saldos (anexo) |
 
-Caminho principal (**auditoria séria**): A → B, sempre no nível da **seção** (`join_key` = `UF:municipio:zona:secao`).  
-Nível C (`fluxo-ecologico`) é anexo opcional — médias de UF, não “o que aconteceu nesta urna”.
+Caminho principal (**auditoria séria**): A → B, no nível da **seção** (`join_key` = `UF:municipio:zona:secao`).  
+Nível C (`fluxo-ecologico`) é opcional — médias de UF, não o saldo individual da urna.
 
-Limiares pré-registrados: `urna_logs.thresholds` (versão no relatório de `achados`). Detalhe do método: [site/metodo.qmd](site/metodo.qmd).
+Limiares: `urna_logs.thresholds` (versão no relatório de `achados`). Método: [site/metodo.qmd](site/metodo.qmd).
 
 ## Como o programa funciona
 
@@ -41,16 +39,16 @@ Cada comando lê o que o anterior gravou em `data/` / `reports/` e escreve Parqu
 
 Repita `download` → `audit` → `cruzar` → `horario` para o **2º turno** (`--turno 2`) antes de `comparar-turnos` / `achados`.
 
-### O que medimos (e o que não)
+### Escopo
 
-| Conseguimos | Não conseguimos |
+| No pipeline | Fora (por enquanto / por desenho) |
 |---|---|
-| RDV ≡ BU e BU ≡ oficial por seção | Saber *quem* votou em quem / migrou entre turnos |
-| Δ 1º×2º (abstenção, finalistas, margem, seções só num turno) | Provar integridade do **hardware** da urna |
-| % sem digital no BU; % habilitações ≥17h no log | Afirmar “eleição limpa” só porque as três camadas batem |
-| Ranking de seções com confluência operacional (B) | Auditar outros cargos neste pipeline (ainda) |
+| RDV ≡ BU e BU ≡ oficial por seção | Identificar eleitor ou migração pessoa a pessoa |
+| Δ 1º×2º (abstenção, finalistas, margem, cobertura) | Outros cargos (schema ASN.1 já permitiria) |
+| % sem digital (BU); % habilitações ≥17h (log) | Validação de assinatura `.vsc` do pacote |
+| Ranking de seções com confluência operacional (B) | |
 
-“Nenhuma divergência” em `audit` / `cruzar-oficial` = só **integridade entre os arquivos públicos comparados**.
+“Nenhuma divergência” em `audit` / `cruzar-oficial` = os arquivos públicos comparados batem.
 
 ## Setup
 
