@@ -345,7 +345,12 @@ def write_audit_report(
     fails = [r for r in results if not r.ok]
     lines += ["", "## Divergências / erros", ""]
     if not fails:
-        lines.append("Nenhuma divergência encontrada.")
+        lines.append(
+            "Nenhuma divergência entre **RDV** e **BU** nas urnas processadas. "
+            "Isso indica apenas que os **arquivos públicos da urna estão íntegros "
+            "entre si** (o recontar do RDV bate com os totais do BU) — "
+            "não avalia origem do voto nem inconsistência com o mundo físico."
+        )
     else:
         lines.append(f"{len(fails)} urna(s):")
         lines.append("")
@@ -363,6 +368,8 @@ def write_audit_report(
         "- RDV: cada `Voto` do cargo presidente é contado",
         "- Tipos especiais RDV (nulo/branco após suspensão etc.) normalizados para o enum do BU",
         "- Legenda (se houver): digitação do RDV reduzida aos 2 dígitos do partido",
+        "- Sem divergência = **integridade entre arquivos públicos** (RDV ≡ BU), "
+        "não auditoria do hardware nem da origem do voto",
         "",
     ]
     path.write_text("\n".join(lines), encoding="utf-8")

@@ -14,10 +14,13 @@ from urna_logs.catalog import build_catalog, print_catalog_summary, save_catalog
 from urna_logs.config import UFS, ensure_dirs
 from urna_logs.download import download_many, extract_logjez, list_zip_members
 from urna_logs.metrics import compute_metrics, print_summary, save_metrics, summarize
+from urna_logs.achados import run_achados
 from urna_logs.comparar_turnos import run_comparar_turnos
+from urna_logs.fluxo_ecologico import run_fluxo_ecologico
 from urna_logs.horario import run_horario
 from urna_logs.oficial import run_cruzar_oficial
 from urna_logs.report_geo import run_by_municipio
+from urna_logs.validar_fluxo import run_validar_fluxo
 from urna_logs.viability import run_viability
 
 app = typer.Typer(help="Validação de logs das urnas — Eleições 2026", no_args_is_help=True)
@@ -212,6 +215,11 @@ def horario_cmd(
         "--detalhe",
         help="Parquet 1 linha/habilitação (lento). Padrão: só curva agregada.",
     ),
+    por_secao: bool = typer.Option(
+        False,
+        "--por-secao",
+        help="Também gera horario_secao_{UF}_{turno}t.parquet (pós-17h por join_key).",
+    ),
     force: bool = typer.Option(
         False, "--force", help="Refaz mesmo se já existir summary/CSV da UF"
     ),
@@ -223,7 +231,8 @@ def horario_cmd(
     uf_list = _parse_ufs(ufs)
     console.print(
         f"[bold]Horário[/bold] — {turno}º turno · "
-        f"{'detalhe' if detalhe else 'curva'} · "
+        f"{'detalhe' if detalhe else 'curva'}"
+        f"{' + seção' if por_secao else ''} · "
         f"{len(uf_list)} UF(s): {', '.join(uf_list)}"
     )
     run_horario(
@@ -232,6 +241,7 @@ def horario_cmd(
         detalhe=detalhe,
         force=force,
         workers=workers or None,
+        por_secao=por_secao,
     )
 
 
@@ -248,6 +258,51 @@ def comparar_turnos_cmd(
         f"{len(uf_list)} UF(s): {', '.join(uf_list)}"
     )
     run_comparar_turnos(uf_list, turno_a, turno_b)
+
+
+@app.command("fluxo-ecologico")
+def fluxo_ecologico_cmd(
+    ufs: Optional[str] = typer.Option("AC", "--ufs"),
+    turno_a: int = typer.Option(1, "--turno-a", min=1, max=2),
+    turno_b: int = typer.Option(2, "--turno-b", min=1, max=2),
+) -> None:
+    """Inferência ecológica de fluxo 1º→2º (Duncan–Davis + taxas com IC)."""
+    uf_list = _parse_ufs(ufs)
+    console.print(
+        f"[bold]Fluxo ecológico[/bold] — {turno_a}º → {turno_b}º · "
+        f"{len(uf_list)} UF(s): {', '.join(uf_list)}"
+    )
+    run_fluxo_ecologico(uf_list, turno_a, turno_b)
+
+
+@app.command("validar-fluxo")
+def validar_fluxo_cmd(
+    ufs: Optional[str] = typer.Option("AC RR AP ZZ", "--ufs"),
+    turno_a: int = typer.Option(1, "--turno-a", min=1, max=2),
+    turno_b: int = typer.Option(2, "--turno-b", min=1, max=2),
+) -> None:
+    """Go/no-go do algoritmo de fluxo (piloto) antes de escalar ao país."""
+    uf_list = _parse_ufs(ufs)
+    console.print(
+        f"[bold]Validar fluxo[/bold] — {turno_a}º → {turno_b}º · "
+        f"{len(uf_list)} UF(s): {', '.join(uf_list)}"
+    )
+    _paths, all_go = run_validar_fluxo(uf_list, turno_a, turno_b)
+    if not all_go:
+        raise typer.Exit(code=1)
+
+
+@app.command("achados")
+def achados_cmd(
+    ufs: Optional[str] = typer.Option("AC RR AP ZZ", "--ufs"),
+) -> None:
+    """Fichas de auditoria por seção — níveis A (documental), B (operacional), C (contexto)."""
+    uf_list = _parse_ufs(ufs)
+    console.print(
+        f"[bold]Achados[/bold] — hierarquia A/B/C · "
+        f"{len(uf_list)} UF(s): {', '.join(uf_list)}"
+    )
+    run_achados(uf_list)
 
 
 if __name__ == "__main__":

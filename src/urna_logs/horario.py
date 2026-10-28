@@ -33,6 +33,7 @@ __all__ = [
     "faixa_hora",
     "run_horario",
     "compute_horario_curva",
+    "compute_horario_secao",
     "refresh_horario_brt",
 ]
 from urna_logs.parse_log import (
@@ -178,6 +179,30 @@ def _count_chunk(payload: tuple[str, list[str]]) -> dict:
     }
 
 
+def _count_chunk_secao(payload: tuple[str, list[str]]) -> dict:
+    """Processo filho: stem → contagem[24] (hora local)."""
+    zpath_s, members = payload
+    by_stem: dict[str, list[int]] = {}
+    with zipfile.ZipFile(zpath_s) as zf:
+        for member in members:
+            raw = read_member_from_open_zip(zf, member)
+            part, _ids = count_habilitado_hours_from_jez_bytes(raw)
+            st = stem_from_source(member)
+            if not st:
+                continue
+            bucket = by_stem.get(st)
+            if bucket is None:
+                bucket = [0] * 24
+                by_stem[st] = bucket
+            for h, c in enumerate(part):
+                bucket[h] += c
+    return {
+        "by_stem": by_stem,
+        "n_logs": len(members),
+        "total": sum(sum(v) for v in by_stem.values()),
+    }
+
+
 def _chunked_by_size(items: list[str], size: int) -> list[list[str]]:
     size = max(1, size)
     return [items[i : i + size] for i in range(0, len(items), size)]
@@ -276,6 +301,112 @@ def compute_horario_curva(
         counts, uf, urnas=len(urnas), secoes=len(stems), modo="curva"
     )
     return por_hora, summary
+
+
+def compute_horario_secao(
+    uf: str,
+    turno: int,
+    *,
+    workers: int | None = None,
+    on_progress: Callable[[int, int, int, int, int], None] | None = None,
+) -> pd.DataFrame:
+    """
+    Agrega habilitações pós-17h por seção (`join_key`), sem Parquet 1-linha/hab.
+    Mesmo scan em lotes do modo curva.
+    """
+    ensure_dirs()
+    uf = uf.upper()
+    zpath = zip_path(uf, turno)
+    if not zpath.exists():
+        raise FileNotFoundError(f"ZIP não encontrado: {zpath}")
+
+    members = list_log_members(zpath)
+    by_stem: dict[str, list[int]] = {}
+    logs_done = 0
+    hab_so_far = 0
+
+    n_workers = workers or min(8, max(1, (os.cpu_count() or 4)))
+    lote_size = 500 if len(members) >= 64 else max(len(members), 1)
+    chunks = _chunked_by_size(members, lote_size)
+    n_lotes = len(chunks)
+    use_pool = len(members) >= 64 and n_workers > 1 and n_lotes > 1
+
+    console.print(
+        f"[dim]  {uf} secao: {len(members):,} logs · {n_lotes} lote(s) · "
+        f"{'pool '+str(n_workers) if use_pool else 'série'}[/dim]"
+    )
+
+    def _absorb(part: dict, lote_i: int) -> None:
+        nonlocal logs_done, hab_so_far
+        for st, counts in part["by_stem"].items():
+            bucket = by_stem.get(st)
+            if bucket is None:
+                bucket = [0] * 24
+                by_stem[st] = bucket
+            for h, c in enumerate(counts):
+                bucket[h] += c
+        logs_done += int(part["n_logs"])
+        hab_so_far += int(part["total"])
+        if on_progress:
+            on_progress(logs_done, len(members), hab_so_far, lote_i, n_lotes)
+        else:
+            console.print(
+                f"[dim]  {uf} secao: lote {lote_i}/{n_lotes} · "
+                f"{logs_done:,}/{len(members):,} logs · {hab_so_far:,} hab[/dim]"
+            )
+
+    if use_pool:
+        with ProcessPoolExecutor(max_workers=n_workers) as pool:
+            futures = {
+                pool.submit(_count_chunk_secao, (str(zpath), chunk)): i
+                for i, chunk in enumerate(chunks, start=1)
+            }
+            finished = 0
+            for fut in as_completed(futures):
+                finished += 1
+                _absorb(fut.result(), finished)
+    else:
+        for i, chunk in enumerate(chunks, start=1):
+            _absorb(_count_chunk_secao((str(zpath), chunk)), i)
+
+    rows: list[dict] = []
+    for stem, counts in by_stem.items():
+        jk = join_key_from_stem(stem)
+        if not jk:
+            continue
+        total = sum(counts)
+        apos = sum(
+            c for h, c in enumerate(counts) if apos_encerramento_oficial(h, uf)
+        )
+        rows.append(
+            {
+                "uf": uf,
+                "turno": turno,
+                "stem": stem,
+                "join_key": jk,
+                "hab_total": total,
+                "hab_apos_17h": apos,
+                "pct_apos_17h": round(100 * apos / total, 4) if total else None,
+            }
+        )
+    return pd.DataFrame(rows) if rows else pd.DataFrame(
+        columns=[
+            "uf",
+            "turno",
+            "stem",
+            "join_key",
+            "hab_total",
+            "hab_apos_17h",
+            "pct_apos_17h",
+        ]
+    )
+
+
+def write_horario_secao(df: pd.DataFrame, uf: str, turno: int) -> Path:
+    ensure_dirs()
+    path = REPORTS_DIR / f"horario_secao_{uf.upper()}_{turno}t.parquet"
+    df.to_parquet(path, index=False)
+    return path
 
 
 def compute_horario(uf: str, turno: int) -> pd.DataFrame:
@@ -598,6 +729,38 @@ def consolidate_horario(ufs: list[str], turno: int) -> tuple[Path, Path] | None:
     return h_out, s_out
 
 
+def run_horario_secao(
+    ufs: list[str],
+    turno: int,
+    *,
+    force: bool = False,
+    workers: int | None = None,
+) -> list[Path]:
+    """Gera `horario_secao_{UF}_{turno}t.parquet` (pós-17h por join_key)."""
+    outputs: list[Path] = []
+    for i, uf in enumerate(ufs, start=1):
+        uf = uf.upper()
+        out = REPORTS_DIR / f"horario_secao_{uf}_{turno}t.parquet"
+        if out.exists() and not force:
+            console.print(f"[dim]Já existe horário seção {uf} (use --force)[/dim]")
+            outputs.append(out)
+            continue
+        console.print(
+            f"\n[bold][{i}/{len(ufs)}] Horário por seção {uf} {turno}º[/bold]"
+        )
+        try:
+            df = compute_horario_secao(uf, turno, workers=workers)
+        except FileNotFoundError as exc:
+            console.print(f"[red]Pulando {uf}:[/red] {exc}")
+            continue
+        path = write_horario_secao(df, uf, turno)
+        console.print(
+            f"[green]Horário seção:[/green] {path} ({len(df):,} seções)"
+        )
+        outputs.append(path)
+    return outputs
+
+
 def run_horario(
     ufs: list[str],
     turno: int,
@@ -605,9 +768,13 @@ def run_horario(
     detalhe: bool = False,
     force: bool = False,
     workers: int | None = None,
+    por_secao: bool = False,
 ) -> list[Path]:
     outputs: list[Path] = []
     done: list[str] = []
+    if por_secao:
+        outputs.extend(run_horario_secao(ufs, turno, force=force, workers=workers))
+        # ainda atualiza curva UF se pedido no mesmo comando
     with Progress(
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),

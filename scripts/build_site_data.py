@@ -28,9 +28,10 @@ def _read_glob(pattern: str, *, multi_name: str | None = None) -> pd.DataFrame |
     return pd.concat(frames, ignore_index=True)
 
 
-def _sem_digital_por_uf() -> pd.DataFrame:
+def _sem_digital_turno(turno: int) -> pd.DataFrame:
+    suffix = f"_{turno}t"
     rows: list[dict] = []
-    for path in sorted(REPORTS.glob("by_municipio_*_1t.csv")):
+    for path in sorted(REPORTS.glob(f"by_municipio_*{suffix}.csv")):
         if "MULTI" in path.name:
             continue
         df = pd.read_csv(path)
@@ -42,11 +43,11 @@ def _sem_digital_por_uf() -> pd.DataFrame:
             rows.append(
                 {
                     "uf": uf,
-                    "municipios_1t": int(df["municipio"].nunique()),
-                    "urnas_1t": int(df["urnas"].sum()),
-                    "comparecimento_1t": int(df["comparecimento"].sum()),
-                    "pct_sem_digital_1t": None,
-                    "com_detalhe_bio_1t": False,
+                    f"municipios{suffix}": int(df["municipio"].nunique()),
+                    f"urnas{suffix}": int(df["urnas"].sum()),
+                    f"comparecimento{suffix}": int(df["comparecimento"].sum()),
+                    f"pct_sem_digital{suffix}": None,
+                    f"com_detalhe_bio{suffix}": False,
                 }
             )
             continue
@@ -55,14 +56,20 @@ def _sem_digital_por_uf() -> pd.DataFrame:
         rows.append(
             {
                 "uf": uf,
-                "municipios_1t": int(com["municipio"].nunique()),
-                "urnas_1t": int(com["urnas"].sum()),
-                "comparecimento_1t": comparecimento,
-                "pct_sem_digital_1t": round(100 * sem_digital / comparecimento, 4),
-                "com_detalhe_bio_1t": True,
+                f"municipios{suffix}": int(com["municipio"].nunique()),
+                f"urnas{suffix}": int(com["urnas"].sum()),
+                f"comparecimento{suffix}": comparecimento,
+                f"pct_sem_digital{suffix}": round(
+                    100 * sem_digital / comparecimento, 4
+                ),
+                f"com_detalhe_bio{suffix}": True,
             }
         )
     return pd.DataFrame(rows) if rows else pd.DataFrame()
+
+
+def _sem_digital_por_uf() -> pd.DataFrame:
+    return _sem_digital_turno(1)
 
 
 def _cruzar_por_uf() -> pd.DataFrame:
@@ -130,6 +137,82 @@ def _horario_summary_por_turno(turno: int) -> pd.DataFrame:
     ]
 
 
+def _achados_por_uf() -> pd.DataFrame:
+    df = _read_glob(
+        "achados_summary_*_1t_2t.csv",
+        multi_name="achados_summary_MULTI_1t_2t.csv",
+    )
+    if df is None or df.empty:
+        return pd.DataFrame()
+    df = df.drop_duplicates(["uf"], keep="last").copy()
+    df["uf"] = df["uf"].astype(str).str.upper()
+    keep = [
+        c
+        for c in (
+            "uf",
+            "n_achados",
+            "n_A",
+            "n_B",
+            "n_C",
+            "protocolo_versao",
+        )
+        if c in df.columns
+    ]
+    return df[keep].rename(
+        columns={
+            "n_achados": "achados_total",
+            "n_A": "achados_A",
+            "n_B": "achados_B",
+            "n_C": "achados_C",
+        }
+    )
+
+
+def _fluxo_por_uf() -> pd.DataFrame:
+    df = _read_glob(
+        "fluxo_ecologico_summary_*_1t_2t.csv",
+        multi_name="fluxo_ecologico_summary_MULTI_1t_2t.csv",
+    )
+    if df is None or df.empty:
+        return pd.DataFrame()
+    df = df.drop_duplicates(["uf"], keep="last").copy()
+    df["uf"] = df["uf"].astype(str).str.upper()
+    keep = [
+        c
+        for c in (
+            "uf",
+            "secoes",
+            "secoes_narrow_majority",
+            "elim_forced_fa",
+            "elim_forced_fb",
+            "p_elim_to_fa",
+            "p_elim_to_fa_p05",
+            "p_elim_to_fa_p95",
+            "p_elim_to_fb",
+            "p_elim_to_fb_p05",
+            "p_elim_to_fb_p95",
+            "p_elim_to_abst",
+            "p_elim_to_abst_p05",
+            "p_elim_to_abst_p95",
+            "p_branco_to_fa",
+            "p_branco_to_fb",
+            "p_nulo_to_fa",
+            "p_nulo_to_fb",
+            "p_abst_to_fa",
+            "p_abst_to_fb",
+            "corr_pct_elim_delta_abst",
+            "corr_margem1_delta_abst",
+        )
+        if c in df.columns
+    ]
+    return df[keep].rename(
+        columns={
+            "secoes": "fluxo_secoes",
+            "secoes_narrow_majority": "fluxo_secoes_narrow",
+        }
+    )
+
+
 def _comparar_por_uf() -> pd.DataFrame:
     df = _read_glob(
         "comparar_turnos_summary_*_1t_2t.csv",
@@ -149,6 +232,14 @@ def _comparar_por_uf() -> pd.DataFrame:
         "horario_1t_pct_apos_17h",
         "horario_2t_pct_apos_17h",
         "delta_pct_apos_17h",
+        "delta_abstencao_pp",
+        "delta_comparecimento",
+        "pct_sem_digital_1t",
+        "pct_sem_digital_2t",
+        "delta_pct_sem_digital",
+        "finalistas",
+        "n_flag_margem",
+        "n_flag_abstencao",
         "mensagem",
     ]
     keep = [c for c in keep if c in df.columns]
@@ -159,10 +250,13 @@ def _comparar_por_uf() -> pd.DataFrame:
 def build_painel_uf() -> pd.DataFrame:
     parts = [
         _sem_digital_por_uf(),
+        _sem_digital_turno(2),
         _cruzar_por_uf(),
         _horario_summary_por_turno(1),
         _horario_summary_por_turno(2),
         _comparar_por_uf(),
+        _fluxo_por_uf(),
+        _achados_por_uf(),
     ]
     parts = [p for p in parts if p is not None and not p.empty]
     if not parts:
@@ -170,7 +264,34 @@ def build_painel_uf() -> pd.DataFrame:
 
     painel = parts[0]
     for p in parts[1:]:
+        # comparar pode trazer pct_sem_digital_* — suffixes
+        overlap = [c for c in p.columns if c != "uf" and c in painel.columns]
+        if overlap:
+            p = p.rename(columns={c: f"{c}_cmp" for c in overlap})
         painel = painel.merge(p, on="uf", how="outer")
+
+    # Preferir by-municipio; fallback do summary do comparar
+    for col in ("pct_sem_digital_1t", "pct_sem_digital_2t", "delta_pct_sem_digital"):
+        cmp_col = f"{col}_cmp"
+        if cmp_col in painel.columns:
+            if col not in painel.columns:
+                painel[col] = painel[cmp_col]
+            else:
+                painel[col] = painel[col].fillna(painel[cmp_col])
+            painel = painel.drop(columns=[cmp_col])
+
+    for col in (
+        "delta_abstencao_pp",
+        "delta_comparecimento",
+        "delta_pct_sem_digital",
+    ):
+        cmp_col = f"{col}_cmp"
+        if cmp_col in painel.columns:
+            if col not in painel.columns:
+                painel[col] = painel[cmp_col]
+            else:
+                painel[col] = painel[col].fillna(painel[cmp_col])
+            painel = painel.drop(columns=[cmp_col])
 
     # Colunas 2º / Δ já no schema (vazias até existir dado)
     for col in (
@@ -184,6 +305,18 @@ def build_painel_uf() -> pd.DataFrame:
     ):
         if col not in painel.columns:
             painel[col] = pd.NA
+
+    if (
+        "pct_sem_digital_1t" in painel.columns
+        and "pct_sem_digital_2t" in painel.columns
+    ):
+        both_sd = painel["pct_sem_digital_1t"].notna() & painel["pct_sem_digital_2t"].notna()
+        if both_sd.any():
+            need = painel["delta_pct_sem_digital"].isna() if "delta_pct_sem_digital" in painel.columns else both_sd
+            painel.loc[both_sd & need, "delta_pct_sem_digital"] = (
+                painel.loc[both_sd & need, "pct_sem_digital_2t"].astype(float)
+                - painel.loc[both_sd & need, "pct_sem_digital_1t"].astype(float)
+            ).round(4)
 
     if "delta_pct_apos_17h" not in painel.columns:
         painel["delta_pct_apos_17h"] = pd.NA
@@ -246,7 +379,7 @@ def build_curva_horaria() -> pd.DataFrame:
 
 
 def build_outliers_sem_digital() -> pd.DataFrame:
-    """Top seções por % sem digital (1º turno) — indicador de risco até existir Δ 2º."""
+    """Top seções por % sem digital (1º) + Δ do comparar quando existir."""
     rows: list[pd.DataFrame] = []
     for path in sorted(REPORTS.glob("audit_presidente_*_1t.parquet")):
         if "MULTI" in path.name or "votos" in path.name:
@@ -267,28 +400,67 @@ def build_outliers_sem_digital() -> pd.DataFrame:
         ).round(4)
         ok["delta_abstencao"] = pd.NA
         ok["delta_margem"] = pd.NA
-        top = ok.nlargest(OUTLIERS_PER_UF, "pct_sem_digital")
-        rows.append(
-            top[
-                [
-                    "uf",
+        ok["flags"] = ""
+        uf = str(ok["uf"].iloc[0]).upper()
+        cmp_path = REPORTS / f"comparar_turnos_{uf}_1t_2t.parquet"
+        if cmp_path.exists():
+            cmp = pd.read_parquet(cmp_path)
+            cols = [
+                c
+                for c in (
                     "join_key",
-                    "municipio",
-                    "zona",
-                    "secao",
-                    "bu_comparecimento",
-                    "pct_abstencao",
-                    "pct_sem_digital",
                     "delta_abstencao",
                     "delta_margem",
-                ]
+                    "flags",
+                    "pct_sem_digital_1t",
+                )
+                if c in cmp.columns
             ]
-        )
+            if "join_key" in cols:
+                ok = ok.drop(columns=["delta_abstencao", "delta_margem", "flags"], errors="ignore")
+                ok = ok.merge(cmp[cols], on="join_key", how="left")
+                if "pct_sem_digital_1t" in ok.columns:
+                    ok["pct_sem_digital"] = ok["pct_sem_digital"].fillna(
+                        ok["pct_sem_digital_1t"]
+                    )
+        # Preferir seções com flag; senão top % sem digital
+        if "flags" not in ok.columns:
+            ok["flags"] = ""
+        flag_mask = ok["flags"].fillna("").astype(str).str.len() > 0
+        flagged = ok[flag_mask]
+        if not flagged.empty:
+            top = flagged.nlargest(OUTLIERS_PER_UF, "pct_sem_digital")
+        else:
+            top = ok.nlargest(OUTLIERS_PER_UF, "pct_sem_digital")
+        keep_cols = [
+            c
+            for c in (
+                "uf",
+                "join_key",
+                "municipio",
+                "zona",
+                "secao",
+                "bu_comparecimento",
+                "pct_abstencao",
+                "pct_sem_digital",
+                "delta_abstencao",
+                "delta_margem",
+                "flags",
+            )
+            if c in top.columns
+        ]
+        rows.append(top[keep_cols])
     if not rows:
         return pd.DataFrame()
     all_top = pd.concat(rows, ignore_index=True)
-    all_top = all_top.sort_values("pct_sem_digital", ascending=False).head(OUTLIERS_MAX)
-    # nomes de município, se houver cache
+    if "flags" not in all_top.columns:
+        all_top["flags"] = ""
+    # Prioriza quem tem Δ/flag; depois % sem digital
+    all_top["_has_delta"] = all_top["delta_margem"].notna() | all_top["flags"].fillna("").astype(str).str.len().gt(0)
+    all_top = all_top.sort_values(
+        ["_has_delta", "pct_sem_digital"], ascending=[False, False]
+    ).head(OUTLIERS_MAX)
+    all_top = all_top.drop(columns=["_has_delta"])
     mun_path = ROOT / "data" / "ref" / "municipios_tse.csv"
     if mun_path.exists():
         mun = pd.read_csv(mun_path)
@@ -299,6 +471,41 @@ def build_outliers_sem_digital() -> pd.DataFrame:
         all_top["nome"] = "(desconhecido)"
     all_top["turno"] = 1
     return all_top.reset_index(drop=True)
+
+
+def build_anomalias_secao() -> pd.DataFrame:
+    """Seções do piloto com flags no comparativo (para scatter do painel)."""
+    frames: list[pd.DataFrame] = []
+    for path in sorted(REPORTS.glob("comparar_turnos_*_1t_2t.parquet")):
+        if "MULTI" in path.name:
+            continue
+        df = pd.read_parquet(path)
+        if df.empty or "status" not in df.columns:
+            continue
+        both = df[df["status"] == "ambos"].copy()
+        if both.empty:
+            continue
+        keep = [
+            c
+            for c in (
+                "uf",
+                "join_key",
+                "municipio",
+                "zona",
+                "secao",
+                "pct_sem_digital_1t",
+                "delta_margem",
+                "delta_abstencao",
+                "pct_apos_17h_2t",
+                "flags",
+            )
+            if c in both.columns
+        ]
+        frames.append(both[keep])
+    if not frames:
+        return pd.DataFrame()
+    out = pd.concat(frames, ignore_index=True)
+    return out.reset_index(drop=True)
 
 
 def main() -> None:
@@ -317,8 +524,35 @@ def main() -> None:
 
     outliers = build_outliers_sem_digital()
     out_o = OUT / "outliers_sem_digital.csv"
-    outliers.to_csv(out_o, index=False)
-    print(f"escrito {out_o} ({len(outliers)} seções)")
+    try:
+        outliers.to_csv(out_o, index=False)
+        print(f"escrito {out_o} ({len(outliers)} seções)")
+    except PermissionError:
+        alt = OUT / "outliers_sem_digital.new.csv"
+        outliers.to_csv(alt, index=False)
+        print(f"aviso: {out_o.name} bloqueado — escrito {alt.name} ({len(outliers)} seções)")
+
+    anom = build_anomalias_secao()
+    out_a = OUT / "anomalias_secao.csv"
+    anom.to_csv(out_a, index=False)
+    print(f"escrito {out_a} ({len(anom)} seções)")
+
+    # achados A/B (documental/operacional) — C fica no Parquet completo
+    ach_path = REPORTS / "achados_MULTI_1t_2t.parquet"
+    if not ach_path.exists():
+        parts = [
+            pd.read_parquet(p)
+            for p in sorted(REPORTS.glob("achados_*_1t_2t.parquet"))
+            if "MULTI" not in p.name
+        ]
+        ach = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
+    else:
+        ach = pd.read_parquet(ach_path)
+    if not ach.empty and "nivel" in ach.columns:
+        ab = ach[ach["nivel"].isin(["A", "B"])].copy()
+        out_ach = OUT / "achados_ab.csv"
+        ab.to_csv(out_ach, index=False)
+        print(f"escrito {out_ach} ({len(ab)} fichas A/B)")
 
     # limpa CSVs antigos do site que o painel não usa mais
     for legacy in (
