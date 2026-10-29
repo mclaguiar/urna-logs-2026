@@ -81,7 +81,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-12a87ce4a3db8ae78ad34dc8821cdee3.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-166690b9c768161ed89deb9505a7d440.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -162,7 +162,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
    
   <ul>
   <li><a href="#cadeia-auditada" id="toc-cadeia-auditada" class="nav-link active" data-scroll-target="#cadeia-auditada">Cadeia auditada</a></li>
+  <li><a href="#hierarquia-de-evidência-a-b-c" id="toc-hierarquia-de-evidência-a-b-c" class="nav-link" data-scroll-target="#hierarquia-de-evidência-a-b-c">Hierarquia de evidência (A / B / C)</a></li>
   <li><a href="#o-que-o-painel-responde" id="toc-o-que-o-painel-responde" class="nav-link" data-scroll-target="#o-que-o-painel-responde">O que o painel responde</a></li>
+  <li><a href="#inferência-ecológica-de-fluxo-1º2º" id="toc-inferência-ecológica-de-fluxo-1º2º" class="nav-link" data-scroll-target="#inferência-ecológica-de-fluxo-1º2º">Inferência ecológica de fluxo (1º→2º)</a></li>
+  <li><a href="#hipóteses-observáveis-agregado-não-conclusões" id="toc-hipóteses-observáveis-agregado-não-conclusões" class="nav-link" data-scroll-target="#hipóteses-observáveis-agregado-não-conclusões">Hipóteses → observáveis (agregado; não conclusões)</a></li>
   <li><a href="#dados-deste-site" id="toc-dados-deste-site" class="nav-link" data-scroll-target="#dados-deste-site">Dados deste site</a></li>
   <li><a href="#glossário" id="toc-glossário" class="nav-link" data-scroll-target="#glossário">Glossário</a></li>
   <li><a href="#publicação" id="toc-publicação" class="nav-link" data-scroll-target="#publicação">Publicação</a></li>
@@ -194,16 +197,117 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="cadeia-auditada" class="level2">
 <h2 class="anchored" data-anchor-id="cadeia-auditada">Cadeia auditada</h2>
 <pre class="text"><code>RDV (recontar votos)  →  BU da urna  →  CSV oficial divulgado</code></pre>
-<p>Trabalhamos só com <strong>arquivos públicos</strong> do TSE. Divergência entre camadas é achado forte; concordância total <strong>não</strong> prova ausência de problema antes da publicação nem integridade do hardware.</p>
+<p>Trabalhamos só com <strong>arquivos públicos</strong> do TSE. Postura de <strong>auditoria</strong>: achar inconsistências e anomalias <strong>justificáveis</strong>, com hierarquia de evidência — não “provar fraude” a partir de padrão eleitoral agregado.</p>
+<p>Divergência entre camadas é achado forte; concordância total <strong>não</strong> prova ausência de problema antes da publicação nem integridade do hardware — significa apenas que os <strong>arquivos disponibilizados estão íntegros/consistentes entre si</strong> (RDV ≡ BU ≡ CSV oficial).</p>
+</section>
+<section id="hierarquia-de-evidência-a-b-c" class="level2">
+<h2 class="anchored" data-anchor-id="hierarquia-de-evidência-a-b-c">Hierarquia de evidência (A / B / C)</h2>
+<p>Limiares pré-registrados em <code>urna_logs.thresholds</code> (versão do protocolo no relatório de achados).</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Nível</th>
+<th>O quê</th>
+<th>Exemplo</th>
+<th>O que se pode dizer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>A</strong></td>
+<td>Inconsistência <strong>documental</strong></td>
+<td>RDV≠BU; BU≠CSV oficial; seção só num turno</td>
+<td>Indício documental — checar cadeia</td>
+</tr>
+<tr class="even">
+<td><strong>B</strong></td>
+<td>Anomalia <strong>operacional</strong> (confluência)</td>
+<td><code>% sem digital</code> alto × <code>|Δ margem|</code>; margem×pós-17h; ≥2 flags</td>
+<td>Priorizar revisão; <strong>≠</strong> fraude comprovada</td>
+</tr>
+<tr class="odd">
+<td><strong>C</strong></td>
+<td>Padrão <strong>ecológico</strong> / contexto</td>
+<td>Flag isolada; taxas IPF; elim. “forçado” só por bounds</td>
+<td>Contexto de saldos; <strong>não</strong> sustenta fraude sozinho</td>
+</tr>
+</tbody>
+</table>
+<p>Comando: <code>urna-logs achados --ufs "AC RR AP ZZ RO SE"</code> → fichas em <code>reports/achados_*</code>.</p>
 </section>
 <section id="o-que-o-painel-responde" class="level2">
 <h2 class="anchored" data-anchor-id="o-que-o-painel-responde">O que o painel responde</h2>
 <ol type="1">
-<li><strong>O que mudou 1º→2º</strong> — Δ abstenção / comparecimento e (quando houver) votos dos finalistas, por UF e depois por seção (<code>join_key</code>).</li>
-<li><strong>Onde olhar</strong> — <code>% sem digital</code> (BU) como indicador de risco, cruzado com Δ atípicos no 2º; até lá, ranking de seções com maior % sem digital no 1º.</li>
-<li><strong>Fluxo do dia</strong> — curva de habilitações no log (pós-17h em Brasília; exterior = horário local); overlay do 2º quando existir.</li>
+<li><strong>O que mudou 1º→2º</strong> — Δ abstenção / comparecimento, votos dos finalistas e margem por seção (<code>join_key</code>).</li>
+<li><strong>Onde olhar</strong> — achados A/B + <code>% sem digital</code> × Δ; flags isoladas ficam como C.</li>
+<li><strong>Fluxo do dia</strong> — curva de habilitações no log (pós-17h em Brasília; exterior = horário local); overlay do 2º.</li>
+<li><strong>Fluxo ecológico</strong> — anexo de saldos (Nível C), não veredito de fraude.</li>
 </ol>
 <p><strong>Não dá:</strong> saber <em>quem</em> migrou de candidato entre turnos (sigilo do voto).</p>
+</section>
+<section id="inferência-ecológica-de-fluxo-1º2º" class="level2">
+<h2 class="anchored" data-anchor-id="inferência-ecológica-de-fluxo-1º2º">Inferência ecológica de fluxo (1º→2º)</h2>
+<p>Sem voto individual, o sistema de transferências por seção é <strong>subdeterminado</strong>. Empilhamos três camadas:</p>
+<ol type="1">
+<li><strong>Duncan–Davis</strong> — para cada origem→destino, o intervalo <strong>matematicamente possível</strong> dados só os totais da seção (<code>max(0, o+d−N)</code> … <code>min(o,d)</code>). Intervalo estreito = quase identificável; largo = pouco se sabe sem hipóteses.</li>
+<li><strong>Taxa média UF</strong> — por seção, matriz IPF (RAS) que casa totais de origem e destino (semente = independência); taxas = fluxo/origem, agregadas com peso; <strong>IC</strong> = percentis 5–95 do bootstrap de seções. Duncan–Davis permanece como intervalo factível sem modelo.</li>
+<li><strong>Resíduo preditivo</strong> — reconstituir totais 2º com as taxas UF × origens 1º; o que sobra é o que o modelo médio não explica.</li>
+</ol>
+<p>Isso é <strong>inferência ecológica</strong> (agregados → taxas médias), não migração pessoa a pessoa. Intervalos factíveis ≠ certeza individual. Correlação ≠ fraude.</p>
+<p>Comandos:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> fluxo-ecologico <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> validar-fluxo <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span>   <span class="co"># go/no-go antes do nacional</span></span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="hipóteses-observáveis-agregado-não-conclusões" class="level2">
+<h2 class="anchored" data-anchor-id="hipóteses-observáveis-agregado-não-conclusões">Hipóteses → observáveis (agregado; não conclusões)</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Hipótese</th>
+<th>Observável</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Transferência aparente dos eliminados</td>
+<td><code>votos_eliminados_1t</code> ≈ <code>ganho_finalistas</code> − <code>delta_comparecimento</code> (<code>gap_transferencia</code>); taxas <code>p_elim_to_fa</code> / <code>p_elim_to_fb</code> + IC</td>
+</tr>
+<tr class="even">
+<td>Eliminados <em>forçados</em> a um finalista</td>
+<td>limite inferior Duncan–Davis &gt; 50% da origem Elim</td>
+</tr>
+<tr class="odd">
+<td>Branco/nulo “migraram”</td>
+<td><code>p_branco_to_*</code>, <code>p_nulo_to_*</code></td>
+</tr>
+<tr class="even">
+<td>Abstenção seletiva</td>
+<td>corr(% Elim 1º, Δ abstenção); <code>p_abst_to_fa/fb</code></td>
+</tr>
+<tr class="odd">
+<td>Risco operacional</td>
+<td>alto <code>% sem digital</code> × <code>|Δ margem|</code></td>
+</tr>
+<tr class="even">
+<td>Cauda horária</td>
+<td>alto <code>% ≥17h</code> × Δ comparecimento/margem</td>
+</tr>
+<tr class="odd">
+<td>Contingência / troca de urna</td>
+<td>status <code>so_1t</code> / <code>so_2t</code></td>
+</tr>
+</tbody>
+</table>
 </section>
 <section id="dados-deste-site" class="level2">
 <h2 class="anchored" data-anchor-id="dados-deste-site">Dados deste site</h2>
@@ -221,7 +325,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td><code>site/data/painel_uf.csv</code></td>
-<td>KPIs por UF (1º + colunas 2º/Δ)</td>
+<td>KPIs por UF (1º + colunas 2º/Δ + taxas de fluxo)</td>
 </tr>
 <tr class="even">
 <td><code>site/data/curva_horaria.csv</code></td>
@@ -229,12 +333,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td><code>site/data/outliers_sem_digital.csv</code></td>
-<td>Top seções % sem digital (1º; Δ 2º quando houver)</td>
+<td>Top seções % sem digital + Δ/flags do comparativo</td>
+</tr>
+<tr class="even">
+<td><code>site/data/anomalias_secao.csv</code></td>
+<td>Seções do comparativo (scatter % sem digital × Δ margem)</td>
+</tr>
+<tr class="odd">
+<td><code>site/data/achados_ab.csv</code></td>
+<td>Fichas níveis A e B (documental / operacional)</td>
 </tr>
 </tbody>
 </table>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/build_site_data.py</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render site</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/build_site_data.py</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render site</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="glossário" class="level2">
 <h2 class="anchored" data-anchor-id="glossário">Glossário</h2>
@@ -309,6 +421,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="even">
 <td><strong>Parquet</strong></td>
 <td>Detalhe local da auditoria (não sobe ao GitHub Pages)</td>
+</tr>
+<tr class="odd">
+<td><strong>Duncan–Davis</strong></td>
+<td>Limites factíveis de uma célula numa tabela de contingência agregada</td>
+</tr>
+<tr class="even">
+<td><strong>Fluxo ecológico</strong></td>
+<td>Estimativa de taxas origem→destino 1º→2º sem microdados de eleitor (evidência <strong>C</strong>)</td>
+</tr>
+<tr class="odd">
+<td><strong>Achado A/B/C</strong></td>
+<td>Classificação de evidência da auditoria (<code>urna-logs achados</code>)</td>
+</tr>
+<tr class="even">
+<td><strong>Protocolo</strong></td>
+<td>Versão dos limiares/regras em <code>urna_logs.thresholds</code></td>
 </tr>
 </tbody>
 </table>
