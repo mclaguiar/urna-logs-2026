@@ -380,6 +380,44 @@ def load_compare(uf: str, turno_a: int = 1, turno_b: int = 2) -> pd.DataFrame | 
     return pd.read_parquet(path)
 
 
+def _nome_votavel(uf: str, numero: str) -> str | None:
+    from urna_logs.config import DATA_DIR
+
+    if not numero or numero == "?":
+        return None
+    path = DATA_DIR / "ref" / f"oficial_presidente_votos_{uf.upper()}_2t.parquet"
+    if not path.exists():
+        return None
+    frame = pd.read_parquet(path, columns=["votavel", "nome_votavel"])
+    votavel = frame["votavel"].astype(str).str.replace(r"\.0$", "", regex=True)
+    hit = frame.loc[votavel == str(numero), "nome_votavel"].dropna()
+    if hit.empty:
+        return None
+    nome = str(hit.iloc[0]).strip()
+    return nome or None
+
+
+def _finalistas_do_comparativo(
+    uf: str, turno_a: int, turno_b: int
+) -> tuple[str, str, str | None, str | None]:
+    """Números de Fa e Fb no comparativo, e o nome no CSV oficial do 2º turno."""
+    path = REPORTS_DIR / f"comparar_turnos_summary_{uf}_{turno_a}t_{turno_b}t.csv"
+    if not path.exists():
+        return "?", "?", None, None
+    frame = pd.read_csv(path)
+    if frame.empty:
+        return "?", "?", None, None
+    row = frame.iloc[0]
+
+    def _num(col: str) -> str:
+        if col not in row or pd.isna(row[col]):
+            return "?"
+        return str(row[col]).replace(".0", "")
+
+    fa, fb = _num("finalista_a"), _num("finalista_b")
+    return fa, fb, _nome_votavel(uf, fa), _nome_votavel(uf, fb)
+
+
 def summarize_fluxo(
     bounds: pd.DataFrame,
     rates_boot: pd.DataFrame,
@@ -506,19 +544,32 @@ def write_fluxo_reports(
             return f"{100 * est:.2f}%"
         return f"{100 * est:.2f}% [{100 * lo:.2f}–{100 * hi:.2f}]"
 
+    fa = str(meta.get("finalista_a") or "?")
+    fb = str(meta.get("finalista_b") or "?")
+    nome_a = str(meta.get("finalista_a_nome") or "").strip()
+    nome_b = str(meta.get("finalista_b_nome") or "").strip()
+
+    def _quem(papel: str, numero: str, nome: str) -> str:
+        if nome:
+            return f"{papel} é o candidato **{numero}**, {nome}."
+        return f"{papel} é o candidato **{numero}**."
+
     lines = [
         f"# Fluxo ecológico 1º→2º — {uf}",
         "",
         "Inferência **agregada por seção** (Duncan–Davis + taxas médias com bootstrap).",
         "Não identifica eleitor a eleitor. Intervalos factíveis ≠ certeza individual.",
         "",
+        f"{_quem('Fa', fa, nome_a)} {_quem('Fb', fb, nome_b)} "
+        "São os dois números nominais do 2º turno, em ordem numérica.",
+        "",
         "## Resumo",
         "",
         f"- Seções (ambos): **{meta['secoes']:,}** · identidade OK: **{meta['secoes_identidade_ok']:,}**",
         f"- Seções com maioria de células “estreitas” "
         f"(largura ≤ {NARROW_WIDTH:.0%}): **{meta['secoes_narrow_majority']:,}**",
-        f"- Eliminados *forçados* (limite inf. > 50%) → Fa: **{meta['elim_forced_fa']:,}** · "
-        f"→ Fb: **{meta['elim_forced_fb']:,}**",
+        f"- Eliminados *forçados* (limite inf. > 50%) → Fa ({fa}): **{meta['elim_forced_fa']:,}** · "
+        f"→ Fb ({fb}): **{meta['elim_forced_fb']:,}**",
         "",
         "## Taxas médias UF (Elim / Branco / Nulo / Abst → destinos)",
         "",
@@ -527,7 +578,7 @@ def write_fluxo_reports(
         f"IC = percentis 5–95 do bootstrap ({BOOTSTRAP_N} reamostragens de seções). "
         "Duncan–Davis (Parquet de bounds) continua sendo o intervalo factível sem modelo.",
         "",
-        "| Origem 1º | → Fa | → Fb | → Branco | → Nulo | → Abst |",
+        f"| Origem 1º | → Fa ({fa}) | → Fb ({fb}) | → Branco | → Nulo | → Abst |",
         "|---|---|---|---|---|---|",
     ]
     labels = {"elim": "Eliminados", "branco": "Branco", "nulo": "Nulo", "abst": "Abstenção"}
@@ -553,14 +604,14 @@ def write_fluxo_reports(
         "",
         "| Hipótese | Leitura neste UF |",
         "|---|---|",
-        f"| Eliminados → sobretudo Fa | taxa Elim→Fa {_fmt_rate('p_elim_to_fa')}; "
+        f"| Eliminados → sobretudo Fa ({fa}) | taxa Elim→Fa {_fmt_rate('p_elim_to_fa')}; "
         f"seções forçadas Fa={meta['elim_forced_fa']} |",
-        f"| Eliminados → sobretudo Fb | taxa Elim→Fb {_fmt_rate('p_elim_to_fb')}; "
+        f"| Eliminados → sobretudo Fb ({fb}) | taxa Elim→Fb {_fmt_rate('p_elim_to_fb')}; "
         f"seções forçadas Fb={meta['elim_forced_fb']} |",
         f"| Branco 1º permanece / migra | →Branco {_fmt_rate('p_branco_to_branco')}; "
-        f"→Fa {_fmt_rate('p_branco_to_fa')}; →Fb {_fmt_rate('p_branco_to_fb')} |",
+        f"→Fa ({fa}) {_fmt_rate('p_branco_to_fa')}; →Fb ({fb}) {_fmt_rate('p_branco_to_fb')} |",
         f"| Nulo 1º | →Nulo {_fmt_rate('p_nulo_to_nulo')}; "
-        f"→Fa {_fmt_rate('p_nulo_to_fa')}; →Fb {_fmt_rate('p_nulo_to_fb')} |",
+        f"→Fa ({fa}) {_fmt_rate('p_nulo_to_fa')}; →Fb ({fb}) {_fmt_rate('p_nulo_to_fb')} |",
         f"| Abstenção seletiva | correlações acima; residual `resid_abst` no Parquet |",
         "",
         "## Limites metodológicos",
@@ -586,6 +637,8 @@ def print_fluxo_meta(meta: dict) -> None:
     table = Table()
     table.add_column("Campo")
     table.add_column("Valor", justify="right")
+    table.add_row("Fa", str(meta.get("finalista_a") or "?"))
+    table.add_row("Fb", str(meta.get("finalista_b") or "?"))
     table.add_row("Seções", f"{meta['secoes']:,}")
     table.add_row("Narrow (maioria células)", f"{meta['secoes_narrow_majority']:,}")
     table.add_row("Elim forçado → Fa", f"{meta['elim_forced_fa']:,}")
@@ -627,6 +680,11 @@ def run_fluxo_uf(uf: str, turno_a: int = 1, turno_b: int = 2) -> list[Path]:
     resid = predictive_residuals(bounds, rates)
     selectivity = abstention_selectivity(compare)
     meta = summarize_fluxo(bounds, rates_boot, selectivity, uf)
+    fa, fb, nome_a, nome_b = _finalistas_do_comparativo(uf, turno_a, turno_b)
+    meta["finalista_a"] = fa
+    meta["finalista_b"] = fb
+    meta["finalista_a_nome"] = nome_a or ""
+    meta["finalista_b_nome"] = nome_b or ""
     print_fluxo_meta(meta)
     md, pq_b, pq_r, csv_meta = write_fluxo_reports(
         bounds, rates_boot, resid, meta, uf, turno_a, turno_b
