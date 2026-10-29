@@ -8,23 +8,69 @@ title: "Método e glossário"
 RDV (recontar votos)  →  BU da urna  →  CSV oficial divulgado
 ```
 
-Trabalhamos só com **arquivos públicos** do TSE. Divergência entre camadas é achado forte; concordância total **não** prova ausência de problema antes da publicação nem integridade do hardware.
+Trabalhamos só com **arquivos públicos** do TSE. Postura de **auditoria**: achar inconsistências e anomalias **justificáveis**, com hierarquia de evidência — não “provar fraude” a partir de padrão eleitoral agregado.
+
+Divergência entre camadas é achado forte; concordância total **não** prova ausência de problema antes da publicação nem integridade do hardware — significa apenas que os **arquivos disponibilizados estão íntegros/consistentes entre si** (RDV ≡ BU ≡ CSV oficial).
+
+## Hierarquia de evidência (A / B / C)
+
+Limiares pré-registrados em `urna_logs.thresholds` (versão do protocolo no relatório de achados).
+
+| Nível | O quê | Exemplo | O que se pode dizer |
+|---|---|---|---|
+| **A** | Inconsistência **documental** | RDV≠BU; BU≠CSV oficial; seção só num turno | Indício documental — checar cadeia |
+| **B** | Anomalia **operacional** (confluência) | `% sem digital` alto × `|Δ margem|`; margem×pós-17h; ≥2 flags | Priorizar revisão; **≠** fraude comprovada |
+| **C** | Padrão **ecológico** / contexto | Flag isolada; taxas IPF; elim. “forçado” só por bounds | Contexto de saldos; **não** sustenta fraude sozinho |
+
+Comando: `urna-logs achados --ufs "AC RR AP ZZ RO SE"` → fichas em `reports/achados_*`.
 
 ## O que o painel responde
 
-1. **O que mudou 1º→2º** — Δ abstenção / comparecimento e (quando houver) votos dos finalistas, por UF e depois por seção (`join_key`).
-2. **Onde olhar** — `% sem digital` (BU) como indicador de risco, cruzado com Δ atípicos no 2º; até lá, ranking de seções com maior % sem digital no 1º.
-3. **Fluxo do dia** — curva de habilitações no log (pós-17h em Brasília; exterior = horário local); overlay do 2º quando existir.
+1. **O que mudou 1º→2º** — Δ abstenção / comparecimento, votos dos finalistas e margem por seção (`join_key`).
+2. **Onde olhar** — achados A/B + `% sem digital` × Δ; flags isoladas ficam como C.
+3. **Fluxo do dia** — curva de habilitações no log (pós-17h em Brasília; exterior = horário local); overlay do 2º.
+4. **Fluxo ecológico** — anexo de saldos (Nível C), não veredito de fraude.
 
 **Não dá:** saber *quem* migrou de candidato entre turnos (sigilo do voto).
+
+## Inferência ecológica de fluxo (1º→2º)
+
+Sem voto individual, o sistema de transferências por seção é **subdeterminado**. Empilhamos três camadas:
+
+1. **Duncan–Davis** — para cada origem→destino, o intervalo **matematicamente possível** dados só os totais da seção (`max(0, o+d−N)` … `min(o,d)`). Intervalo estreito = quase identificável; largo = pouco se sabe sem hipóteses.
+2. **Taxa média UF** — por seção, matriz IPF (RAS) que casa totais de origem e destino (semente = independência); taxas = fluxo/origem, agregadas com peso; **IC** = percentis 5–95 do bootstrap de seções. Duncan–Davis permanece como intervalo factível sem modelo.
+3. **Resíduo preditivo** — reconstituir totais 2º com as taxas UF × origens 1º; o que sobra é o que o modelo médio não explica.
+
+Isso é **inferência ecológica** (agregados → taxas médias), não migração pessoa a pessoa. Intervalos factíveis ≠ certeza individual. Correlação ≠ fraude.
+
+Comandos:
+
+```bash
+urna-logs fluxo-ecologico --ufs "AC RR AP ZZ"
+urna-logs validar-fluxo --ufs "AC RR AP ZZ"   # go/no-go antes do nacional
+```
+
+## Hipóteses → observáveis (agregado; não conclusões)
+
+| Hipótese | Observável |
+|---|---|
+| Transferência aparente dos eliminados | `votos_eliminados_1t` ≈ `ganho_finalistas` − `delta_comparecimento` (`gap_transferencia`); taxas `p_elim_to_fa` / `p_elim_to_fb` + IC |
+| Eliminados *forçados* a um finalista | limite inferior Duncan–Davis > 50% da origem Elim |
+| Branco/nulo “migraram” | `p_branco_to_*`, `p_nulo_to_*` |
+| Abstenção seletiva | corr(% Elim 1º, Δ abstenção); `p_abst_to_fa/fb` |
+| Risco operacional | alto `% sem digital` × `|Δ margem|` |
+| Cauda horária | alto `% ≥17h` × Δ comparecimento/margem |
+| Contingência / troca de urna | status `so_1t` / `so_2t` |
 
 ## Dados deste site
 
 | Arquivo | Conteúdo |
 |---|---|
-| `site/data/painel_uf.csv` | KPIs por UF (1º + colunas 2º/Δ) |
+| `site/data/painel_uf.csv` | KPIs por UF (1º + colunas 2º/Δ + taxas de fluxo) |
 | `site/data/curva_horaria.csv` | Habilitações por hora (BRT) × UF × turno |
-| `site/data/outliers_sem_digital.csv` | Top seções % sem digital (1º; Δ 2º quando houver) |
+| `site/data/outliers_sem_digital.csv` | Top seções % sem digital + Δ/flags do comparativo |
+| `site/data/anomalias_secao.csv` | Seções do comparativo (scatter % sem digital × Δ margem) |
+| `site/data/achados_ab.csv` | Fichas níveis A e B (documental / operacional) |
 
 ```bash
 python scripts/build_site_data.py
@@ -51,6 +97,10 @@ quarto render site
 | **`join_key`** | `UF:municipio:zona:secao` — chave 1º×2º e BU×oficial |
 | **CSV oficial** | [Resultados 2026](https://dadosabertos.tse.jus.br/dataset/resultados-2026) (ex.: presidente por seção) |
 | **Parquet** | Detalhe local da auditoria (não sobe ao GitHub Pages) |
+| **Duncan–Davis** | Limites factíveis de uma célula numa tabela de contingência agregada |
+| **Fluxo ecológico** | Estimativa de taxas origem→destino 1º→2º sem microdados de eleitor (evidência **C**) |
+| **Achado A/B/C** | Classificação de evidência da auditoria (`urna-logs achados`) |
+| **Protocolo** | Versão dos limiares/regras em `urna_logs.thresholds` |
 
 ## Publicação
 

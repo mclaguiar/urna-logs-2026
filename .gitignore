@@ -65,3 +65,4 @@ reports/comparar_turnos_*.parquet
 # site/data/*.csv leve fica versionável
 !site/data/
 .cursor
+reports/leitura_2t.md

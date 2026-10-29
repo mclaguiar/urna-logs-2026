@@ -3,15 +3,18 @@ title: "Painel 1º × 2º turno"
 subtitle: "Migração agregada, abstenção e indicador sem digital — Eleições 2026"
 ---
 
-Auditoria da **cadeia pública** (RDV ↔ BU ↔ CSV oficial), com foco em entender o **2º turno seção a seção**: mudança de totais e abstenção, cruzada com **% sem digital** como indicador de risco.
+Auditoria da **cadeia pública** (RDV ↔ BU ↔ CSV oficial), com foco em **achados justificáveis** no 2º turno seção a seção.
 
-**Limite:** não dá para saber *quem* mudou de candidato. “Migração” = mudança dos totais da seção (`join_key`).
+**Evidência:** **A** documental · **B** operacional (confluência) · **C** contexto ecológico (não sustenta fraude sozinho). Ver [Método](metodo.qmd).
+
+**Limite:** não dá para saber *quem* mudou de candidato. Concordância RDV≡BU≡CSV = só **integridade entre arquivos públicos**.
 
 ```{ojs}
 //| echo: false
 painel = FileAttachment("data/painel_uf.csv").csv({typed: true})
 horas = FileAttachment("data/curva_horaria.csv").csv({typed: true})
 outliers = FileAttachment("data/outliers_sem_digital.csv").csv({typed: true})
+anomalias = FileAttachment("data/anomalias_secao.csv").csv({typed: true})
 ```
 
 ```{ojs}
@@ -24,6 +27,7 @@ rows = painel.map(d => ({
   status_2t: d.status_2t || "pendente",
   pct_sem_digital_1t: d.pct_sem_digital_1t == null || d.pct_sem_digital_1t === "" ? null : +d.pct_sem_digital_1t,
   pct_sem_digital_2t: d.pct_sem_digital_2t == null || d.pct_sem_digital_2t === "" ? null : +d.pct_sem_digital_2t,
+  delta_pct_sem_digital: d.delta_pct_sem_digital == null || d.delta_pct_sem_digital === "" ? null : +d.delta_pct_sem_digital,
   delta_abstencao_pp: d.delta_abstencao_pp == null || d.delta_abstencao_pp === "" ? null : +d.delta_abstencao_pp,
   delta_comparecimento: d.delta_comparecimento == null || d.delta_comparecimento === "" ? null : +d.delta_comparecimento,
   pct_apos_17h_1t: d.pct_apos_17h_1t == null || d.pct_apos_17h_1t === "" ? null : +d.pct_apos_17h_1t,
@@ -31,7 +35,21 @@ rows = painel.map(d => ({
   hora_pico_1t: d.hora_pico_1t == null || d.hora_pico_1t === "" ? null : +d.hora_pico_1t,
   pct_secoes_ok_oficial_1t: d.pct_secoes_ok_oficial_1t == null || d.pct_secoes_ok_oficial_1t === "" ? null : +d.pct_secoes_ok_oficial_1t,
   secoes_divergentes_1t: d.secoes_divergentes_1t == null || d.secoes_divergentes_1t === "" ? 0 : +d.secoes_divergentes_1t,
-  comparecimento_1t: d.comparecimento_1t == null || d.comparecimento_1t === "" ? null : +d.comparecimento_1t
+  comparecimento_1t: d.comparecimento_1t == null || d.comparecimento_1t === "" ? null : +d.comparecimento_1t,
+  n_flag_margem: d.n_flag_margem == null || d.n_flag_margem === "" ? null : +d.n_flag_margem,
+  p_elim_to_fa: d.p_elim_to_fa == null || d.p_elim_to_fa === "" ? null : +d.p_elim_to_fa,
+  p_elim_to_fa_p05: d.p_elim_to_fa_p05 == null || d.p_elim_to_fa_p05 === "" ? null : +d.p_elim_to_fa_p05,
+  p_elim_to_fa_p95: d.p_elim_to_fa_p95 == null || d.p_elim_to_fa_p95 === "" ? null : +d.p_elim_to_fa_p95,
+  p_elim_to_fb: d.p_elim_to_fb == null || d.p_elim_to_fb === "" ? null : +d.p_elim_to_fb,
+  p_elim_to_fb_p05: d.p_elim_to_fb_p05 == null || d.p_elim_to_fb_p05 === "" ? null : +d.p_elim_to_fb_p05,
+  p_elim_to_fb_p95: d.p_elim_to_fb_p95 == null || d.p_elim_to_fb_p95 === "" ? null : +d.p_elim_to_fb_p95,
+  p_elim_to_abst: d.p_elim_to_abst == null || d.p_elim_to_abst === "" ? null : +d.p_elim_to_abst,
+  elim_forced_fa: d.elim_forced_fa == null || d.elim_forced_fa === "" ? null : +d.elim_forced_fa,
+  elim_forced_fb: d.elim_forced_fb == null || d.elim_forced_fb === "" ? null : +d.elim_forced_fb,
+  corr_pct_elim_delta_abst: d.corr_pct_elim_delta_abst == null || d.corr_pct_elim_delta_abst === "" ? null : +d.corr_pct_elim_delta_abst,
+  achados_A: d.achados_A == null || d.achados_A === "" ? null : +d.achados_A,
+  achados_B: d.achados_B == null || d.achados_B === "" ? null : +d.achados_B,
+  achados_C: d.achados_C == null || d.achados_C === "" ? null : +d.achados_C
 }))
 ```
 
@@ -62,7 +80,7 @@ Inputs.table(
 
 ## 1. O que mudou (1º → 2º)
 
-Colunas de Δ ficam vazias até existir audit/horario do 2º turno.
+UFs com `comparativo ativo` já trazem Δ de abstenção, comparecimento e % sem digital. Demais ficam vazias até existir audit/horario do 2º.
 
 ```{ojs}
 //| echo: false
@@ -74,8 +92,13 @@ Inputs.table(
     "Status 2o": d.status_2t,
     "% sem dig 1o": d.pct_sem_digital_1t,
     "% sem dig 2o": d.pct_sem_digital_2t,
+    "Delta sem dig": d.delta_pct_sem_digital,
     "Delta abst pp": d.delta_abstencao_pp,
     "Delta comp": d.delta_comparecimento,
+    "Flags margem": d.n_flag_margem,
+    "Achados A": d.achados_A,
+    "Achados B": d.achados_B,
+    "Achados C": d.achados_C,
     "% apos 17h 1o": d.pct_apos_17h_1t,
     "% apos 17h 2o": d.pct_apos_17h_2t,
     "BU=oficial %": d.pct_secoes_ok_oficial_1t
@@ -101,11 +124,68 @@ Plot.plot({
 })
 ```
 
+## 1b. Fluxo ecológico (eliminados → finalistas)
+
+Taxas médias UF via matriz IPF por seção (casa totais 1º/2º) + IC bootstrap 5–95%. Duncan–Davis no relatório detalha o intervalo factível sem modelo. Não é migração eleitor a eleitor — ver [Método](metodo.qmd).
+
+```{ojs}
+//| echo: false
+fluxoRows = rows.filter(d => d.p_elim_to_fa != null)
+Inputs.table(
+  fluxoRows.map(d => ({
+    UF: d.uf,
+    "Elim→Fa %": +(100 * d.p_elim_to_fa).toFixed(2),
+    "IC Fa 5–95": d.p_elim_to_fa_p05 == null ? null : `${(100*d.p_elim_to_fa_p05).toFixed(1)}–${(100*d.p_elim_to_fa_p95).toFixed(1)}`,
+    "Elim→Fb %": +(100 * d.p_elim_to_fb).toFixed(2),
+    "IC Fb 5–95": d.p_elim_to_fb_p05 == null ? null : `${(100*d.p_elim_to_fb_p05).toFixed(1)}–${(100*d.p_elim_to_fb_p95).toFixed(1)}`,
+    "Elim→Abst %": d.p_elim_to_abst == null ? null : +(100 * d.p_elim_to_abst).toFixed(2),
+    "Forçados Fa": d.elim_forced_fa,
+    "Forçados Fb": d.elim_forced_fb,
+    "corr Elim×Δabst": d.corr_pct_elim_delta_abst
+  })),
+  {sort: "UF"}
+)
+```
+
 ## 2. Onde olhar (risco: sem digital × mudança)
 
-**Sem digital** = biografia + sem biometria no BU — indicador operacional; ganha força se coincidir com Δ atípico no 2º.
+**Sem digital** = biografia + sem biometria no BU — indicador operacional; ganha força se coincidir com Δ atípico no 2º. Correlação ≠ fraude.
 
-Com 2º pendente: lista das seções do 1º com maior % sem digital (fila de auditoria). O scatter 1º×2º entra quando houver audit do 2º.
+```{ojs}
+//| echo: false
+viewof ufAnom = Inputs.select(
+  ["ALL", ...[...new Set(anomalias.map(d => d.uf))].sort()],
+  {label: "UF (scatter)", value: "ALL"}
+)
+```
+
+```{ojs}
+//| echo: false
+pts = anomalias
+  .filter(d => ufAnom === "ALL" || d.uf === ufAnom)
+  .map(d => ({
+    uf: d.uf,
+    join_key: d.join_key,
+    pct_sem_digital_1t: d.pct_sem_digital_1t == null || d.pct_sem_digital_1t === "" ? null : +d.pct_sem_digital_1t,
+    delta_margem: d.delta_margem == null || d.delta_margem === "" ? null : +d.delta_margem,
+    flagged: d.flags != null && String(d.flags).length > 0
+  }))
+  .filter(d => d.pct_sem_digital_1t != null && d.delta_margem != null)
+Plot.plot({
+  marginLeft: 50,
+  width: 720,
+  height: 320,
+  x: {label: "% sem digital (1o)", grid: true},
+  y: {label: "Delta margem (2o−1o)", grid: true},
+  marks: [
+    Plot.ruleY([0], {stroke: "#999", strokeOpacity: 0.5}),
+    Plot.dot(pts.filter(d => !d.flagged), {x: "pct_sem_digital_1t", y: "delta_margem", fill: "#1f4e79", r: 3, fillOpacity: 0.35}),
+    Plot.dot(pts.filter(d => d.flagged), {x: "pct_sem_digital_1t", y: "delta_margem", fill: "#a51c1c", r: 4})
+  ]
+})
+```
+
+Azul = seções sem flag · vermelho = com flag de anomalia (percentis na UF).
 
 ```{ojs}
 //| echo: false
@@ -118,7 +198,8 @@ Inputs.table(
     "% abst 1o": d.pct_abstencao == null || d.pct_abstencao === "" ? null : +d.pct_abstencao,
     "% sem digital": +d.pct_sem_digital,
     "Delta abst": d.delta_abstencao == null || d.delta_abstencao === "" ? null : +d.delta_abstencao,
-    "Delta margem": d.delta_margem == null || d.delta_margem === "" ? null : +d.delta_margem
+    "Delta margem": d.delta_margem == null || d.delta_margem === "" ? null : +d.delta_margem,
+    Flags: d.flags || ""
   })),
   {sort: "% sem digital", reverse: true}
 )

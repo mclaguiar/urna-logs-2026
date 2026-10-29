@@ -32,7 +32,7 @@ Votos contabilizados: **488,330**
 
 ## Divergências / erros
 
-Nenhuma divergência encontrada.
+Nenhuma divergência entre **RDV** e **BU** nas urnas processadas. Isso indica apenas que os **arquivos públicos da urna estão íntegros entre si** (o recontar do RDV bate com os totais do BU) — não avalia origem do voto nem inconsistência com o mundo físico.
 
 ## Método
 
@@ -40,3 +40,4 @@ Nenhuma divergência encontrada.
 - RDV: cada `Voto` do cargo presidente é contado
 - Tipos especiais RDV (nulo/branco após suspensão etc.) normalizados para o enum do BU
 - Legenda (se houver): digitação do RDV reduzida aos 2 dígitos do partido
+- Sem divergência = **integridade entre arquivos públicos** (RDV ≡ BU), não auditoria do hardware nem da origem do voto

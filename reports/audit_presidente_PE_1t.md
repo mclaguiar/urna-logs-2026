@@ -32,7 +32,7 @@ Votos contabilizados: **5,911,062**
 
 ## Divergências / erros
 
-Nenhuma divergência encontrada.
+Nenhuma divergência entre **RDV** e **BU** nas urnas processadas. Isso indica apenas que os **arquivos públicos da urna estão íntegros entre si** (o recontar do RDV bate com os totais do BU) — não avalia origem do voto nem inconsistência com o mundo físico.
 
 ## Método
 

@@ -1,0 +1,67 @@
+uf,go,n_secoes,check,severity,ok,detail
+AC,True,2270,min_secoes,hard,True,2270 seções (mínimo 50)
+AC,True,2270,identidade,hard,True,2270/2270 seções com margens coerentes (100.00%; mín 99.5%)
+AC,True,2270,ipf_margens,hard,True,max |IPF−origem|=0.000 · max |IPF−destino|=0.000 (tol 2.0)
+AC,True,2270,ipf_dentro_bounds,hard,True,"0 violações em 45400 células (max fora=0.000, tol=2.0)"
+AC,True,2270,taxas_validas,hard,True,todas as origens-foco OK
+AC,True,2270,sem_colapso_5050,hard,True,|Fa2−Fb2|/N=0.233 · |pElimFa−pElimFb|=0.242
+AC,True,2270,estabilidade,hard,True,taxas IPF idênticas=True · bootstrap seed=True
+AC,True,2270,residuo_preditivo,soft,True,"mean|resid|/mean(dest) → fa:0.189, fb:0.137, abst:0.207 (tol 0.35)"
+AC,True,2270,compat_elim_fa,hard,True,"Elim×p(Elim→Fa)=7,518.4 ≤ Fa2=144,513.0"
+AC,True,2270,artefatos,soft,True,OK
+AC,True,2270,cruzar_oficial_2t,soft,True,seções divergentes BU×oficial=0
+RR,True,1519,min_secoes,hard,True,1519 seções (mínimo 50)
+RR,True,1519,identidade,hard,True,1519/1519 seções com margens coerentes (100.00%; mín 99.5%)
+RR,True,1519,ipf_margens,hard,True,max |IPF−origem|=0.000 · max |IPF−destino|=0.000 (tol 2.0)
+RR,True,1519,ipf_dentro_bounds,hard,True,"0 violações em 30380 células (max fora=0.000, tol=2.0)"
+RR,True,1519,taxas_validas,hard,True,todas as origens-foco OK
+RR,True,1519,sem_colapso_5050,hard,True,|Fa2−Fb2|/N=0.339 · |pElimFa−pElimFb|=0.370
+RR,True,1519,estabilidade,hard,True,taxas IPF idênticas=True · bootstrap seed=True
+RR,True,1519,residuo_preditivo,soft,True,"mean|resid|/mean(dest) → fa:0.279, fb:0.128, abst:0.221 (tol 0.35)"
+RR,True,1519,compat_elim_fa,hard,True,"Elim×p(Elim→Fa)=3,879.9 ≤ Fa2=83,505.0"
+RR,True,1519,artefatos,soft,True,OK
+RR,True,1519,cruzar_oficial_2t,soft,True,seções divergentes BU×oficial=0
+AP,True,1914,min_secoes,hard,True,1914 seções (mínimo 50)
+AP,True,1914,identidade,hard,True,1914/1914 seções com margens coerentes (100.00%; mín 99.5%)
+AP,True,1914,ipf_margens,hard,True,max |IPF−origem|=0.000 · max |IPF−destino|=0.000 (tol 2.0)
+AP,True,1914,ipf_dentro_bounds,hard,True,"0 violações em 38280 células (max fora=0.000, tol=2.0)"
+AP,True,1914,taxas_validas,hard,True,todas as origens-foco OK
+AP,True,1914,sem_colapso_5050,hard,True,|Fa2−Fb2|/N=0.042 · |pElimFa−pElimFb|=0.022
+AP,True,1914,estabilidade,hard,True,taxas IPF idênticas=True · bootstrap seed=True
+AP,True,1914,residuo_preditivo,soft,True,"mean|resid|/mean(dest) → fa:0.124, fb:0.191, abst:0.247 (tol 0.35)"
+AP,True,1914,compat_elim_fa,hard,True,"Elim×p(Elim→Fa)=15,303.1 ≤ Fa2=222,968.0"
+AP,True,1914,artefatos,soft,True,OK
+AP,True,1914,cruzar_oficial_2t,soft,True,seções divergentes BU×oficial=0
+ZZ,True,1310,min_secoes,hard,True,1310 seções (mínimo 50)
+ZZ,True,1310,identidade,hard,True,1308/1310 seções com margens coerentes (99.85%; mín 99.5%)
+ZZ,True,1310,ipf_margens,hard,True,max |IPF−origem|=0.000 · max |IPF−destino|=0.000 (tol 2.0)
+ZZ,True,1310,ipf_dentro_bounds,hard,True,"0 violações em 26160 células (max fora=0.000, tol=2.0)"
+ZZ,True,1310,taxas_validas,hard,True,todas as origens-foco OK
+ZZ,True,1310,sem_colapso_5050,hard,True,|Fa2−Fb2|/N=0.031 · |pElimFa−pElimFb|=0.038
+ZZ,True,1310,estabilidade,hard,True,taxas IPF idênticas=True · bootstrap seed=True
+ZZ,True,1310,residuo_preditivo,soft,False,"mean|resid|/mean(dest) → fa:0.443, fb:0.363, abst:0.161 (tol 0.35)"
+ZZ,True,1310,compat_elim_fa,hard,True,"Elim×p(Elim→Fa)=7,141.6 ≤ Fa2=200,154.0"
+ZZ,True,1310,artefatos,soft,True,OK
+ZZ,True,1310,cruzar_oficial_2t,soft,True,seções divergentes BU×oficial=0
+RO,True,4698,min_secoes,hard,True,4698 seções (mínimo 50)
+RO,True,4698,identidade,hard,True,4698/4698 seções com margens coerentes (100.00%; mín 99.5%)
+RO,True,4698,ipf_margens,hard,True,max |IPF−origem|=0.000 · max |IPF−destino|=0.000 (tol 2.0)
+RO,True,4698,ipf_dentro_bounds,hard,True,"0 violações em 93960 células (max fora=0.000, tol=2.0)"
+RO,True,4698,taxas_validas,hard,True,todas as origens-foco OK
+RO,True,4698,sem_colapso_5050,hard,True,|Fa2−Fb2|/N=0.300 · |pElimFa−pElimFb|=0.278
+RO,True,4698,estabilidade,hard,True,taxas IPF idênticas=True · bootstrap seed=True
+RO,True,4698,residuo_preditivo,soft,True,"mean|resid|/mean(dest) → fa:0.257, fb:0.113, abst:0.159 (tol 0.35)"
+RO,True,4698,compat_elim_fa,hard,True,"Elim×p(Elim→Fa)=15,759.8 ≤ Fa2=294,446.0"
+RO,True,4698,artefatos,soft,True,OK
+RO,True,4698,cruzar_oficial_2t,soft,True,seções divergentes BU×oficial=0
+SE,True,5923,min_secoes,hard,True,5923 seções (mínimo 50)
+SE,True,5923,identidade,hard,True,5923/5923 seções com margens coerentes (100.00%; mín 99.5%)
+SE,True,5923,ipf_margens,hard,True,max |IPF−origem|=0.000 · max |IPF−destino|=0.000 (tol 2.0)
+SE,True,5923,ipf_dentro_bounds,hard,True,"0 violações em 118460 células (max fora=0.000, tol=2.0)"
+SE,True,5923,taxas_validas,hard,True,todas as origens-foco OK
+SE,True,5923,sem_colapso_5050,hard,True,|Fa2−Fb2|/N=0.319 · |pElimFa−pElimFb|=0.293
+SE,True,5923,estabilidade,hard,True,taxas IPF idênticas=True · bootstrap seed=True
+SE,True,5923,residuo_preditivo,soft,True,"mean|resid|/mean(dest) → fa:0.101, fb:0.250, abst:0.202 (tol 0.35)"
+SE,True,5923,compat_elim_fa,hard,True,"Elim×p(Elim→Fa)=50,306.3 ≤ Fa2=989,041.0"
+SE,True,5923,artefatos,soft,True,OK
+SE,True,5923,cruzar_oficial_2t,soft,True,seções divergentes BU×oficial=0

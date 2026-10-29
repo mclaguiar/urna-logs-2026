@@ -11,7 +11,7 @@ Camada: **BU (audit)** × **CSV oficial** (`votacao_secao_*_BR`, cargo president
 
 ## Divergências
 
-Nenhuma divergência encontrada.
+Nenhuma divergência entre totais do **BU** (audit) e o **CSV oficial** de votação por seção. Isso indica apenas que os **arquivos disponibilizados pelo TSE estão consistentes entre si** nessa chave (seção × votável) — não prova ausência de anomalia operacional nem migração eleitor a eleitor.
 
 ## Método
 
