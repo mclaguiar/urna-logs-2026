@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.10.19">
+<meta name="generator" content="quarto-1.10.20">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -78,7 +78,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-17888a1159294d3eb470f19f6f52f5a5.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="site_libs/bootstrap/bootstrap-166690b9c768161ed89deb9505a7d440.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -197,8 +197,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="cadeia-auditada" class="level2">
 <h2 class="anchored" data-anchor-id="cadeia-auditada">Cadeia auditada</h2>
 <pre class="text"><code>RDV (recontar votos)  →  BU da urna  →  CSV oficial divulgado</code></pre>
-<p>Trabalhamos só com <strong>arquivos públicos</strong> do TSE. Postura de <strong>auditoria</strong>: achar inconsistências e anomalias <strong>justificáveis</strong>, com hierarquia de evidência — não “provar fraude” a partir de padrão eleitoral agregado.</p>
-<p>Divergência entre camadas é achado forte; concordância total <strong>não</strong> prova ausência de problema antes da publicação nem integridade do hardware — significa apenas que os <strong>arquivos disponibilizados estão íntegros/consistentes entre si</strong> (RDV ≡ BU ≡ CSV oficial).</p>
+<p>Trabalhamos só com <strong>arquivos públicos</strong> do TSE: inconsistências, saldos e taxas com hierarquia de evidência. Relatórios descrevem consistência e padrões agregados; interpretação causal ou jurídica fica com o leitor.</p>
+<p>Divergência entre camadas = as publicações <strong>não fecham</strong> na chave. Concordância = RDV ≡ BU ≡ CSV oficial <strong>nessa chave</strong> (totais de seção).</p>
 </section>
 <section id="hierarquia-de-evidência-a-b-c" class="level2">
 <h2 class="anchored" data-anchor-id="hierarquia-de-evidência-a-b-c">Hierarquia de evidência (A / B / C)</h2>
@@ -215,7 +215,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <th>Nível</th>
 <th>O quê</th>
 <th>Exemplo</th>
-<th>O que se pode dizer</th>
+<th>Leitura</th>
 </tr>
 </thead>
 <tbody>
@@ -223,23 +223,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td><strong>A</strong></td>
 <td>Inconsistência <strong>documental</strong></td>
 <td>RDV≠BU; BU≠CSV oficial; seção só num turno</td>
-<td>Indício documental — checar cadeia</td>
+<td>Listar e checar a cadeia pública</td>
 </tr>
 <tr class="even">
 <td><strong>B</strong></td>
 <td>Anomalia <strong>operacional</strong> (confluência)</td>
 <td><code>% sem digital</code> alto × <code>|Δ margem|</code>; margem×pós-17h; ≥2 flags</td>
-<td>Priorizar revisão; <strong>≠</strong> fraude comprovada</td>
+<td>Priorizar revisão (extremos da UF)</td>
 </tr>
 <tr class="odd">
 <td><strong>C</strong></td>
 <td>Padrão <strong>ecológico</strong> / contexto</td>
 <td>Flag isolada; taxas IPF; elim. “forçado” só por bounds</td>
-<td>Contexto de saldos; <strong>não</strong> sustenta fraude sozinho</td>
+<td>Saldos e taxas agregadas</td>
 </tr>
 </tbody>
 </table>
-<p>Comando: <code>urna-logs achados --ufs "AC RR AP ZZ RO SE"</code> → fichas em <code>reports/achados_*</code>.</p>
+<p>Comando: <code>urna-logs achados --ufs ALL</code> → fichas em <code>reports/achados_*</code>.</p>
 </section>
 <section id="o-que-o-painel-responde" class="level2">
 <h2 class="anchored" data-anchor-id="o-que-o-painel-responde">O que o painel responde</h2>
@@ -247,9 +247,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><strong>O que mudou 1º→2º</strong> — Δ abstenção / comparecimento, votos dos finalistas e margem por seção (<code>join_key</code>).</li>
 <li><strong>Onde olhar</strong> — achados A/B + <code>% sem digital</code> × Δ; flags isoladas ficam como C.</li>
 <li><strong>Fluxo do dia</strong> — curva de habilitações no log (pós-17h em Brasília; exterior = horário local); overlay do 2º.</li>
-<li><strong>Fluxo ecológico</strong> — anexo de saldos (Nível C), não veredito de fraude.</li>
+<li><strong>Fluxo ecológico</strong> — anexo de saldos e taxas (Nível C).</li>
 </ol>
-<p><strong>Não dá:</strong> saber <em>quem</em> migrou de candidato entre turnos (sigilo do voto).</p>
+<p><strong>Escopo:</strong> totais por seção; sem microdado de eleitor (sigilo do voto).</p>
 </section>
 <section id="inferência-ecológica-de-fluxo-1º2º" class="level2">
 <h2 class="anchored" data-anchor-id="inferência-ecológica-de-fluxo-1º2º">Inferência ecológica de fluxo (1º→2º)</h2>
@@ -259,7 +259,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><strong>Taxa média UF</strong> — por seção, matriz IPF (RAS) que casa totais de origem e destino (semente = independência); taxas = fluxo/origem, agregadas com peso; <strong>IC</strong> = percentis 5–95 do bootstrap de seções. Duncan–Davis permanece como intervalo factível sem modelo.</li>
 <li><strong>Resíduo preditivo</strong> — reconstituir totais 2º com as taxas UF × origens 1º; o que sobra é o que o modelo médio não explica.</li>
 </ol>
-<p>Isso é <strong>inferência ecológica</strong> (agregados → taxas médias), não migração pessoa a pessoa. Intervalos factíveis ≠ certeza individual. Correlação ≠ fraude.</p>
+<p>Inferência ecológica = agregados → taxas médias. Intervalos factíveis ≠ certeza individual; correlação ≠ identificação de mecanismo.</p>
 <p>Comandos:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> fluxo-ecologico <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> validar-fluxo <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span>   <span class="co"># go/no-go antes do nacional</span></span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>

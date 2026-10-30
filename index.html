@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.10.19">
+<meta name="generator" content="quarto-1.10.20">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -78,7 +78,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-17888a1159294d3eb470f19f6f52f5a5.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="site_libs/bootstrap/bootstrap-166690b9c768161ed89deb9505a7d440.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -195,8 +195,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <p>Auditoria da <strong>cadeia pública</strong> (RDV ↔︎ BU ↔︎ CSV oficial), com foco em <strong>achados justificáveis</strong> no 2º turno seção a seção.</p>
-<p><strong>Evidência:</strong> <strong>A</strong> documental · <strong>B</strong> operacional (confluência) · <strong>C</strong> contexto ecológico (não sustenta fraude sozinho). Ver <a href="./metodo.html">Método</a>.</p>
-<p><strong>Limite:</strong> não dá para saber <em>quem</em> mudou de candidato. Concordância RDV≡BU≡CSV = só <strong>integridade entre arquivos públicos</strong>.</p>
+<p><strong>Evidência:</strong> <strong>A</strong> documental · <strong>B</strong> operacional (confluência) · <strong>C</strong> contexto ecológico. Ver <a href="./metodo.html">Método</a>.</p>
+<p><strong>Escopo:</strong> totais por seção (sem microdado de eleitor). Concordância RDV≡BU≡CSV = <strong>consistência entre arquivos públicos</strong> na chave.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code hidden" id="cb1" data-startfrom="14" data-source-offset="-0"><pre class="sourceCode js code-with-copy"><code class="sourceCode javascript" style="counter-reset: source-line 13;"><span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>painel <span class="op">=</span> <span class="fu">FileAttachment</span>(<span class="st">"data/painel_uf.csv"</span>)<span class="op">.</span><span class="fu">csv</span>({<span class="dt">typed</span><span class="op">:</span> <span class="kw">true</span>})</span>
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>horas <span class="op">=</span> <span class="fu">FileAttachment</span>(<span class="st">"data/curva_horaria.csv"</span>)<span class="op">.</span><span class="fu">csv</span>({<span class="dt">typed</span><span class="op">:</span> <span class="kw">true</span>})</span>
@@ -427,7 +427,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="onde-olhar-risco-sem-digital-mudança" class="level2">
 <h2 class="anchored" data-anchor-id="onde-olhar-risco-sem-digital-mudança">2. Onde olhar (risco: sem digital × mudança)</h2>
-<p><strong>Sem digital</strong> = biografia + sem biometria no BU — indicador operacional; ganha força se coincidir com Δ atípico no 2º. Correlação ≠ fraude.</p>
+<p><strong>Sem digital</strong> = biografia + sem biometria no BU — indicador operacional; ganha força descritiva se coincidir com Δ atípico no 2º (correlação de seções, não identificação individual).</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code hidden" id="cb8" data-startfrom="155" data-source-offset="0"><pre class="sourceCode js code-with-copy"><code class="sourceCode javascript" style="counter-reset: source-line 154;"><span id="cb8-155"><a href="#cb8-155" aria-hidden="true" tabindex="-1"></a>viewof ufAnom <span class="op">=</span> Inputs<span class="op">.</span><span class="fu">select</span>(</span>
 <span id="cb8-156"><a href="#cb8-156" aria-hidden="true" tabindex="-1"></a>  [<span class="st">"ALL"</span><span class="op">,</span> <span class="op">...</span>[<span class="op">...</span><span class="kw">new</span> <span class="bu">Set</span>(anomalias<span class="op">.</span><span class="fu">map</span>(d <span class="kw">=&gt;</span> d<span class="op">.</span><span class="at">uf</span>))]<span class="op">.</span><span class="fu">sort</span>()]<span class="op">,</span></span>
