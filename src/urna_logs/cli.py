@@ -21,6 +21,7 @@ from urna_logs.horario import run_horario
 from urna_logs.oficial import run_cruzar_oficial
 from urna_logs.report_geo import run_by_municipio
 from urna_logs.validar_fluxo import run_validar_fluxo
+from urna_logs.verificar_vsc import run_verificar_vsc
 from urna_logs.viability import run_viability
 
 app = typer.Typer(help="Validação de logs das urnas — Eleições 2026", no_args_is_help=True)
@@ -303,6 +304,30 @@ def achados_cmd(
         f"{len(uf_list)} UF(s): {', '.join(uf_list)}"
     )
     run_achados(uf_list)
+
+
+@app.command("verificar-vsc")
+def verificar_vsc_cmd(
+    ufs: Optional[str] = typer.Option("AC", "--ufs"),
+    turno: int = typer.Option(1, "--turno", min=1, max=2),
+    nivel: int = typer.Option(
+        1,
+        "--nivel",
+        min=0,
+        max=2,
+        help="0=cobertura · 1=hashes (+auto-hash) · 2=HW crypto (parcial)",
+    ),
+    limit: Optional[int] = typer.Option(
+        None, "--limit", help="Só os N primeiros stems (piloto)"
+    ),
+) -> None:
+    """Valida `-vota.vsc` (cobertura + SHA-512 dos arquivos presentes no ZIP)."""
+    uf_list = _parse_ufs(ufs)
+    console.print(
+        f"[bold]Verificar .vsc[/bold] — nível≤{nivel} · {turno}º · "
+        f"{len(uf_list)} UF(s): {', '.join(uf_list)}"
+    )
+    run_verificar_vsc(uf_list, turno, nivel=nivel, limit=limit)
 
 
 if __name__ == "__main__":

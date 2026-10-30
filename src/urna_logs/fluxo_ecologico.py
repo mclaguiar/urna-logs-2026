@@ -558,7 +558,7 @@ def write_fluxo_reports(
         f"# Fluxo ecológico 1º→2º — {uf}",
         "",
         "Inferência **agregada por seção** (Duncan–Davis + taxas médias com bootstrap).",
-        "Não identifica eleitor a eleitor. Intervalos factíveis ≠ certeza individual.",
+        "Sistema subdeterminado: intervalos factíveis e taxas médias, não microdados.",
         "",
         f"{_quem('Fa', fa, nome_a)} {_quem('Fb', fb, nome_b)} "
         "São os dois números nominais do 2º turno, em ordem numérica.",
@@ -600,9 +600,9 @@ def write_fluxo_reports(
         f"- corr(margem 1º, Δ abstenção): "
         f"**{corr_m if corr_m is None else round(corr_m, 4)}**",
         "",
-        "## Hipóteses (evidência agregada, não prova)",
+        "## Hipóteses (leitura agregada sob o modelo)",
         "",
-        "| Hipótese | Leitura neste UF |",
+        "| Hipótese | Leitura neste UF (taxas IPF + bounds) |",
         "|---|---|",
         f"| Eliminados → sobretudo Fa ({fa}) | taxa Elim→Fa {_fmt_rate('p_elim_to_fa')}; "
         f"seções forçadas Fa={meta['elim_forced_fa']} |",
@@ -617,9 +617,9 @@ def write_fluxo_reports(
         "## Limites metodológicos",
         "",
         "- Duncan–Davis: o que é **matematicamente possível** dados só os totais da seção.",
-        "- Taxa média + IC: estimativa sob a hipótese de que o ponto médio do intervalo "
-        "é um resumo útil e que as seções são trocáveis no bootstrap (troca ecológica).",
-        "- RDV≡BU≡CSV comparam a integridade entre os arquivos públicos.",
+        "- Taxa média + IC: estimativa sob semente de independência e bootstrap de seções "
+        "(troca ecológica); outras decomposições nos bounds também fecham as margens.",
+        "- RDV≡BU≡CSV medem consistência entre arquivos públicos (outra camada).",
         "",
         "## Arquivos",
         "",

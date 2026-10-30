@@ -5,9 +5,9 @@ subtitle: "Migração agregada, abstenção e indicador sem digital — Eleiçõ
 
 Auditoria da **cadeia pública** (RDV ↔ BU ↔ CSV oficial), com foco em **achados justificáveis** no 2º turno seção a seção.
 
-**Evidência:** **A** documental · **B** operacional (confluência) · **C** contexto ecológico (não sustenta fraude sozinho). Ver [Método](metodo.qmd).
+**Evidência:** **A** documental · **B** operacional (confluência) · **C** contexto ecológico. Ver [Método](metodo.qmd).
 
-**Limite:** não dá para saber *quem* mudou de candidato. Concordância RDV≡BU≡CSV = só **integridade entre arquivos públicos**.
+**Escopo:** totais por seção (sem microdado de eleitor). Concordância RDV≡BU≡CSV = **consistência entre arquivos públicos** na chave.
 
 ```{ojs}
 //| echo: false
@@ -149,7 +149,7 @@ Inputs.table(
 
 ## 2. Onde olhar (risco: sem digital × mudança)
 
-**Sem digital** = biografia + sem biometria no BU — indicador operacional; ganha força se coincidir com Δ atípico no 2º. Correlação ≠ fraude.
+**Sem digital** = biografia + sem biometria no BU — indicador operacional; ganha força descritiva se coincidir com Δ atípico no 2º (correlação de seções, não identificação individual).
 
 ```{ojs}
 //| echo: false

@@ -630,7 +630,7 @@ def build_compare(uf: str, turno_a: int, turno_b: int) -> tuple[pd.DataFrame, di
     fb = meta.get("finalista_b") or "?"
     meta["mensagem"] = (
         f"Comparativo 1º×2º preenchido (finalistas {fa}×{fb}; "
-        f"saldo agregado por seção — não é migração eleitor a eleitor)."
+        f"saldo agregado por seção)."
     )
     out = merged.reindex(columns=COMPARE_COLS)
     return out, meta

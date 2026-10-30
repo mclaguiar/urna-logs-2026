@@ -308,8 +308,7 @@ def write_fichas(
                 f"% ≥17h 2º: **{row.pct_apos_17h_2t}**",
                 f"- Flags comparar: `{row.flags_comparar or '—'}`",
                 f"- **Fato:** {row.conclusao_permitida}",
-                "- **Limite:** o número é o total da seção. "
-                "Não identifica o voto de cada eleitor.",
+                "- **Escopo:** totais agregados da seção (sem microdado de eleitor).",
                 "",
             ]
         if len(df) > max_fichas:

@@ -8,30 +8,30 @@ title: "Método e glossário"
 RDV (recontar votos)  →  BU da urna  →  CSV oficial divulgado
 ```
 
-Trabalhamos só com **arquivos públicos** do TSE. Postura de **auditoria**: achar inconsistências e anomalias **justificáveis**, com hierarquia de evidência — não “provar fraude” a partir de padrão eleitoral agregado.
+Trabalhamos só com **arquivos públicos** do TSE: inconsistências, saldos e taxas com hierarquia de evidência. Relatórios descrevem consistência e padrões agregados; interpretação causal ou jurídica fica com o leitor.
 
-Divergência entre camadas é achado forte; concordância total **não** prova ausência de problema antes da publicação nem integridade do hardware — significa apenas que os **arquivos disponibilizados estão íntegros/consistentes entre si** (RDV ≡ BU ≡ CSV oficial).
+Divergência entre camadas = as publicações **não fecham** na chave. Concordância = RDV ≡ BU ≡ CSV oficial **nessa chave** (totais de seção).
 
 ## Hierarquia de evidência (A / B / C)
 
 Limiares pré-registrados em `urna_logs.thresholds` (versão do protocolo no relatório de achados).
 
-| Nível | O quê | Exemplo | O que se pode dizer |
+| Nível | O quê | Exemplo | Leitura |
 |---|---|---|---|
-| **A** | Inconsistência **documental** | RDV≠BU; BU≠CSV oficial; seção só num turno | Indício documental — checar cadeia |
-| **B** | Anomalia **operacional** (confluência) | `% sem digital` alto × `|Δ margem|`; margem×pós-17h; ≥2 flags | Priorizar revisão; **≠** fraude comprovada |
-| **C** | Padrão **ecológico** / contexto | Flag isolada; taxas IPF; elim. “forçado” só por bounds | Contexto de saldos; **não** sustenta fraude sozinho |
+| **A** | Inconsistência **documental** | RDV≠BU; BU≠CSV oficial; seção só num turno | Listar e checar a cadeia pública |
+| **B** | Anomalia **operacional** (confluência) | `% sem digital` alto × `|Δ margem|`; margem×pós-17h; ≥2 flags | Priorizar revisão (extremos da UF) |
+| **C** | Padrão **ecológico** / contexto | Flag isolada; taxas IPF; elim. “forçado” só por bounds | Saldos e taxas agregadas |
 
-Comando: `urna-logs achados --ufs "AC RR AP ZZ RO SE"` → fichas em `reports/achados_*`.
+Comando: `urna-logs achados --ufs ALL` → fichas em `reports/achados_*`.
 
 ## O que o painel responde
 
 1. **O que mudou 1º→2º** — Δ abstenção / comparecimento, votos dos finalistas e margem por seção (`join_key`).
 2. **Onde olhar** — achados A/B + `% sem digital` × Δ; flags isoladas ficam como C.
 3. **Fluxo do dia** — curva de habilitações no log (pós-17h em Brasília; exterior = horário local); overlay do 2º.
-4. **Fluxo ecológico** — anexo de saldos (Nível C), não veredito de fraude.
+4. **Fluxo ecológico** — anexo de saldos e taxas (Nível C).
 
-**Não dá:** saber *quem* migrou de candidato entre turnos (sigilo do voto).
+**Escopo:** totais por seção; sem microdado de eleitor (sigilo do voto).
 
 ## Inferência ecológica de fluxo (1º→2º)
 
@@ -41,7 +41,7 @@ Sem voto individual, o sistema de transferências por seção é **subdeterminad
 2. **Taxa média UF** — por seção, matriz IPF (RAS) que casa totais de origem e destino (semente = independência); taxas = fluxo/origem, agregadas com peso; **IC** = percentis 5–95 do bootstrap de seções. Duncan–Davis permanece como intervalo factível sem modelo.
 3. **Resíduo preditivo** — reconstituir totais 2º com as taxas UF × origens 1º; o que sobra é o que o modelo médio não explica.
 
-Isso é **inferência ecológica** (agregados → taxas médias), não migração pessoa a pessoa. Intervalos factíveis ≠ certeza individual. Correlação ≠ fraude.
+Inferência ecológica = agregados → taxas médias. Intervalos factíveis ≠ certeza individual; correlação ≠ identificação de mecanismo.
 
 Comandos:
 

@@ -312,10 +312,8 @@ def write_cruzamento_report(
     if diverg.empty:
         lines.append(
             "Nenhuma divergência entre totais do **BU** (audit) e o **CSV oficial** "
-            "de votação por seção. Isso indica apenas que os **arquivos "
-            "disponibilizados pelo TSE estão consistentes entre si** nessa chave "
-            "(seção × votável) — não prova ausência de anomalia operacional nem "
-            "“migração” eleitor a eleitor."
+            "de votação por seção: as **camadas públicas batem** nesta chave "
+            "(seção × votável). Os totais são agregados por seção."
         )
     else:
         lines.append(f"{len(diverg):,} linha(s) com diferença (até 40):")
@@ -338,8 +336,8 @@ def write_cruzamento_report(
         "- Votável: número do candidato; branco=`95`; nulo=`96` (padrão TSE)",
         "- Fonte oficial: "
         f"[Resultados 2026 — presidente por seção]({VOTACAO_PRESIDENTE_URL})",
-        "- Sem divergência = **consistência entre arquivos públicos** (BU ≡ CSV), "
-        "não prova ausência de anomalia operacional",
+        "- Sem divergência = **consistência entre arquivos públicos** (BU ≡ CSV) "
+        "na chave seção × votável",
         "",
     ]
     md.write_text("\n".join(lines), encoding="utf-8")
