@@ -3,11 +3,17 @@ title: "Painel 1º × 2º turno"
 subtitle: "Migração agregada, abstenção e indicador sem digital — Eleições 2026"
 ---
 
-Auditoria da **cadeia pública** (RDV ↔ BU ↔ CSV oficial), com foco em **achados justificáveis** no 2º turno seção a seção.
+Auditoria da **cadeia pública** (RDV ↔ BU ↔ CSV oficial), com foco em achados justificáveis seção a seção.
 
-**Evidência:** **A** documental · **B** operacional (confluência) · **C** contexto ecológico. Ver [Método](metodo.qmd).
+**Hierarquia de evidência**
 
-**Escopo:** totais por seção (sem microdado de eleitor). Concordância RDV≡BU≡CSV = **consistência entre arquivos públicos** na chave.
+| Nível | Significado |
+|---|---|
+| **A** | Inconsistência **documental** (RDV≠BU, BU≠oficial, seção só num turno) |
+| **B** | Anomalia **operacional** (confluência de extremos na mesma seção, na UF) |
+| **C** | Contexto ecológico / flag isolada / taxas médias |
+
+Detalhe e limiares: [Método](metodo.qmd). Concordância RDV≡BU≡CSV = consistência entre arquivos públicos na chave — não prova hardware.
 
 ```{ojs}
 //| echo: false
@@ -15,6 +21,8 @@ painel = FileAttachment("data/painel_uf.csv").csv({typed: true})
 horas = FileAttachment("data/curva_horaria.csv").csv({typed: true})
 outliers = FileAttachment("data/outliers_sem_digital.csv").csv({typed: true})
 anomalias = FileAttachment("data/anomalias_secao.csv").csv({typed: true})
+achadosAb = FileAttachment("data/achados_ab.csv").csv({typed: true})
+fluxoBr = FileAttachment("data/fluxo_br.csv").csv({typed: true})
 ```
 
 ```{ojs}
@@ -58,11 +66,17 @@ rows = painel.map(d => ({
 nUfs = rows.length
 nPronto = rows.filter(d => d.pronto_2t).length
 divOfficial = rows.reduce((s, d) => s + (d.secoes_divergentes_1t || 0), 0)
+sumA = rows.reduce((s, d) => s + (d.achados_A || 0), 0)
+sumB = rows.reduce((s, d) => s + (d.achados_B || 0), 0)
+sumC = rows.reduce((s, d) => s + (d.achados_C || 0), 0)
 okOfficial = rows.filter(d => d.pct_secoes_ok_oficial_1t != null)
 meanOk = okOfficial.length
   ? +(okOfficial.reduce((s, d) => s + d.pct_secoes_ok_oficial_1t, 0) / okOfficial.length).toFixed(2)
   : null
-statusGeral2t = nPronto ? "comparativo ativo" : "pendente (esqueleto)"
+statusGeral2t = nPronto === nUfs && nUfs
+  ? "comparativo ativo (todas)"
+  : (nPronto ? `comparativo ativo (${nPronto}/${nUfs})` : "pendente (esqueleto)")
+fichaA = achadosAb.filter(d => String(d.nivel).toUpperCase() === "A")
 ```
 
 ```{ojs}
@@ -73,14 +87,55 @@ Inputs.table(
     "2o turno ativo": nPronto,
     "Status 2o": statusGeral2t,
     "BU=oficial % medio": meanOk,
-    "Secoes divergentes": divOfficial
+    "Secoes divergentes": divOfficial,
+    "Achados A": sumA,
+    "Achados B": sumB,
+    "Achados C": sumC
   }]
 )
 ```
 
+**Nota técnica (KPI):** ordem de grandeza documental = Achados A (hoje concentrados em poucas seções). B/C são priorização e contexto — ver seções abaixo.
+
+## Divergência documental (Achado A — MA)
+
+Mede: seções em que BU e CSV oficial (e/ou RDV) **não fecham** na chave `UF:municipio:zona:secao`.
+
+```{ojs}
+//| echo: false
+maA = (() => {
+  const a = fichaA.find(d => String(d.join_key || "").startsWith("MA:")) || fichaA[0];
+  if (!a) return null;
+  return {
+    join_key: a.join_key,
+    uf: a.uf,
+    codigos: a.codigos || a.codes || "",
+    conclusao: a.conclusao_permitida || a.fato || "",
+    delta_margem: a.delta_margem == null || a.delta_margem === "" ? null : +a.delta_margem
+  };
+})()
+```
+
+```{ojs}
+//| echo: false
+maA
+  ? Inputs.table([{
+      join_key: maA.join_key,
+      UF: maA.uf,
+      Codigos: maA.codigos,
+      "Tipo": "BU=0 × votos só no oficial (pacote/RDV incompleto na chave)",
+      "Votos no oficial (aprox.)": 219,
+      "Detalhe": "13=158 · 22=52 · demais=9 (cruzar MA 1º)",
+      "Escala UF": "1 divergente em ~18.093 seções (MA)"
+    }])
+  : md`Nenhuma ficha A em \`achados_ab.csv\` neste build.`
+```
+
+**Nota técnica:** impacto na ordem de **uma seção / ~200 votos** frente a milhões no país — inconsistência de **cobertura/publicação** da cadeia nessa chave, não deslocamento agregado da UF. Fonte: `cruzar_oficial_MA_1t` + ficha A.
+
 ## 1. O que mudou (1º → 2º)
 
-UFs com `comparativo ativo` já trazem Δ de abstenção, comparecimento e % sem digital. Demais ficam vazias até existir audit/horario do 2º.
+Mede: Δ abstenção, comparecimento e % sem digital por UF, quando o comparativo 1º×2º está pronto.
 
 ```{ojs}
 //| echo: false
@@ -111,8 +166,9 @@ Inputs.table(
 //| echo: false
 Plot.plot({
   marginLeft: 40,
-  width: 720,
-  height: 280,
+  marginBottom: 40,
+  width: 960,
+  height: 320,
   x: {label: "UF", domain: rows.map(d => d.uf)},
   y: {label: "% sem digital (1o turno)", grid: true},
   marks: [
@@ -124,32 +180,64 @@ Plot.plot({
 })
 ```
 
+```{ojs}
+//| echo: false
+totSec1 = rows.reduce((s, d) => s + (d.secoes_1t || 0), 0)
+totSec2 = rows.reduce((s, d) => s + (d.secoes_2t || 0), 0)
+md`**Totalizador:** ${nPronto}/${nUfs} UFs com comparativo ativo · seções 1º ≈ **${totSec1.toLocaleString("pt-BR")}** · 2º ≈ **${totSec2.toLocaleString("pt-BR")}** · Achados A/B/C = **${sumA}** / **${sumB.toLocaleString("pt-BR")}** / **${sumC.toLocaleString("pt-BR")}**.`
+```
+
+**Nota técnica:** Status `pendente` some quando existir `comparar_turnos` da UF (e o build não preferir MULTI parcial). % sem digital é indicador operacional do BU, não identificação de eleitor.
+
 ## 1b. Fluxo ecológico (eliminados → finalistas)
 
-Taxas médias UF via matriz IPF por seção (casa totais 1º/2º) + IC bootstrap 5–95%. Duncan–Davis no relatório detalha o intervalo factível sem modelo. Não é migração eleitor a eleitor — ver [Método](metodo.qmd).
+Mede: taxas médias UF (IPF por seção) de quem votou em eliminados no 1º para **Fa = 13** / **Fb = 22** / abstenção no 2º. Não é migração pessoa a pessoa.
 
 ```{ojs}
 //| echo: false
+brRow = fluxoBr && fluxoBr.length ? fluxoBr[0] : null
 fluxoRows = rows.filter(d => d.p_elim_to_fa != null)
-Inputs.table(
-  fluxoRows.map(d => ({
+fluxoTable = [
+  ...fluxoRows.map(d => ({
     UF: d.uf,
-    "Elim→Fa %": +(100 * d.p_elim_to_fa).toFixed(2),
-    "IC Fa 5–95": d.p_elim_to_fa_p05 == null ? null : `${(100*d.p_elim_to_fa_p05).toFixed(1)}–${(100*d.p_elim_to_fa_p95).toFixed(1)}`,
-    "Elim→Fb %": +(100 * d.p_elim_to_fb).toFixed(2),
-    "IC Fb 5–95": d.p_elim_to_fb_p05 == null ? null : `${(100*d.p_elim_to_fb_p05).toFixed(1)}–${(100*d.p_elim_to_fb_p95).toFixed(1)}`,
+    "Elim→13 (Fa) %": +(100 * d.p_elim_to_fa).toFixed(2),
+    "IC 13 5–95": d.p_elim_to_fa_p05 == null ? null : `${(100*d.p_elim_to_fa_p05).toFixed(1)}–${(100*d.p_elim_to_fa_p95).toFixed(1)}`,
+    "Elim→22 (Fb) %": +(100 * d.p_elim_to_fb).toFixed(2),
+    "IC 22 5–95": d.p_elim_to_fb_p05 == null ? null : `${(100*d.p_elim_to_fb_p05).toFixed(1)}–${(100*d.p_elim_to_fb_p95).toFixed(1)}`,
     "Elim→Abst %": d.p_elim_to_abst == null ? null : +(100 * d.p_elim_to_abst).toFixed(2),
-    "Forçados Fa": d.elim_forced_fa,
-    "Forçados Fb": d.elim_forced_fb,
+    "Forçados 13": d.elim_forced_fa,
+    "Forçados 22": d.elim_forced_fb,
     "corr Elim×Δabst": d.corr_pct_elim_delta_abst
   })),
-  {sort: "UF"}
-)
+  ...(brRow ? [{
+    UF: "BR (ponderado)",
+    "Elim→13 (Fa) %": +(100 * +brRow.p_elim_to_fa).toFixed(2),
+    "IC 13 5–95": "— (soma UFs)",
+    "Elim→22 (Fb) %": +(100 * +brRow.p_elim_to_fb).toFixed(2),
+    "IC 22 5–95": "— (soma UFs)",
+    "Elim→Abst %": +(100 * +brRow.p_elim_to_abst).toFixed(2),
+    "Forçados 13": +brRow.forced_fa,
+    "Forçados 22": +brRow.forced_fb,
+    "corr Elim×Δabst": null
+  }] : [])
+]
+Inputs.table(fluxoTable, {sort: "UF"})
 ```
+
+```{ojs}
+//| echo: false
+brRow
+  ? md`**Totalizador BR:** eliminados 1º ≈ **${(+brRow.elim_1t).toLocaleString("pt-BR")}** · fluxo estimado →13 ≈ **${(+brRow.elim_to_fa).toLocaleString("pt-BR")}** (${(100*+brRow.p_elim_to_fa).toFixed(1)}%) · →22 ≈ **${(+brRow.elim_to_fb).toLocaleString("pt-BR")}** (${(100*+brRow.p_elim_to_fb).toFixed(1)}%) · →abst ≈ **${(+brRow.elim_to_abst).toLocaleString("pt-BR")}** (${(100*+brRow.p_elim_to_abst).toFixed(1)}%).`
+  : md`**Totalizador BR:** rode \`python scripts/relatorio_hipoteses_fluxo.py\` e \`build_site_data\` para gerar \`fluxo_br.csv\`.`
+```
+
+**Nota técnica:** Fa/Fb = finalistas por número de urna (**13** e **22**). Taxas = soma de fluxos IPF ÷ soma de origens (média ponderada). IC 5–95 é bootstrap por UF; BR é agregado das UFs no relatório de hipóteses. Ver [Método](metodo.qmd).
 
 ## 2. Onde olhar (risco: sem digital × mudança)
 
-**Sem digital** = biografia + sem biometria no BU — indicador operacional; ganha força descritiva se coincidir com Δ atípico no 2º (correlação de seções, não identificação individual).
+Mede: seções com **% sem digital** (1º) alto e **Δ margem** (2º−1º) extremo na própria UF. **Anomalia** aqui = ponto nos extremos da distribuição da UF (flags pré-registradas), não veredito causal.
+
+**Sem digital** = biografia + sem biometria no BU — indicador operacional; ganha força descritiva se coincidir com Δ atípico.
 
 ```{ojs}
 //| echo: false
@@ -171,10 +259,16 @@ pts = anomalias
     flagged: d.flags != null && String(d.flags).length > 0
   }))
   .filter(d => d.pct_sem_digital_1t != null && d.delta_margem != null)
+nPts = pts.length
+nFlag = pts.filter(d => d.flagged).length
+meanAbsDelta = nPts
+  ? d3.mean(pts, d => Math.abs(d.delta_margem))
+  : null
 Plot.plot({
-  marginLeft: 50,
-  width: 720,
-  height: 320,
+  marginLeft: 60,
+  marginBottom: 50,
+  width: 1000,
+  height: 480,
   x: {label: "% sem digital (1o)", grid: true},
   y: {label: "Delta margem (2o−1o)", grid: true},
   marks: [
@@ -185,29 +279,38 @@ Plot.plot({
 })
 ```
 
-Azul = seções sem flag · vermelho = com flag de anomalia (percentis na UF).
+```{ojs}
+//| echo: false
+md`**Totalizador (${ufAnom}):** **${nPts.toLocaleString("pt-BR")}** seções no scatter · **${nFlag.toLocaleString("pt-BR")}** com flag (${nPts ? (100*nFlag/nPts).toFixed(1) : "—"}%) · |Δ margem| médio ≈ **${meanAbsDelta == null ? "—" : meanAbsDelta.toFixed(1)}** votos · outliers listados abaixo: **${outliers.filter(d => ufAnom === "ALL" || d.uf === ufAnom).length}**.`
+```
+
+Azul = sem flag · vermelho = com flag de anomalia (percentis na UF).
 
 ```{ojs}
 //| echo: false
 Inputs.table(
-  outliers.map(d => ({
-    UF: d.uf,
-    Municipio: d.nome,
-    join_key: d.join_key,
-    Comparecimento: +d.bu_comparecimento,
-    "% abst 1o": d.pct_abstencao == null || d.pct_abstencao === "" ? null : +d.pct_abstencao,
-    "% sem digital": +d.pct_sem_digital,
-    "Delta abst": d.delta_abstencao == null || d.delta_abstencao === "" ? null : +d.delta_abstencao,
-    "Delta margem": d.delta_margem == null || d.delta_margem === "" ? null : +d.delta_margem,
-    Flags: d.flags || ""
-  })),
+  outliers
+    .filter(d => ufAnom === "ALL" || d.uf === ufAnom)
+    .map(d => ({
+      UF: d.uf,
+      Municipio: d.nome,
+      join_key: d.join_key,
+      Comparecimento: +d.bu_comparecimento,
+      "% abst 1o": d.pct_abstencao == null || d.pct_abstencao === "" ? null : +d.pct_abstencao,
+      "% sem digital": +d.pct_sem_digital,
+      "Delta abst": d.delta_abstencao == null || d.delta_abstencao === "" ? null : +d.delta_abstencao,
+      "Delta margem": d.delta_margem == null || d.delta_margem === "" ? null : +d.delta_margem,
+      Flags: d.flags || ""
+    })),
   {sort: "% sem digital", reverse: true}
 )
 ```
 
+**Nota técnica:** prioriza revisão operacional (nível B). Correlação de seções ≠ identificação individual; flags caem quando o comparativo/`horario` está atualizado (ex. %≥17h filtrado ao dia oficial).
+
 ## 3. Fluxo do dia (habilitações)
 
-Horário = momento da **habilitação** no log (não voto em candidato). O eixo usa **horário de Brasília** (relógio local convertido pelo fuso da UF). Exterior (**ZZ**) permanece em horário local do posto. **Todos** soma as UFs nacionais (sem ZZ).
+Mede: momento da **habilitação** no log (não voto em candidato), em **horário de Brasília** (ZZ = hora local do posto).
 
 ```{ojs}
 //| echo: false
@@ -222,7 +325,6 @@ viewof ufHora = Inputs.select(ufsHoraOpts, {
 
 ```{ojs}
 //| echo: false
-// Agrega por hora de Brasília (CSV: hora=local, hora_brasilia=ref. oficial).
 aggPorBrt = (subset, turno) => {
   const m = new Map(d3.range(24).map(h => [h, {hora: h, n: 0, turno, after: h >= 17}]));
   for (const d of subset) {
@@ -239,29 +341,39 @@ baseHoras = ufHora === "BR"
 serie1 = aggPorBrt(baseHoras, 1)
 serie2 = aggPorBrt(baseHoras, 2)
 eixoLabel = ufHora === "ZZ" ? "Hora local (exterior)" : "Hora de Brasilia"
+tot1 = d3.sum(serie1, d => d.n)
+tot2 = d3.sum(serie2, d => d.n)
+apos1 = d3.sum(serie1.filter(d => d.after), d => d.n)
+apos2 = d3.sum(serie2.filter(d => d.after), d => d.n)
+yMax = Math.max(d3.max(serie1, d => d.n) || 0, d3.max(serie2, d => d.n) || 0)
+yPad = yMax > 0 ? yMax * 1.08 : 1
 ```
 
 ```{ojs}
 //| echo: false
 metaUf = (() => {
-  const tot = d3.sum(serie1, d => d.n);
-  const apos = d3.sum(serie1.filter(d => d.after), d => d.n);
   const pico = serie1.length
     ? serie1.reduce((a, b) => (a.n >= b.n ? a : b))
     : null;
   const r = ufHora === "BR" ? null : rows.find(d => d.uf === ufHora);
   return {
     escopo: ufHora === "BR" ? "Todos (BRT, sem ZZ)" : ufHora,
-    pct_apos_17h_1t: tot ? +(100 * apos / tot).toFixed(4) : null,
+    pct_apos_17h_1t: tot1 ? +(100 * apos1 / tot1).toFixed(4) : null,
+    pct_apos_17h_2t: tot2 ? +(100 * apos2 / tot2).toFixed(4) : null,
     hora_pico_1t: pico ? pico.hora : null,
     ref: ufHora === "ZZ" ? "hora local" : "Brasilia",
-    status_2t: r ? r.status_2t : (nPronto ? "comparativo ativo" : "pendente")
+    status_2t: r ? r.status_2t : (nPronto ? "comparativo ativo" : "pendente"),
+    hab_1t: tot1,
+    hab_2t: tot2
   };
 })()
 Inputs.table([{
   Escopo: metaUf.escopo,
+  "Hab 1o": metaUf.hab_1t,
+  "Hab 2o": metaUf.hab_2t,
   "% apos 17h 1o": metaUf.pct_apos_17h_1t,
-  "Pico (h)": metaUf.hora_pico_1t,
+  "% apos 17h 2o": metaUf.pct_apos_17h_2t,
+  "Pico (h) 1o": metaUf.hora_pico_1t,
   "Eixo": metaUf.ref,
   "Status 2o": metaUf.status_2t
 }])
@@ -270,11 +382,17 @@ Inputs.table([{
 ```{ojs}
 //| echo: false
 Plot.plot({
-  marginLeft: 50,
-  width: 720,
-  height: 320,
+  marginLeft: 72,
+  marginBottom: 44,
+  width: 1000,
+  height: 460,
   x: {label: eixoLabel, domain: d3.range(24), ticks: 24},
-  y: {label: "Habilitacoes", grid: true},
+  y: {
+    label: "Habilitacoes",
+    grid: true,
+    domain: [0, yPad],
+    tickFormat: d => d3.format("~s")(d)
+  },
   marks: [
     Plot.ruleY([0]),
     Plot.ruleX([17], {stroke: "#a51c1c", strokeOpacity: 0.35, strokeDasharray: "4,4"}),
@@ -286,7 +404,33 @@ Plot.plot({
 })
 ```
 
-Azul = 1º turno · pontilhado âmbar = 2º (quando houver) · vermelho = ≥17h na referência do eixo · tracejado vertical = 17h.
+Azul = 1º · pontilhado âmbar = 2º · vermelho = ≥17h · tracejado = 17h. Eixo Y em escala SI (`~s`) para caber totais BR.
+
+```{ojs}
+//| echo: false
+horaTabela = d3.range(24).map(h => {
+  const a = serie1.find(d => d.hora === h);
+  const b = serie2.find(d => d.hora === h);
+  const n1 = a ? a.n : 0;
+  const n2 = b ? b.n : 0;
+  return {
+    Hora: h,
+    "Hab 1o": n1,
+    "% dia 1o": tot1 ? +((100 * n1) / tot1).toFixed(2) : null,
+    "Hab 2o": n2,
+    "% dia 2o": tot2 ? +((100 * n2) / tot2).toFixed(2) : null,
+    ">=17h": h >= 17 ? "sim" : ""
+  };
+})
+Inputs.table(horaTabela)
+```
+
+```{ojs}
+//| echo: false
+md`**Totalizador:** habilitações 1º **${tot1.toLocaleString("pt-BR")}** · 2º **${tot2.toLocaleString("pt-BR")}** · pós-17h 1º **${tot1 ? (100*apos1/tot1).toFixed(2) : "—"}%** · 2º **${tot2 ? (100*apos2/tot2).toFixed(2) : "—"}%**.`
+```
+
+**Nota técnica:** curva = ritmo de habilitação no log do dia oficial (± tolerância). Picos fora de 8h–17h ou pós-17h elevados merecem checagem de fuso/`historico_outro_dia`, não inferência de voto.
 
 ## Cadeia pública (rodapé)
 

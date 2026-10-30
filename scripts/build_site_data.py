@@ -15,17 +15,34 @@ OUTLIERS_MAX = 80
 
 
 def _read_glob(pattern: str, *, multi_name: str | None = None) -> pd.DataFrame | None:
-    multi = REPORTS / multi_name if multi_name else None
-    if multi and multi.exists():
-        return pd.read_csv(multi)
+    """Lê summaries per-UF; MULTI só se cobrir ≥ UFs dos per-UF (evita MULTI parcial)."""
     frames = [
         pd.read_csv(p)
         for p in sorted(REPORTS.glob(pattern))
         if "MULTI" not in p.name
     ]
-    if not frames:
-        return None
-    return pd.concat(frames, ignore_index=True)
+    per_uf = pd.concat(frames, ignore_index=True) if frames else None
+    if per_uf is not None and not per_uf.empty and "uf" in per_uf.columns:
+        per_uf = per_uf.drop_duplicates(["uf"], keep="last").copy()
+        n_uf = int(per_uf["uf"].nunique())
+    else:
+        n_uf = 0
+
+    multi = REPORTS / multi_name if multi_name else None
+    if multi is not None and multi.exists():
+        mdf = pd.read_csv(multi)
+        if not mdf.empty and "uf" in mdf.columns:
+            mdf = mdf.drop_duplicates(["uf"], keep="last").copy()
+            n_multi = int(mdf["uf"].nunique())
+        else:
+            n_multi = 0
+        if n_multi >= n_uf and n_multi > 0:
+            return mdf
+        if n_uf > 0:
+            return per_uf
+        return mdf if n_multi else None
+
+    return per_uf if n_uf else None
 
 
 def _sem_digital_turno(turno: int) -> pd.DataFrame:
@@ -553,6 +570,16 @@ def main() -> None:
         out_ach = OUT / "achados_ab.csv"
         ab.to_csv(out_ach, index=False)
         print(f"escrito {out_ach} ({len(ab)} fichas A/B)")
+
+    # Brasil ponderado (fluxo ecológico) — para linha total do painel
+    hip = REPORTS / "hipoteses_fluxo_resumo_1t_2t.csv"
+    if hip.exists():
+        hdf = pd.read_csv(hip)
+        br = hdf[hdf["uf"].astype(str).str.upper() == "BR"]
+        if not br.empty:
+            out_br = OUT / "fluxo_br.csv"
+            br.to_csv(out_br, index=False)
+            print(f"escrito {out_br} (linha BR)")
 
     # limpa CSVs antigos do site que o painel não usa mais
     for legacy in (
