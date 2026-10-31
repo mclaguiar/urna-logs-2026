@@ -1,6 +1,9 @@
 project:
   type: website
   output-dir: _site
+  resources:
+    - data/secao
+    - data/migracao
 
 website:
   title: "urna-logs-2026"
@@ -9,9 +12,17 @@ website:
   navbar:
     left:
       - href: index.qmd
-        text: Painel
+        text: Visão geral
+      - href: migracao.qmd
+        text: Migração dos votos
+      - href: auditoria.qmd
+        text: Auditoria
+      - href: secao.qmd
+        text: Consulta por seção
       - href: metodo.qmd
         text: Método
+      - href: assinaturas.qmd
+        text: Integridade dos arquivos
     right:
       - icon: github
         href: https://github.com/mclaguiar/urna-logs-2026
@@ -25,6 +36,11 @@ format:
     link-external-newwindow: true
     # plain evita MathJax ($) engolir expressões OJS
     html-math-method: plain
+    # padrão do Quarto: body 800px. Painel tem tabelas e plots de ~1000px.
+    grid:
+      sidebar-width: 0px
+      body-width: 1200px
+      margin-width: 250px
 
 execute:
   echo: false

@@ -2,107 +2,283 @@
 title: "Método e glossário"
 ---
 
+O site confere a consistência entre os arquivos públicos do TSE (Eleições 2026, cargo presidente) e descreve padrões agregados por seção, cidade, UF e país.
+
+Não afirma integridade da urna, fraude, causalidade nem o voto de uma pessoa. Os totais publicados entram como dado. A leitura não valida nem invalida se eles são o que aconteceu na urna.
+
+```{ojs}
+proto = FileAttachment("data/protocolo.csv").csv({typed: false})
+v = (chave) => {
+  const row = proto.find((d) => d.chave === chave);
+  return row ? String(row.valor) : "";
+}
+md`Extração usada neste site: protocolo de limiares **${v("protocolo_versao")}**, pacote \`${v("pkg_version")}\`. Hash SHA-256 do registro dos limiares: \`${v("hash_sha256")}\`.`
+```
+
+<style>
+.cadeia { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.5rem; margin: 1rem 0 1.25rem; }
+.caixa { flex: 1 1 9rem; border: 1px solid #d0d0d0; border-radius: 0.45rem; padding: 0.75rem 0.85rem; background: #f6f6f6; }
+.caixa strong { display: block; margin-bottom: 0.2rem; }
+.seta { flex: 1 1 8rem; font-size: 0.88rem; padding: 0.35rem 0.2rem; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin: 0.5rem 0 1rem; }
+.card-link { display: block; border: 1px solid #e2e2e2; border-radius: 0.5rem; padding: 0.85rem 1rem; text-decoration: none; color: inherit; }
+.card-link:hover { border-color: #888; }
+.card-link strong { display: block; margin-bottom: 0.25rem; }
+</style>
+
 ## Cadeia auditada
 
-```text
-RDV (recontar votos)  →  BU da urna  →  CSV oficial divulgado
+A chave de todas as setas é `join_key`: `UF:municipio:zona:secao`.
+
+<div class="cadeia">
+  <div class="caixa"><strong>RDV</strong>Registro digital do voto. Recontagem do presidente, sem identificar eleitor.</div>
+  <div class="seta"><strong>RDV → BU</strong><br>Os votos recontados no RDV batem com os totais do boletim, na mesma seção.</div>
+  <div class="caixa"><strong>BU</strong>Boletim de urna. Aptos, comparecimento, votos e o detalhe de habilitação.</div>
+  <div class="seta"><strong>BU → CSV oficial</strong><br>Os totais do boletim batem com a votação oficial por seção, na mesma chave.</div>
+  <div class="caixa"><strong>CSV oficial</strong>Votação publicada pelo TSE, por seção.</div>
+</div>
+
+Divergência: as publicações não fecham nessa chave. Concordância: RDV, BU e CSV oficial fecham nos totais da seção. Fechar entre si não prova a causa do número nem o voto de alguém.
+
+## Assinatura de hardware {#assinatura-de-hardware}
+
+O `-vota.vsc` guarda o hash SHA-512 de `bu`, `rdv` e `log`, o certificado da urna e a assinatura de hardware desses hashes. O par modelo/algoritmo declarado no arquivo escolhe o verificador. A contagem por UF está em [Integridade dos arquivos](assinaturas.qmd).
+
+UE2020 e UE2022 declaram Ed521. O certificado da urna é conferido com a AC UE2020 ou UE2022, fixada no código, e a assinatura dos arquivos é conferida com a chave desse certificado.
+
+UE2013 e UE2015 declaram ECDSA P-521. A assinatura dos arquivos é conferida com a chave do certificado da urna. O certificado da urna é conferido com a AC URNA publicada em [acurna.crt](http://acurna.tse.jus.br/crt/acurna.crt), o repositório da Declaração de Práticas de Certificação ([DPC-PC-ACURNA](http://dpc.acurna.tse.jus.br/DPC-PC-ACURNA.PDF), seções 2.1 e 6.1.4). Esse certificado da AC venceu em 18/07/2026, antes da eleição. A conta confere a assinatura e não consulta a data. As AC UE2020 e UE2022 são de outra geração e não assinam esses certificados.
+
+Cadeia fechada amarra o hash dos três arquivos à chave da urna e essa chave ao certificado da AC correspondente. Trocar só os arquivos, deixando o certificado original, quebra o hash ou a assinatura. Trocar o pacote inteiro exige um certificado emitido por essa AC. Relatório gravado antes de fixar o certificado publicado não entra nessa conta: na página, essa seção aparece como cadeia ainda não reprocessada.
+
+A assinatura de software da cerimônia não entra nesta conta. O verificador só confere o hash desse bloco.
+
+## Hierarquia A / B / C
+
+O extremo da UF é um percentil calculado dentro da própria UF, só nas seções presentes nos dois turnos. O corte em votos muda de UF para UF. O que fica registrado é o percentil, lido de `urna_logs.thresholds` no build (`site/data/protocolo.csv`).
+
+```{ojs}
+pct = (chave) => {
+  const n = Number(v(chave));
+  return Number.isFinite(n) ? n.toLocaleString("pt-BR", { style: "percent", maximumFractionDigits: 0 }) : v(chave);
+}
+cauda = (chave) => {
+  const n = Number(v(chave));
+  return Number.isFinite(n) ? ((1 - n) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 }) + "%" : "";
+}
+html`<table class="table table-sm">
+  <thead><tr><th>Flag</th><th>O que marca</th><th>Percentil</th><th>Cauda, por construção</th></tr></thead>
+  <tbody>
+    <tr><td><code>flag_margem</code></td><td>|Δ margem|</td><td>${pct("p_flag_margem")}</td><td>cerca de ${cauda("p_flag_margem")} das seções da UF</td></tr>
+    <tr><td><code>flag_abstencao</code></td><td>|Δ abstenção|</td><td>${pct("p_flag_abst")}</td><td>cerca de ${cauda("p_flag_abst")} das seções da UF</td></tr>
+    <tr><td><code>flag_pos17</code></td><td>% de habilitações após as 17h no 2º turno, ou |Δ| dessa fatia</td><td>${pct("p_flag_pos17")}</td><td>cerca de ${cauda("p_flag_pos17")} das seções da UF</td></tr>
+    <tr><td><code>flag_sem_digital_x_margem</code></td><td>% sem digital do 1º turno e, ao mesmo tempo, |Δ margem| no extremo</td><td>sem digital ${pct("p_flag_sem_dig")}; margem ${pct("p_flag_margem")}</td><td>interseção, menor que cada cauda</td></tr>
+    <tr><td><code>flag_so_turno</code></td><td>seção só no 1º ou só no 2º turno</td><td>não é percentil</td><td>entra como achado A</td></tr>
+  </tbody>
+</table>
+<p>Confluência (nível B): pelo menos <strong>${v("confluencia_min")}</strong> destas flags na mesma seção: <code>${v("confluencia_flags")}</code>.</p>
+<p>${v("protocolo_nota")}</p>`
 ```
 
-Trabalhamos só com **arquivos públicos** do TSE: inconsistências, saldos e taxas com hierarquia de evidência. Relatórios descrevem consistência e padrões agregados; interpretação causal ou jurídica fica com o leitor.
+**Margem** na seção é votos do 13 menos votos do 22, naquele turno. **Δ margem** é a margem do 2º turno menos a margem do 1º.
 
-Divergência entre camadas = as publicações **não fecham** na chave. Concordância = RDV ≡ BU ≡ CSV oficial **nessa chave** (totais de seção).
+| Nível | O quê | Leitura |
+|---|---|---|
+| **A** | Os arquivos públicos da seção não fecham (RDV≠BU, BU≠CSV oficial) ou a seção só existe num turno | Abrir a cadeia dessa chave |
+| **B** | Dois ou mais sinais no extremo da própria UF | Priorizar a revisão da seção |
+| **C** | Uma flag do comparativo, sem confluência | Contexto. O tamanho dessa lista é a cauda que a regra recorta |
 
-## Hierarquia de evidência (A / B / C)
+## Transferência 1º→2º
 
-Limiares pré-registrados em `urna_logs.thresholds` (versão do protocolo no relatório de achados).
+Sem o voto de cada pessoa, a matriz de origem e destino da seção não tem uma solução só. A estimativa usada é a `transferencia`: uma matriz comum às seções da unidade. A página [Migração dos Votos](migracao.qmd) mostra essa matriz em votos, somados até a UF e o Brasil.
 
-| Nível | O quê | Exemplo | Leitura |
+**Brown e Payne** (1986, *Aggregate data, ecological regression, and voting transitions*, JASA) é inferência ecológica: uma matriz de transição a partir das margens da seção. Nesta auditoria a conta é mínimos quadrados nas contagens, com cada linha somando 1 (softmax) e várias partidas. Não é o IGLS com efeito aleatório do artigo, nem um modelo multinomial-Dirichlet.
+
+**lphom** (pacote R `lphom`, cenário `simultaneous`; Pavía) estima a mesma matriz por programação linear. É uma estimativa pontual.
+
+A premissa é homogeneidade: dentro da unidade, as seções compartilham a mesma matriz. A taxa é uma média da unidade. Ler essa média como o caminho de um eleitor é a falácia ecológica.
+
+Origens: 13, 22, eliminados, branco, nulo e abstenção. Destinos: 13, 22, branco, nulo e abstenção. **Eliminados** reúne os demais votos nominais do 1º turno: o modelo não separa cada candidato que saiu. Branco e nulo são estimados em separado; a página de migração soma os dois só na exibição. A abstenção entra na matriz para as duas margens fecharem.
+
+A observação é a seção. A cidade ganha matriz própria quando tem pelo menos o mínimo de seções do protocolo; abaixo disso, herda a matriz do estado. Brown e Payne usa todas as seções. O lphom usa a seção até o teto de linhas; acima disso, soma por zona (município + zona), depois por município e, por último, em blocos. O teto limita só o lphom.
+
+```{ojs}
+html`<p>Mínimo para a cidade ter matriz própria: <strong>${v("min_secoes")}</strong> seções. Teto de linhas do lphom: <strong>${Number(v("max_linhas_lphom")).toLocaleString("pt-BR")}</strong>.</p>`
+```
+
+A UF e o Brasil **somam os votos transferidos** (votos da origem na cidade × taxa da cidade). Não é a média das taxas. Cidade pequena entra com a taxa do estado e com os votos dela. O Brasil é a soma das UFs incluídas. É essa soma que a página de migração exibe.
+
+O estimado não é o divulgado. Uma matriz por cidade não reproduz o 2º turno de cada seção. A tabela de diferença é o 2º turno estimado menos o 2º turno do boletim. Onde Brown e Payne e lphom divergem, a distância é incerteza do modelo ecológico. Um número só nessa célula seria um fato que o outro modelo não sustenta.
+
+**Eleitorado entre turnos.** Entra na matriz a seção presente nos dois turnos. Seção só num turno fica fora e aparece como achado A (`so_1t` / `so_2t`). Aptos podem mudar na mesma seção. O programa iguala a soma da origem e a soma do destino: a diferença do lado menor vai para a abstenção daquele lado. Por isso a abstenção de origem da matriz não é a abstenção publicada do 1º turno. A do boletim é aptos menos comparecimento. A da matriz inclui esse ajuste para as duas margens terem o mesmo total. A página de migração imprime os dois números e a diferença. Trocar a abstenção da matriz pela do boletim quebraria as taxas, que foram ajustadas na base com o acréscimo.
+
+O intervalo de 95% de Brown e Payne fica nos arquivos da transferência (`taxa_lo`, `taxa_hi`) nas células afastadas de 0 e de 1. Célula colada na fronteira não tem intervalo. O lphom não tem intervalo. A página de migração mostra a estimativa pontual, em votos e em taxa, e não esse intervalo.
+
+## Limitações
+
+Comparações múltiplas. Cada flag de percentil recorta a cauda da própria UF. O tamanho dessa cauda está na tabela de flags: é 1 menos o percentil, aplicado às seções da UF que existem nos dois turnos. O nível C é essa cauda quando o sinal não encontra um segundo. A contagem de fichas C não é um excedente sobre o acaso: o corte fabrica a cauda. Quatro testes na mesma seção aumentam a chance de um sinal isolado. Confluência (dois ou mais) é o que a hierarquia trata como prioridade, e mesmo assim é associação na seção, não causa.
+
+Associação não é causa. Sem digital alto junto de |Δ margem| grande descreve a seção. Não atribui o voto a um candidato nem a um horário.
+
+Falácia ecológica. A matriz é da cidade ou do estado. Não é o trajeto de um eleitor.
+
+Concordância entre camadas prova que os arquivos públicos fecham naquela chave. Não prova como o eleitor votou, nem por que a margem mudou, nem que a publicação é o que aconteceu. Divergência prova que, naquela chave, as publicações não fecham.
+
+A cadeia de hardware está em [Integridade dos arquivos](assinaturas.qmd). Onde o relatório já usa a AC publicada, a assinatura do certificado da urna confere; o certificado da AC URNA venceu em 18/07/2026 e a conta não usa a data. Relatório ainda não refeito com essa chave não fecha o último elo.
+
+## Hipóteses → observáveis
+
+Nenhuma linha abaixo é uma conclusão. É o que se esperaria ver, e onde olhar.
+
+| Hipótese | Padrão se for verdadeira | Padrão se for falsa | Onde ver |
 |---|---|---|---|
-| **A** | Inconsistência **documental** | RDV≠BU; BU≠CSV oficial; seção só num turno | Listar e checar a cadeia pública |
-| **B** | Anomalia **operacional** (confluência) | `% sem digital` alto × `|Δ margem|`; margem×pós-17h; ≥2 flags | Priorizar revisão (extremos da UF) |
-| **C** | Padrão **ecológico** / contexto | Flag isolada; taxas IPF; elim. “forçado” só por bounds | Saldos e taxas agregadas |
+| Os arquivos públicos fecham entre si | RDV, BU e CSV oficial iguais na `join_key` | Diferença de totais na mesma chave, ou seção só num turno | [Auditoria](auditoria.qmd), fichas A |
+| A margem da seção mudou no extremo da UF | \|Δ margem\| na cauda da UF, sozinha (C) ou com outro sinal (B) | A seção fica fora dessa cauda | [Auditoria](auditoria.qmd) |
+| O fluxo do dia concentra habilitação tarde | % após as 17h na cauda da UF | A seção acompanha o restante da UF | [Auditoria](auditoria.qmd) |
+| A transferência 1º→2º cabe numa matriz homogênea | Os dois modelos próximos entre si e do 2º turno publicado | Modelos distantes, ou estimado longe do publicado | [Migração dos Votos](migracao.qmd) |
+| A seção mudou de eleitorado entre os turnos | Status `so_1t` ou `so_2t`, ou aptos diferentes nos dois turnos | A seção existe nos dois, com a mesma base | [Seção](secao.qmd) e fichas A |
 
-Comando: `urna-logs achados --ufs ALL` → fichas em `reports/achados_*`.
+## O que o site responde
 
-## O que o painel responde
+<div class="cards">
+  <a class="card-link" href="auditoria.qmd"><strong>Auditoria</strong>O que mudou do 1º para o 2º turno, onde a seção está no extremo da UF e como as habilitações se distribuíram no dia.</a>
+  <a class="card-link" href="assinaturas.qmd"><strong>Integridade dos arquivos</strong>Se o pacote foi assinado pela urna: hash do `.vsc`, assinatura e certificado, por modelo e por UF.</a>
+  <a class="card-link" href="secao.qmd"><strong>Seção (Resultado por Seção)</strong>Totais da seção, da zona ou da cidade, e a mesma matriz de migração aplicada a esse conjunto.</a>
+  <a class="card-link" href="migracao.qmd"><strong>Migração dos Votos</strong>De onde a estimativa manda cada origem, nos dois modelos, por UF e no Brasil, e a diferença para o divulgado.</a>
+  <a class="card-link" href="metodo.qmd"><strong>Método</strong>Cadeia, limiares, transferência, limitações e o glossário desta página.</a>
+</div>
 
-1. **O que mudou 1º→2º** — Δ abstenção / comparecimento, votos dos finalistas e margem por seção (`join_key`).
-2. **Onde olhar** — achados A/B + `% sem digital` × Δ; flags isoladas ficam como C.
-3. **Fluxo do dia** — curva de habilitações no log (pós-17h em Brasília; exterior = horário local); overlay do 2º.
-4. **Fluxo ecológico** — anexo de saldos e taxas (Nível C).
+## Glossário
 
-**Escopo:** totais por seção; sem microdado de eleitor (sigilo do voto).
-
-## Inferência ecológica de fluxo (1º→2º)
-
-Sem voto individual, o sistema de transferências por seção é **subdeterminado**. Empilhamos três camadas:
-
-1. **Duncan–Davis** — para cada origem→destino, o intervalo **matematicamente possível** dados só os totais da seção (`max(0, o+d−N)` … `min(o,d)`). Intervalo estreito = quase identificável; largo = pouco se sabe sem hipóteses.
-2. **Taxa média UF** — por seção, matriz IPF (RAS) que casa totais de origem e destino (semente = independência); taxas = fluxo/origem, agregadas com peso; **IC** = percentis 5–95 do bootstrap de seções. Duncan–Davis permanece como intervalo factível sem modelo.
-3. **Resíduo preditivo** — reconstituir totais 2º com as taxas UF × origens 1º; o que sobra é o que o modelo médio não explica.
-
-Inferência ecológica = agregados → taxas médias. Intervalos factíveis ≠ certeza individual; correlação ≠ identificação de mecanismo.
-
-Comandos:
-
-```bash
-urna-logs fluxo-ecologico --ufs "AC RR AP ZZ"
-urna-logs validar-fluxo --ufs "AC RR AP ZZ"   # go/no-go antes do nacional
-```
-
-## Hipóteses → observáveis (agregado; não conclusões)
-
-| Hipótese | Observável |
+| Termo | Significado |
 |---|---|
-| Transferência aparente dos eliminados | `votos_eliminados_1t` ≈ `ganho_finalistas` − `delta_comparecimento` (`gap_transferencia`); taxas `p_elim_to_fa` / `p_elim_to_fb` + IC |
-| Eliminados *forçados* a um finalista | limite inferior Duncan–Davis > 50% da origem Elim |
-| Branco/nulo “migraram” | `p_branco_to_*`, `p_nulo_to_*` |
-| Abstenção seletiva | corr(% Elim 1º, Δ abstenção); `p_abst_to_fa/fb` |
-| Risco operacional | alto `% sem digital` × `|Δ margem|` |
-| Cauda horária | alto `% ≥17h` × Δ comparecimento/margem |
-| Contingência / troca de urna | status `so_1t` / `so_2t` |
+| **Abstenção** | Aptos menos comparecimento, no boletim. Na matriz de transferência, pode incluir o ajuste que iguala as duas margens |
+| **Achado A/B/C** | Classificação da evidência: A documental, B confluência, C sinal isolado |
+| **Aptos** | Eleitores aptos a votar na seção, no boletim |
+| **Brown e Payne** | Inferência ecológica de 1986. Aqui: mínimos quadrados nas contagens da seção, linha somando 1 |
+| **BU** | Boletim de urna: aptos, comparecimento, votos e detalhe de habilitação |
+| **AC** | Autoridade certificadora. Emite o certificado da urna |
+| **AC URNA** | Autoridade das urnas UE2013 e UE2015. Certificado em [acurna.crt](http://acurna.tse.jus.br/crt/acurna.crt), válido até 18/07/2026 |
+| **Autenticidade** | O pacote foi assinado pela urna. É o que [Integridade dos arquivos](assinaturas.qmd) mede |
+| **Cadeia aberta** | Seção UE2013/UE2015 cujo relatório ainda não confrontou o certificado com a AC URNA publicada. Limite da verificação, não indício de alteração |
+| **Cadeia fechada** | Hash ok e o certificado da urna conferido com a AC do modelo. Em UE2020/UE2022, AC embutida (Ed521). Em UE2013/UE2015, AC URNA publicada (ECDSA P-521); a conta não usa a data de validade |
+| **Certificado da urna** | Certificado dentro do `.vsc`, com a chave que assina os hashes. O emissor é a AC do modelo |
+| **Consistência** | Os arquivos públicos fecham entre si na mesma chave (RDV, BU, CSV). Não diz quem assinou |
+| **ECDSA P-521** | Assinatura das urnas UE2013 e UE2015, curva secp521r1. A AC é a AC URNA |
+| **Ed521** | Assinatura das urnas UE2020 e UE2022. A AC correspondente está no código |
+| **Comparecimento** | Eleitores que compareceram na seção |
+| **Confluência** | Dois ou mais sinais do protocolo na mesma seção. É o nível B |
+| **Contingência** | Seção presente só num turno (`so_1t` ou `so_2t`). Entra como achado A e fica fora da matriz |
+| **CSV oficial** | [Resultados 2026](https://dadosabertos.tse.jus.br/dataset/resultados-2026), votação por seção |
+| **Delta (Δ)** | Diferença 2º menos 1º. Δ margem é a margem do 2º menos a do 1º |
+| **Eliminados** | Votos nominais do 1º turno que não são 13 nem 22, somados numa origem só |
+| **Flag** | Marca de que a seção caiu na cauda da UF, ou de que só existe num turno |
+| **Fuso (log)** | O relógio do log é a hora local. AC fica cerca de 2 horas atrás de Brasília; AM, MT, MS, RO e RR, cerca de 1 hora |
+| **Habilitação** | Liberação do eleitor para votar, no log (`Eleitor foi habilitado`). Não é o voto num candidato |
+| **Inferência ecológica** | Estimar uma transição individual a partir de totais de grupo. A premissa aqui é uma matriz comum à unidade |
+| **`join_key`** | `UF:municipio:zona:secao`. Chave do 1º com o 2º e do BU com o oficial |
+| **Log / logjez** | Eventos da urna. Fonte do horário e do tipo de habilitação |
+| **lphom** | Programa linear do pacote R `lphom`, cenário `simultaneous`. Estimativa pontual da mesma matriz |
+| **Margem** | Votos do 13 menos votos do 22, na seção e no turno |
+| **Parquet** | Detalhe local em `reports/`. Não sobe ao GitHub Pages |
+| **Pós-17h** | Habilitações a partir das 17:00 no horário de Brasília. No exterior (ZZ), 17:00 no horário local do posto |
+| **Protocolo** | Versão, data e hash dos limiares em `urna_logs.thresholds` |
+| **RDV** | Registro digital do voto. Sequência sem identificar eleitor; base da recontagem |
+| **Seção** | Unidade de votação: município + zona + seção |
+| **Sem digital (BU)** | Habilitados por biografia (ano de nascimento) mais quem compareceu sem biometria cadastrada. Não é voto em candidato |
+| **Sem digital (log)** | Proxy do log: `sem_biometria` + `manual_falha`. Não misturar com o percentual do BU |
+| **Transferência** | Matriz estimada do 1º para o 2º turno. A página soma votos, não a média das taxas |
+| **TSE** | Tribunal Superior Eleitoral. Publica os arquivos abertos |
+| **UF** | Unidade da Federação. ZZ é o exterior |
+| **Votável** | Código no CSV oficial. Branco = `95`, nulo = `96` |
+| **Votos válidos** | No 1º turno, 13 + 22 + eliminados. No 2º, 13 + 22. Branco, nulo e abstenção ficam fora desse percentual |
+| **`.vsc`** | Arquivo `-vota.vsc`. Guarda o hash SHA-512 de `bu`, `rdv` e `log`, o certificado da urna e a assinatura de hardware |
 
 ## Dados deste site
 
-| Arquivo | Conteúdo |
-|---|---|
-| `site/data/painel_uf.csv` | KPIs por UF (1º + colunas 2º/Δ + taxas de fluxo) |
-| `site/data/curva_horaria.csv` | Habilitações por hora (BRT) × UF × turno |
-| `site/data/outliers_sem_digital.csv` | Top seções % sem digital + Δ/flags do comparativo |
-| `site/data/anomalias_secao.csv` | Seções do comparativo (scatter % sem digital × Δ margem) |
-| `site/data/achados_ab.csv` | Fichas níveis A e B (documental / operacional) |
+| Arquivo | Conteúdo | Download |
+|---|---|---|
+| `site/data/painel_uf.csv` | Indicadores por UF, 1º e 2º turno | [painel_uf.csv](data/painel_uf.csv) |
+| `site/data/curva_horaria.csv` | Habilitações por hora, UF e turno | [curva_horaria.csv](data/curva_horaria.csv) |
+| `site/data/outliers_sem_digital.csv` | Seções no topo de % sem digital | [outliers_sem_digital.csv](data/outliers_sem_digital.csv) |
+| `site/data/anomalias_secao.csv` | Seções do comparativo | [anomalias_secao.csv](data/anomalias_secao.csv) |
+| `site/data/achados_ab.csv` | Fichas A e B | [achados_ab.csv](data/achados_ab.csv) |
+| `site/data/protocolo.csv` | Limiares lidos no build | [protocolo.csv](data/protocolo.csv) |
+| `site/data/hw_cadeia.csv` | Seções verificadas por UF e turno: hash, cadeia e modelo | [hw_cadeia.csv](data/hw_cadeia.csv) |
+| `site/data/hw_cobertura.csv` | Seções verificadas em cada UF e turno, inclusive zero | [hw_cobertura.csv](data/hw_cobertura.csv) |
+| `site/data/secao/hw_{UF}.csv` | Selo da seção: modelo, cadeia e hash | [exemplo AC](data/secao/hw_AC.csv) |
+| `site/data/migracao/fluxo.csv` | Votos transferidos por UF e no Brasil | [fluxo.csv](data/migracao/fluxo.csv) |
+| `site/data/migracao/turnos.csv` | Totais publicados por UF, turno e grupo | [turnos.csv](data/migracao/turnos.csv) |
+| `site/data/migracao/matriz.csv` | Taxas por cidade e do estado, nos dois modelos | [matriz.csv](data/migracao/matriz.csv) |
+| `site/data/migracao/conferencia.csv` | BU × CSV oficial, por grupo | [conferencia.csv](data/migracao/conferencia.csv) |
+| `site/data/migracao/cobertura.csv` | Quantas UFs têm matriz | [cobertura.csv](data/migracao/cobertura.csv) |
+| `site/data/secao/votos_{UF}.csv` | Consulta da seção. Um arquivo por UF | [exemplo AC](data/secao/votos_AC.csv) |
+| `site/data/secao/municipios.csv` | Código e nome do município | [municipios.csv](data/secao/municipios.csv) |
+| `site/data/secao/rotulos.csv` | Código votável e nome | [rotulos.csv](data/secao/rotulos.csv) |
+
+::: {.callout-note collapse="true"}
+## Dicionário de colunas
+
+**painel_uf.csv.** `uf`. `secoes_1t`, `secoes_2t`. `pct_sem_digital_1t`, `pct_sem_digital_2t`, `delta_pct_sem_digital`. `delta_abstencao_pp`, `delta_comparecimento`. `pct_apos_17h_1t`, `pct_apos_17h_2t`, `hora_pico_1t`. `pct_secoes_ok_oficial_1t`, `secoes_divergentes_1t`. `n_flag_margem`. `achados_A`, `achados_B`, `achados_C`. `protocolo_versao`. Colunas `p_elim_*` e `fluxo_*` são de uma estimativa antiga de independência. A migração do site não usa essas colunas.
+
+**curva_horaria.csv.** `uf`, `turno`, `hora`, `habilitacoes`, `pct`, `hora_brasilia`, `after_17h`. Por tipo: `hab_biometrica`, `hab_manual`, `hab_sem_biometria`, `hab_desconhecido`, e o percentual de cada uma.
+
+**outliers_sem_digital.csv.** `uf`, `join_key`, `municipio`, `zona`, `secao`, `bu_comparecimento`, `pct_abstencao`, `pct_sem_digital`, `delta_abstencao`, `delta_margem`, `flags`, `nome`, `turno`.
+
+**anomalias_secao.csv.** `uf`, `join_key`, `municipio`, `zona`, `secao`, `pct_sem_digital_1t`, `delta_margem`, `delta_abstencao`, `pct_apos_17h_2t`, `flags`.
+
+**achados_ab.csv.** `uf`, `join_key`, `municipio`, `zona`, `secao`, `nivel`, `nivel_desc`, `codigos`, `conclusao_permitida`, `status`, `delta_margem`, `delta_abstencao`, `pct_sem_digital_1t`, `pct_apos_17h_2t`, `flags_comparar`, `protocolo_versao`, `pkg_version`.
+
+**fluxo.csv.** `uf` (`BR` é o país), `modelo` (`brown_payne` ou `lphom`), `origem`, `destino`, `votos`, `taxa`, `taxa_lo`, `taxa_hi`. O intervalo só vem preenchido em parte das células de Brown e Payne. A página de migração não o exibe.
+
+**turnos.csv.** `uf`, `turno`, `grupo` (`13`, `22`, `eliminados`, `branco`, `nulo`, `abstencao`), `votos` do boletim.
+
+**matriz.csv.** `uf`, `municipio` (`0` é a matriz do estado), `modelo`, `origem`, `destino`, `taxa`, `taxa_lo`, `taxa_hi`.
+
+**conferencia.csv.** `uf`, `turno`, `grupo`, `votos_bu`, `votos_oficial`. A abstenção não entra neste arquivo.
+
+**cobertura.csv.** `presentes`, `faltam`, `n_presentes`, `n_ufs`.
+
+**hw_cadeia.csv.** `uf`, `turno`, `secoes`, `hash_ok`, `hash_falhou`, `cadeia_fechada`, `cadeia_aberta`, `fora`, `n_ue2013`, `n_ue2015`, `n_ue2020`, `n_ue2022`, `verificador` (`novo` ou `anterior`), `bloco` (`novo`, `pre_ac` ou `anterior`). Sem votos.
+
+**hw_cobertura.csv.** `uf`, `turno`, `secoes`, `bloco`. Uma linha por UF e turno, inclusive quando a contagem é zero.
+
+**hw_{UF}.csv.** `municipio`, `zona`, `secao`, `turno`, `modelo`, `cadeia` (`fechada`, `aberta`, `falha` ou `nao_reprocessada`), `hash` (`ok` ou `falhou`).
+
+**votos_{UF}.csv.** `municipio`, `zona`, `secao`. `t1` e `t2`: pares código=votos. `dif`: alguma diferença RDV×BU na seção. `a1` e `a2`: abstenção. `aptos_1t`, `aptos_2t`, `comparecimento_1t`, `comparecimento_2t`. `pct_sem_digital_1t`, `pct_sem_digital_2t`, `pct_apos_17h_1t`, `pct_apos_17h_2t`. `status`, `flags`, `nivel`, `codigos`, `conclusao_permitida` (texto só em A e B). `ndiv` e `det`: votáveis em que RDV≠BU ou BU≠oficial.
+
+**municipios.csv.** `uf`, `municipio`, `nome`.
+
+**rotulos.csv.** `votavel`, `nome_votavel`.
+:::
+
+::: {.callout-note collapse="true"}
+## Reproduzir
+
+Os comandos abaixo refazem os relatórios e o site. O passo a passo completo está no [README](https://github.com/mclaguiar/urna-logs-2026/blob/main/README.md).
+
+```bash
+urna-logs download --ufs "AC RR AP ZZ" --turno 1
+urna-logs audit --ufs "AC RR AP ZZ" --turno 1
+urna-logs cruzar-oficial --ufs "AC RR AP ZZ" --turno 1
+urna-logs horario --ufs "AC RR AP ZZ" --turno 1 --por-secao
+urna-logs download --ufs "AC RR AP ZZ" --turno 2
+urna-logs audit --ufs "AC RR AP ZZ" --turno 2
+urna-logs cruzar-oficial --ufs "AC RR AP ZZ" --turno 2
+urna-logs horario --ufs "AC RR AP ZZ" --turno 2 --por-secao
+urna-logs comparar-turnos --ufs "AC RR AP ZZ"
+urna-logs achados --ufs "AC RR AP ZZ"
+urna-logs transferencia --ufs "AC RR AP ZZ"
+urna-logs verificar-vsc --ufs "AC RR AP ZZ" --turno 1
+```
+
+O detalhe por seção fica em Parquet, em `reports/` (`audit_presidente_*`, `cruzar_oficial_*`, `horario_*`, `comparar_turnos_*`, `achados_*`, `transferencia_*`, `verificar_vsc_*`). Esse detalhe não entra no site. O site lê CSV.
 
 ```bash
 python scripts/build_site_data.py
 quarto render site
 ```
 
-## Glossário
+`build_site_data.py protocolo` regrava só `site/data/protocolo.csv`. `build_site_data.py migracao` regrava só os CSV da migração. `build_site_data.py hw` regrava `hw_cadeia.csv`, `hw_cobertura.csv` e `secao/hw_{UF}.csv` a partir dos `verificar_vsc_*_*t.csv` já gravados.
 
-| Termo | Significado |
-|---|---|
-| **TSE** | Tribunal Superior Eleitoral — publica os arquivos abertos |
-| **UF** | Unidade da Federação; **ZZ** = exterior |
-| **Seção** | Unidade de votação (município + zona + seção) |
-| **BU** | Boletim de Urna — totais da urna (aptos, comparecimento, votos, detalhe biométrico) |
-| **RDV** | Registro Digital do Voto — sequência de votos **sem** identificar eleitor; base da recontagem |
-| **Log / logjez** | Eventos da urna; fonte do horário e do tipo de habilitação |
-| **Habilitação** | Liberação do eleitor para votar (`Eleitor foi habilitado`) |
-| **Sem digital (BU)** | **Canônico no painel:** biografia + sem biometria no BU (não é voto em candidato) |
-| **Sem digital (log)** | Proxy no log: `sem_biometria` + `manual_falha` (ano de nascimento + digital do mesário). Não misturar com o % do BU |
-| **Pós-17h** | Habilitações ≥ 17:00 no **horário de Brasília** (relógio local convertido pelo fuso da UF). **ZZ** (exterior): ≥ 17:00 no horário local do posto. Um único helper: `urna_logs.fuso.apos_encerramento_oficial` |
-| **Fuso (log)** | Relógio do log = hora local; AC ≈ UTC−5 (−2h vs BRT), AM/MT/MS/RO/RR ≈ UTC−4 (−1h); demais UTC−3 |
-| **Abstenção** | Aptos − comparecimento |
-| **Votável** | Código no CSV oficial; branco=`95`, nulo=`96` |
-| **`join_key`** | `UF:municipio:zona:secao` — chave 1º×2º e BU×oficial |
-| **CSV oficial** | [Resultados 2026](https://dadosabertos.tse.jus.br/dataset/resultados-2026) (ex.: presidente por seção) |
-| **Parquet** | Detalhe local da auditoria (não sobe ao GitHub Pages) |
-| **Duncan–Davis** | Limites factíveis de uma célula numa tabela de contingência agregada |
-| **Fluxo ecológico** | Estimativa de taxas origem→destino 1º→2º sem microdados de eleitor (evidência **C**) |
-| **Achado A/B/C** | Classificação de evidência da auditoria (`urna-logs achados`) |
-| **Protocolo** | Versão dos limiares/regras em `urna_logs.thresholds` |
-
-## Publicação
-
-GitHub Actions (`.github/workflows/quarto-publish.yml`) → branch `gh-pages`.  
-README do repositório: [github.com/mclaguiar/urna-logs-2026](https://github.com/mclaguiar/urna-logs-2026).
+A publicação é o GitHub Actions em `.github/workflows/quarto-publish.yml`, na branch `gh-pages`.
+:::

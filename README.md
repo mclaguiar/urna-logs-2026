@@ -14,10 +14,10 @@ Divergência entre camadas = achado documental. Concordância = os arquivos publ
 |---|---|---|
 | **A** | Inconsistência **documental** (RDV≠BU, BU≠oficial, seção só num turno) | Abrir a cadeia da seção |
 | **B** | Anomalia **operacional** (confluência de flags na mesma seção) | Priorizar revisão |
-| **C** | Padrão ecológico / flag isolada / taxas médias da UF | Contexto de saldos |
+| **C** | Flag isolada do comparativo | Um sinal no extremo da UF |
 
 Caminho principal: A → B, no nível da **seção** (`join_key` = `UF:municipio:zona:secao`).  
-Nível C (`fluxo-ecologico`) — médias de UF e bounds por seção.
+A migração 1º→2º é a `transferencia` (Brown e Payne e lphom).
 
 Limiares: `urna_logs.thresholds`. Método: [site/metodo.qmd](site/metodo.qmd).
 
@@ -34,11 +34,10 @@ Cada comando lê o que o anterior gravou em `data/` / `reports/` e escreve Parqu
 | 5 | `horario` | Dia oficial ± tolerância: janelas 8h–17h / pós / fora; histórico = outras datas no `.jez`. `--por-secao`. |
 | 6 | `comparar-turnos` | 1º×2º na mesma seção: Δ + flags. |
 | 7 | `achados` | Fichas A/B/C. |
-| 8 | `verificar-vsc` | `-vota.vsc`: hashes do ZIP e Ed521. `--nivel 1` só hashes; `--nivel 2` só Ed521. |
-| 9 | `fluxo-ecologico` | Duncan–Davis + taxas IPF com IC (Nível C). |
-| 10 | `transferencia` | Matriz 1º→2º por cidade. Brown e Payne em cada seção, com intervalo de 95%. lphom na seção até 2.500 linhas; acima disso, por zona. No fim, leitura de cada estado e o consolidado do país. |
+| 8 | `verificar-vsc` | `-vota.vsc`: hashes do ZIP e assinatura HW. `--nivel 1` só hashes; `--nivel 2` só HW (Ed521 ou ECDSA, conforme o modelo). |
+| 9 | `transferencia` | Matriz 1º→2º por cidade. Brown e Payne em cada seção, com intervalo de 95%. lphom na seção até 2.500 linhas; acima disso, por zona. No fim, leitura de cada estado e o consolidado do país. |
 
-**Opcionais:** `viability` / `catalog` / `metrics`; `validar-fluxo`; `inspect`.
+**Opcionais:** `viability` / `catalog` / `metrics`; `inspect`.
 
 Repita `download` → `audit` → `cruzar` → `horario` para o **2º turno** (`--turno 2`) antes de `comparar-turnos` / `achados`.
 
@@ -48,9 +47,9 @@ Repita `download` → `audit` → `cruzar` → `horario` para o **2º turno** (`
 |---|---|
 | RDV ≡ BU e BU ≡ oficial por seção | Microdado de eleitor / migração pessoa a pessoa |
 | Δ 1º×2º; % sem digital; pós-17h; flags B | Outros cargos |
-| Fluxo ecológico (taxas + bounds) | Chave SW da cerimônia (`.vsc`) |
+| Transferência 1º→2º (Brown e Payne, lphom) | Chave SW da cerimônia (`.vsc`) |
 | Hashes `.vsc` nível 1 (arquivos no ZIP) | |
-| Ed521 `.vsc` (padrão do `verificar-vsc`; extra `hw`) | |
+| Assinatura HW do `.vsc`: Ed521 (UE2020/UE2022) e ECDSA P-521 (UE2013/UE2015; cadeia AC URNA ainda pendente) | |
 
 ### Prefixos em `reports/`
 
@@ -61,9 +60,9 @@ Repita `download` → `audit` → `cruzar` → `horario` para o **2º turno** (`
 | `horario_*` / `horario_secao_*` / `curva_horaria_*` | Log horário |
 | `comparar_turnos_*` | 1º×2º + flags |
 | `achados_*` | Fichas A/B/C |
-| `fluxo_*` | Bounds / taxas / MD ecológico |
+| `transferencia_*` | Matriz 1º→2º por cidade |
 | `verificar_vsc_*` | Integridade `.vsc` |
-| `hipoteses_fluxo_*` / `evidencia_nacional_*` | Consolidados nacionais (scripts) |
+| `evidencia_nacional_*` | Consolidado nacional (script) |
 
 ## Setup
 
@@ -96,7 +95,7 @@ urna-logs horario --ufs "AC RR AP ZZ" --turno 2 --por-secao
 
 urna-logs comparar-turnos --ufs "AC RR AP ZZ"
 urna-logs achados --ufs "AC RR AP ZZ"
-urna-logs fluxo-ecologico --ufs "AC RR AP ZZ"
+urna-logs transferencia --ufs "AC RR AP ZZ"
 urna-logs verificar-vsc --ufs "AC RR AP ZZ" --turno 1
 urna-logs verificar-vsc --ufs "AC RR AP ZZ" --turno 2
 ```
@@ -105,8 +104,7 @@ urna-logs verificar-vsc --ufs "AC RR AP ZZ" --turno 2
 
 ```bash
 python scripts/relatorio_evidencia_nacional.py          # A/B/C + log×BU + .vsc resumo
-python scripts/relatorio_evidencia_nacional.py --all     # + hipóteses IPF + painel
-python scripts/relatorio_hipoteses_fluxo.py              # só fluxo didático UF+Brasil
+python scripts/relatorio_evidencia_nacional.py --site    # + painel
 python scripts/build_site_data.py                       # site/data/*.csv
 ```
 
@@ -114,9 +112,9 @@ Se `outliers_sem_digital.csv` estiver bloqueado no Windows, o build grava `outli
 
 ## Status
 
-- Pipeline 1º/2º e comparativo/achados/fluxo em escala **nacional** (28 UFs), conforme CDN.
-- Consolidados: `reports/evidencia_nacional_1t_2t.md`, `reports/hipoteses_fluxo_1t_2t.md`.
-- `.vsc`: `verificar-vsc` confere hashes e Ed521. `--nivel 1` fica só nos hashes; `--nivel 2` fica só no Ed521. O Ed521 precisa do extra `hw` (ECPy). Piloto de hashes no AC: 100%; demais UFs conforme job.
+- Pipeline 1º/2º, comparativo, achados e transferência em escala **nacional** (28 UFs), conforme CDN.
+- Consolidado: `reports/evidencia_nacional_1t_2t.md`.
+- `.vsc`: `verificar-vsc` confere hashes e a assinatura HW do modelo (Ed521 nas UE2020/UE2022; ECDSA P-521 nas UE2013/UE2015, com cadeia da AC URNA ainda pendente). `--nivel 1` fica só nos hashes; `--nivel 2` fica só na assinatura. Precisa do extra `hw` (ECPy).
 - Ainda: outros cargos.
 
 ## Site (Quarto → GitHub Pages)

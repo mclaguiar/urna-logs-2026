@@ -1,0 +1,903 @@
+---
+title: "Migração dos Votos"
+subtitle: "Presidente — totais por estado e a transferência estimada"
+---
+
+Esta página estima como os votos do 1º turno podem ter se repartido no 2º, a partir dos totais divulgados.
+
+Esses totais são aceitos como dados: a leitura não valida nem invalida se o que foi divulgado é o que aconteceu.
+
+```{ojs}
+//| echo: false
+turnos = FileAttachment("data/migracao/turnos.csv").csv({typed: true})
+fluxo = FileAttachment("data/migracao/fluxo.csv").csv({typed: true})
+cobertura = FileAttachment("data/migracao/cobertura.csv").csv({typed: true})
+conferencia = FileAttachment("data/migracao/conferencia.csv").csv({typed: true})
+nome = ({
+  "13": "Lula (13)",
+  "22": "Flávio (22)",
+  eliminados: "Eliminados",
+  branco_nulo: "Branco e nulo",
+  abstencao: "Abstenção"
+})
+COR = ({
+  "13": "#a51c1c",
+  "22": "#1f4e79",
+  eliminados: "#6b7280",
+  branco_nulo: "#9ca3af",
+  abstencao: "#c4a35a"
+})
+origensVis = ["13", "22", "eliminados", "branco_nulo", "abstencao"]
+destinosVis = ["13", "22", "branco_nulo", "abstencao"]
+partes = grupo => grupo === "branco_nulo" ? ["branco", "nulo"] : [grupo]
+fmt = n => Math.round(+n || 0).toLocaleString("pt-BR")
+pct = taxa => taxa == null || Number.isNaN(+taxa)
+  ? "—"
+  : (100 * +taxa).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + "%"
+pct2 = taxa => (100 * taxa).toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + "%"
+pp = delta => {
+  if (delta == null || Number.isNaN(+delta)) return "—"
+  const sinal = delta > 0 ? "+" : ""
+  return `${sinal}${(+delta).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})} pp`
+}
+deltaTxt = (depois, antes) => {
+  const d = Math.round(depois) - Math.round(antes)
+  const sinal = d > 0 ? "+" : ""
+  return `${sinal}${fmt(d)}`
+}
+nomeUf = uf => uf === "ZZ" ? "Exterior" : uf
+cob = cobertura[0] || {n_presentes: 0, n_ufs: 28, faltam: "", presentes: ""}
+votosTurno = (uf, turno, grupo) => {
+  const achou = turnos.find(d => d.uf === uf && +d.turno === turno && String(d.grupo) === grupo)
+  return achou ? +achou.votos : 0
+}
+votosGrupo = (uf, turno, grupo) => partes(grupo).reduce((s, g) => s + votosTurno(uf, turno, g), 0)
+ufsTurno = turno => [...new Set(turnos.filter(d => +d.turno === turno).map(d => d.uf))].sort()
+votosPais = (turno, grupo) => ufsTurno(turno).reduce((s, uf) => s + votosGrupo(uf, turno, grupo), 0)
+validosPais = turno => turno === 1
+  ? votosPais(1, "13") + votosPais(1, "22") + votosPais(1, "eliminados")
+  : votosPais(2, "13") + votosPais(2, "22")
+totalBoletim = turno => ["13", "22", "eliminados", "branco_nulo", "abstencao"]
+  .filter(g => !(turno === 2 && g === "eliminados"))
+  .reduce((s, g) => s + votosPais(turno, g), 0)
+vencedor = (uf, turno) => {
+  const lula = votosTurno(uf, turno, "13")
+  const flavio = votosTurno(uf, turno, "22")
+  if (lula > flavio) return "lula"
+  if (flavio > lula) return "flavio"
+  return ""
+}
+classeUf = (uf, turno = 2) => {
+  const v = vencedor(uf, turno)
+  return v === "lula" ? "uf-lula" : v === "flavio" ? "uf-flavio" : ""
+}
+linhaFluxo = (uf, modelo, origem, destino) => fluxo.find(d =>
+  d.uf === uf && d.modelo === modelo && String(d.origem) === String(origem) && String(d.destino) === String(destino)
+)
+celulaFluxo = (uf, modelo, origem, destino) => {
+  const origens = partes(origem)
+  const destinos = partes(destino)
+  let votos = 0
+  let base = 0
+  let tem = false
+  const todosDestinos = ["13", "22", "branco", "nulo", "abstencao"]
+  for (const o of origens) {
+    for (const d of todosDestinos) {
+      const row = linhaFluxo(uf, modelo, o, d)
+      if (!row) continue
+      tem = true
+      const n = Math.round(+row.votos || 0)
+      base += n
+      if (destinos.includes(d)) votos += n
+    }
+  }
+  if (!tem) return null
+  return {votos, taxa: base ? votos / base : null}
+}
+ufsFluxo = [...new Set(fluxo.map(d => d.uf))].filter(uf => uf !== "BR").sort()
+obsDestino = (uf, destino) => uf === "BR"
+  ? ufsFluxo.reduce((s, u) => s + votosGrupo(u, 2, destino), 0)
+  : votosGrupo(uf, 2, destino)
+abstOrigem = (uf, modelo) => destinosVis.reduce((s, d) => s + (celulaFluxo(uf, modelo, "abstencao", d)?.votos || 0), 0)
+totalMatriz = (uf, modelo) => origensVis.reduce((s, o) => s + destinosVis.reduce((t, d) => t + (celulaFluxo(uf, modelo, o, d)?.votos || 0), 0), 0)
+textoDif = (est, obs) => {
+  if (est == null) return "—"
+  const d = Math.round(est) - Math.round(obs)
+  if (d === 0) return "bate"
+  const rel = obs ? pct2(d / obs) : "—"
+  const sinal = d > 0 ? "+" : ""
+  return `${sinal}${fmt(d)} (${sinal}${rel})`
+}
+estimadoColuna = (uf, modelo, destino) => origensVis.reduce((s, o) => s + (celulaFluxo(uf, modelo, o, destino)?.votos || 0), 0)
+erroRel = (uf, modelo, destino) => {
+  const obs = obsDestino(uf, destino)
+  if (!obs) return null
+  return (estimadoColuna(uf, modelo, destino) - obs) / obs
+}
+divCelula = (uf, o, d) => {
+  const bp = celulaFluxo(uf, "brown_payne", o, d)
+  const lp = celulaFluxo(uf, "lphom", o, d)
+  if (!bp || !lp || bp.taxa == null || lp.taxa == null) return null
+  return (lp.taxa - bp.taxa) * 100
+}
+numTaxa = v => (v == null || v === "" || Number.isNaN(+v) ? null : +v)
+saldoTaxa = (uf, modelo, origem) => {
+  const a = celulaFluxo(uf, modelo, origem, "13")
+  const b = celulaFluxo(uf, modelo, origem, "22")
+  if (!a || !b || a.taxa == null || b.taxa == null) return null
+  return a.taxa - b.taxa
+}
+ladoSaldo = saldo => saldo == null ? "" : saldo > 0 ? "Lula" : saldo < 0 ? "Flávio" : ""
+favorece = (uf, origem) => {
+  const a = ladoSaldo(saldoTaxa(uf, "brown_payne", origem))
+  const b = ladoSaldo(saldoTaxa(uf, "lphom", origem))
+  if (!a || !b || a !== b) return "depende do modelo"
+  return a
+}
+intervaloCruza = (uf, origem) => {
+  let lo = 0
+  let hi = 0
+  let peso = 0
+  for (const o of partes(origem)) {
+    const base = ["13", "22", "branco", "nulo", "abstencao"].reduce((s, d) => {
+      const row = linhaFluxo(uf, "brown_payne", o, d)
+      return s + (row ? Math.round(+row.votos || 0) : 0)
+    }, 0)
+    if (!base) continue
+    const a = linhaFluxo(uf, "brown_payne", o, "13")
+    const b = linhaFluxo(uf, "brown_payne", o, "22")
+    const loA = numTaxa(a && a.taxa_lo)
+    const hiA = numTaxa(a && a.taxa_hi)
+    const loB = numTaxa(b && b.taxa_lo)
+    const hiB = numTaxa(b && b.taxa_hi)
+    if (loA == null || hiA == null || loB == null || hiB == null) return false
+    lo += base * (loA - hiB)
+    hi += base * (hiA - loB)
+    peso += base
+  }
+  return peso > 0 && lo < 0 && hi > 0
+}
+textoFavorece = (uf, origem) => {
+  const base = favorece(uf, origem)
+  return intervaloCruza(uf, origem) ? `${base} · intervalo cruza zero` : base
+}
+eleitoradoUf = uf => ["13", "22", "eliminados", "branco", "nulo", "abstencao"].reduce((s, g) => s + votosTurno(uf, 1, g), 0)
+pesoOrigem = (uf, origem) => {
+  const el = eleitoradoUf(uf)
+  if (!el) return 0
+  const votos = origem === "branco_nulo"
+    ? votosTurno(uf, 1, "branco") + votosTurno(uf, 1, "nulo")
+    : votosTurno(uf, 1, origem)
+  return votos / el
+}
+celulasDiv = [
+  ["eliminados", "13"],
+  ["eliminados", "22"],
+  ["branco_nulo", "13"],
+  ["abstencao", "13"],
+  ["abstencao", "22"]
+]
+divRelevante = uf => {
+  const vals = celulasDiv
+    .filter(([o]) => pesoOrigem(uf, o) >= 0.01)
+    .map(([o, d]) => divCelula(uf, o, d))
+    .filter(v => v != null)
+    .map(v => Math.abs(v))
+  return vals.length ? Math.max(...vals) : 0
+}
+erroGrupo = (uf, destinos) => {
+  const vals = destinos.flatMap(d => ["brown_payne", "lphom"].map(m => erroRel(uf, m, d))).filter(v => v != null).map(v => Math.abs(v))
+  return vals.length ? Math.max(...vals) : null
+}
+leituraUf = uf => {
+  if (favorece(uf, "eliminados") === "depende do modelo" || favorece(uf, "branco_nulo") === "depende do modelo") return "Indeterminada"
+  return divRelevante(uf) > 10 ? "Sensível" : "Robusta"
+}
+classeLeitura = nivel => nivel === "Robusta" ? "leitura-robusta" : nivel === "Sensível" ? "leitura-sensivel" : "leitura-indeterminada"
+```
+
+::: {.callout-note collapse="true"}
+## Como ler e metodologia
+
+Brown e Payne e lphom partem dos mesmos boletins e devolvem uma matriz: de cada origem (Lula, Flávio, eliminados, branco e nulo, abstenção) para cada destino do 2º turno. A seção não tem taxa própria. A matriz da cidade, quando há seções suficientes, é a que entra na soma do estado.
+
+Cada célula da matriz numérica é o voto transferido e a taxa sobre a origem. A soma da linha fecha em 100%. O total da coluna é o 2º turno estimado. No mapa de calor, a cor é essa taxa; o tooltip traz a taxa e o voto. Os dois modelos ficam em abas separadas. A aba Diferença é lphom − Brown e Payne, em pontos percentuais (pp).
+
+A barra empilhada reparte a parcela dos válidos estimados. Válidos no 1º turno: Lula (13), Flávio (22) e eliminados. No 2º: Lula (13) e Flávio (22). Branco, nulo e abstenção não entram nesse percentual; na barra, aparecem só como origem.
+
+A diferença do ajuste é o estimado menos o divulgado. Ela mede o quanto uma matriz única deixa de reproduzir o boletim.
+
+Na tabela por estado, a linha vermelha é Lula à frente no 2º turno e a azul é Flávio. "% dos válidos" usa só o voto nominal. "% do eleitorado" é a fatia da linha, com a abstenção. "Fatia do país" é a parte do total nacional. ZZ aparece como Exterior.
+
+A leitura de cada UF compara os dois modelos, sem usar solução de canto: o lphom encosta em 0% ou 100% por construção do programa linear.
+
+"Eliminados favorecem" e "Branco e nulo favorecem" olham o saldo da origem (para Lula menos para Flávio). O mesmo sinal nos dois modelos vira "Lula" ou "Flávio". Sinais opostos viram "depende do modelo". Quando Brown e Payne tem intervalo de 95% nas duas taxas do saldo e esse intervalo cruza zero, a célula também diz isso. Célula sem intervalo não recebe essa marca.
+
+"Divergência máx." é o maior |lphom − Brown e Payne| em pp, só nas células Eliminados→Lula, Eliminados→Flávio, Branco e nulo→Lula, Abstenção→Lula e Abstenção→Flávio. Origem com menos de 1% do eleitorado da UF no 1º turno (votos nominais, brancos, nulos e abstenção) fica de fora dessa conta.
+
+"Erro candidatos" é o maior |estimado − divulgado| / divulgado de Lula e de Flávio, nos dois modelos. "Erro branco e nulo" é a mesma conta para branco e nulo somados.
+
+Robusta: os dois saldos concordam entre os modelos e a divergência fica em até 10 pp. Sensível: os saldos concordam e a divergência passa de 10 pp. Indeterminada: pelo menos um saldo muda de lado conforme o modelo. O intervalo que cruza zero é uma marca na célula; não muda sozinho o nível.
+
+Cores: Lula (13) vermelho, Flávio (22) azul, eliminados cinza, branco e nulo cinza-claro, abstenção dourado.
+
+<div id="nota-ajuste-abstencao"></div>
+:::
+
+```{ojs}
+//| echo: false
+{
+  const el = document.getElementById("nota-ajuste-abstencao")
+  const matriz = abstOrigem("BR", "brown_payne")
+  const boletim = votosPais(1, "abstencao")
+  const totalM = totalMatriz("BR", "brown_payne")
+  const totalB = totalBoletim(1)
+  el.textContent = `A abstenção que entra como origem na matriz nacional é ${fmt(matriz)}. No boletim do 1º turno ela é ${fmt(boletim)}. A diferença de ${fmt(matriz - boletim)} votos é o ajuste que, em cada seção, iguala a soma do 1º turno à soma do 2º turno antes da estimativa: o que falta em um dos lados é somado à abstenção. Não é abstenção publicada. O total da matriz (${fmt(totalM)}) fica ${fmt(totalM - totalB)} votos acima do boletim (${fmt(totalB)}). A distância entre esses dois ajustes é o arredondamento de cada célula. No AC, a matriz usa ${fmt(abstOrigem("AC", "brown_payne"))} e o boletim ${fmt(votosGrupo("AC", 1, "abstencao"))}.`
+}
+```
+
+```{=html}
+<style>
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem; margin: 0.5rem 0 1rem; }
+.kpi { border: 1px solid #e6e6e6; border-radius: 0.5rem; padding: 0.7rem 0.85rem; background: #fff; }
+.kpi .rot { font-size: 0.82rem; color: #555; }
+.kpi .num { font-size: 1.2rem; font-weight: 650; line-height: 1.3; }
+.kpi .sub { font-size: 0.82rem; color: #333; }
+.erro-alto { background: #fde8e8; }
+.leitura { display: inline-block; border-radius: 0.25rem; padding: 0.05rem 0.4rem; font-size: 0.78rem; }
+.leitura-robusta { background: #e5f6ec; }
+.leitura-sensivel { background: #f8e8c8; }
+.leitura-indeterminada { background: #fde8e8; }
+tr.uf-lula > td, tr.uf-lula > th { background-color: #f8d6d6; }
+tr.uf-flavio > td, tr.uf-flavio > th { background-color: #d6e6f8; }
+</style>
+```
+
+```{ojs}
+//| echo: false
+md`## Resumo`
+```
+
+```{ojs}
+//| echo: false
+md`**${cob.n_presentes} de ${cob.n_ufs} estados** têm matriz de migração.${cob.faltam ? ` Ainda sem matriz: ${cob.faltam}.` : ""}`
+```
+
+```{ojs}
+//| echo: false
+cartao = (rotulo, numero, sub) => html`<div class="kpi"><div class="rot">${rotulo}</div><div class="num">${numero}</div><div class="sub">${sub}</div></div>`
+html`<div class="kpi-grid">
+  ${cartao("Lula (13)", `${fmt(votosPais(1, "13"))} → ${fmt(votosPais(2, "13"))}`, `${deltaTxt(votosPais(2, "13"), votosPais(1, "13"))} votos · ${pct(votosPais(2, "13") / validosPais(2))} dos válidos no 2º`)}
+  ${cartao("Flávio (22)", `${fmt(votosPais(1, "22"))} → ${fmt(votosPais(2, "22"))}`, `${deltaTxt(votosPais(2, "22"), votosPais(1, "22"))} votos · ${pct(votosPais(2, "22") / validosPais(2))} dos válidos no 2º`)}
+  ${cartao("Eliminados", fmt(votosPais(1, "eliminados")), `${pct(votosPais(1, "eliminados") / validosPais(1))} dos válidos no 1º turno`)}
+  ${cartao("Branco e nulo", `${fmt(votosPais(1, "branco_nulo"))} → ${fmt(votosPais(2, "branco_nulo"))}`, `${deltaTxt(votosPais(2, "branco_nulo"), votosPais(1, "branco_nulo"))} votos · fora dos válidos`)}
+  ${cartao("Abstenção", `${fmt(votosPais(1, "abstencao"))} → ${fmt(votosPais(2, "abstencao"))}`, `${deltaTxt(votosPais(2, "abstencao"), votosPais(1, "abstencao"))} votos · fora dos válidos`)}
+</div>`
+```
+
+```{ojs}
+//| echo: false
+maiorDiv = origensVis.flatMap(o => destinosVis.map(d => ({o, d, pp: divCelula("BR", o, d)})))
+  .filter(x => x.pp != null)
+  .sort((a, b) => Math.abs(b.pp) - Math.abs(a.pp))[0]
+maiorErro = destinosVis.flatMap(d => [
+  {modelo: "Brown e Payne", d, rel: erroRel("BR", "brown_payne", d)},
+  {modelo: "lphom", d, rel: erroRel("BR", "lphom", d)}
+]).sort((a, b) => Math.abs(b.rel) - Math.abs(a.rel))[0]
+pisoFidelidade = uf => Math.min(
+  celulaFluxo(uf, "brown_payne", "13", "13")?.taxa ?? 0,
+  celulaFluxo(uf, "lphom", "13", "13")?.taxa ?? 0,
+  celulaFluxo(uf, "brown_payne", "22", "22")?.taxa ?? 0,
+  celulaFluxo(uf, "lphom", "22", "22")?.taxa ?? 0
+)
+pisoNacional = (() => {
+  const achar = (p) => {
+    if (p < 50) return {p: 0, n: 0}
+    const n = ufsFluxo.filter(uf => pisoFidelidade(uf) >= p / 100).length
+    if (n >= Math.ceil(ufsFluxo.length / 2)) return {p, n}
+    return achar(p - 1)
+  }
+  return achar(99)
+})()
+nElimDepende = ufsFluxo.filter(uf => favorece(uf, "eliminados") === "depende do modelo").length
+nacionalElim = favorece("BR", "eliminados")
+html`<ul>
+  <li>Lula (13) permanece ${pct(celulaFluxo("BR", "brown_payne", "13", "13")?.taxa)} no Brown e Payne e ${pct(celulaFluxo("BR", "lphom", "13", "13")?.taxa)} no lphom. Flávio (22) permanece ${pct(celulaFluxo("BR", "brown_payne", "22", "22")?.taxa)} e ${pct(celulaFluxo("BR", "lphom", "22", "22")?.taxa)}.</li>
+  <li>Fidelidade de Lula e Flávio concorda entre modelos (≥ ${pisoNacional.p}% em ${pisoNacional.n}/${ufsFluxo.length} UFs); a divisão dos eliminados depende do modelo em ${nElimDepende}/${ufsFluxo.length} UFs${nacionalElim === "depende do modelo" ? " e no total nacional" : `. No total nacional, os dois modelos favorecem ${nacionalElim}`}.</li>
+  <li>Eliminados: ${pct(celulaFluxo("BR", "brown_payne", "eliminados", "13")?.taxa)} → Lula (13), ${pct(celulaFluxo("BR", "brown_payne", "eliminados", "22")?.taxa)} → Flávio (22) (Brown e Payne); lphom: ${pct(celulaFluxo("BR", "lphom", "eliminados", "13")?.taxa)} e ${pct(celulaFluxo("BR", "lphom", "eliminados", "22")?.taxa)}.</li>
+  <li>Maior distância entre os modelos (lphom − Brown e Payne): ${nome[maiorDiv.o]} → ${nome[maiorDiv.d]}, ${pp(maiorDiv.pp)}.</li>
+  <li>Maior distância do divulgado: ${nome[maiorErro.d]}, ${maiorErro.modelo} ${textoDif(estimadoColuna("BR", maiorErro.modelo === "lphom" ? "lphom" : "brown_payne", maiorErro.d), obsDestino("BR", maiorErro.d))}.</li>
+</ul>`
+```
+
+```{ojs}
+//| echo: false
+md`## Conferência`
+```
+
+```{ojs}
+//| echo: false
+oficialGrupo = (turno, grupo) => {
+  let soma = 0
+  let achou = false
+  for (const g of partes(grupo)) {
+    const row = conferencia.find(d => d.uf === "BR" && +d.turno === turno && String(d.grupo) === g)
+    if (!row) continue
+    achou = true
+    soma += +row.votos_oficial
+  }
+  return achou ? soma : null
+}
+checagens = [1, 2].flatMap(turno => {
+  const grupos = turno === 1 ? ["13", "22", "eliminados", "branco_nulo"] : ["13", "22", "branco_nulo"]
+  return grupos.map(g => {
+    const publicado = oficialGrupo(turno, g)
+    const soma = votosPais(turno, g)
+    return {turno, g, soma, publicado, diff: publicado == null ? null : soma - publicado}
+  })
+})
+avulsos = ["branco", "nulo"].flatMap(g => [1, 2].map(turno => {
+  const publicado = oficialGrupo(turno, g)
+  return publicado == null ? null : votosPais(turno, g) - publicado
+}))
+bateTudo = checagens.every(c => c.diff === 0) && avulsos.every(d => d === 0)
+bateTudo
+  ? md`✓ Somas conferem com o CSV oficial de votação por seção (7/7 grupos: 4 no 1º turno e 3 no 2º). Branco e nulo entram somados; cada um também fecha sozinho. A abstenção não entra nesse arquivo.`
+  : html`<p>Há diferença entre a soma dos estados e o CSV oficial. A contagem é de 7 grupos: 4 no 1º turno e 3 no 2º, com branco e nulo somados. A abstenção não entra nesse arquivo.</p>
+    <table class="table table-sm">
+      <thead><tr><th>Turno</th><th>Grupo</th><th>Soma dos estados</th><th>CSV oficial</th><th>Soma − CSV</th></tr></thead>
+      <tbody>${checagens.filter(c => c.diff !== 0).map(c => html`<tr>
+        <td>${c.turno}º</td><td>${nome[c.g] || c.g}</td><td>${fmt(c.soma)}</td><td>${c.publicado == null ? "—" : fmt(c.publicado)}</td><td>${fmt(c.diff)}</td>
+      </tr>`)}</tbody>
+    </table>`
+```
+
+```{ojs}
+//| echo: false
+md`## Como os votos migraram (Brasil)`
+```
+
+```{ojs}
+//| echo: false
+Plotly = require("https://cdn.plot.ly/plotly-2.35.2.min.js")
+sankey = (uf, modelo) => {
+  const nos = [
+    ...origensVis.map(o => ({nome: `${nome[o]} · 1º`, cor: COR[o]})),
+    ...destinosVis.map(d => ({nome: `${nome[d]} · 2º`, cor: COR[d]}))
+  ]
+  const links = []
+  for (const o of origensVis) {
+    for (const d of destinosVis) {
+      const cel = celulaFluxo(uf, modelo, o, d)
+      if (!cel || !cel.votos) continue
+      links.push({
+        source: origensVis.indexOf(o),
+        target: origensVis.length + destinosVis.indexOf(d),
+        value: cel.votos,
+        rotulo: `${nome[o]} → ${nome[d]}: ${fmt(cel.votos)} (${pct(cel.taxa)} da origem)`
+      })
+    }
+  }
+  const div = document.createElement("div")
+  div.style.minHeight = "520px"
+  Plotly.newPlot(div, [{
+    type: "sankey",
+    orientation: "h",
+    node: {label: nos.map(n => n.nome), color: nos.map(n => n.cor), pad: 16, thickness: 16, line: {color: "#fff", width: 0}},
+    link: {
+      source: links.map(l => l.source),
+      target: links.map(l => l.target),
+      value: links.map(l => l.value),
+      customdata: links.map(l => l.rotulo),
+      hovertemplate: "%{customdata}<extra></extra>",
+      color: "rgba(120,120,120,0.28)"
+    }
+  }], {
+    font: {family: "inherit", size: 12},
+    margin: {l: 8, r: 8, t: 12, b: 8},
+    height: 520
+  }, {displayModeBar: false, responsive: true})
+  return div
+}
+heatmapTaxa = (uf, modelo) => {
+  const celulas = origensVis.flatMap(o => destinosVis.map(d => {
+    const cel = celulaFluxo(uf, modelo, o, d)
+    return {
+      origem: nome[o],
+      destino: nome[d],
+      taxa: cel ? cel.taxa : 0,
+      Taxa: cel ? pct(cel.taxa) : "—",
+      Votos: cel ? fmt(cel.votos) : "—"
+    }
+  }))
+  return Plot.plot({
+    marginLeft: 130,
+    marginBottom: 70,
+    height: 380,
+    width: 760,
+    x: {label: "2º turno", domain: destinosVis.map(d => nome[d])},
+    y: {label: "1º turno", domain: [...origensVis].reverse().map(o => nome[o])},
+    color: {legend: true, scheme: "blues", label: "% da origem", tickFormat: v => pct(v)},
+    marks: [
+      Plot.cell(celulas, {x: "destino", y: "origem", fill: "taxa", tip: true}),
+      Plot.text(celulas, {x: "destino", y: "origem", text: "Taxa", fill: "#111", fontSize: 11})
+    ]
+  })
+}
+heatmapDif = uf => {
+  const celulas = origensVis.flatMap(o => destinosVis.map(d => {
+    const gap = divCelula(uf, o, d)
+    const bp = celulaFluxo(uf, "brown_payne", o, d)
+    const lp = celulaFluxo(uf, "lphom", o, d)
+    return {
+      origem: nome[o],
+      destino: nome[d],
+      pp: gap || 0,
+      "lphom − Brown e Payne": pp(gap),
+      "Brown e Payne": bp ? pct(bp.taxa) : "—",
+      lphom: lp ? pct(lp.taxa) : "—"
+    }
+  }))
+  return Plot.plot({
+    marginLeft: 130,
+    marginBottom: 70,
+    height: 380,
+    width: 760,
+    x: {label: "2º turno", domain: destinosVis.map(d => nome[d])},
+    y: {label: "1º turno", domain: [...origensVis].reverse().map(o => nome[o])},
+    color: {legend: true, type: "diverging", scheme: "RdBu", pivot: 0, label: "lphom − Brown e Payne (pp)", tickFormat: v => pp(v)},
+    marks: [
+      Plot.cell(celulas, {x: "destino", y: "origem", fill: "pp", tip: true}),
+      Plot.text(celulas, {x: "destino", y: "origem", text: "lphom − Brown e Payne", fill: "#111", fontSize: 11})
+    ]
+  })
+}
+```
+
+```{ojs}
+//| echo: false
+viewof modeloBrasil = Inputs.radio(["brown_payne", "lphom"], {
+  label: "Modelo do diagrama",
+  value: "brown_payne",
+  format: m => m === "brown_payne" ? "Brown e Payne" : "lphom"
+})
+```
+
+```{ojs}
+//| echo: false
+fluxo.some(d => d.uf === "BR") ? sankey("BR", modeloBrasil) : md`Ainda não há matriz exportada.`
+```
+
+::: {.panel-tabset}
+## Brown e Payne
+
+```{ojs}
+//| echo: false
+heatmapTaxa("BR", "brown_payne")
+```
+
+## lphom
+
+```{ojs}
+//| echo: false
+heatmapTaxa("BR", "lphom")
+```
+
+## lphom − Brown e Payne
+
+```{ojs}
+//| echo: false
+heatmapDif("BR")
+```
+:::
+
+```{ojs}
+//| echo: false
+faixas = ["13", "22"].flatMap(destino => ["brown_payne", "lphom"].flatMap(modelo => {
+  const base = estimadoColuna("BR", modelo, "13") + estimadoColuna("BR", modelo, "22")
+  return origensVis.map(o => {
+    const cel = celulaFluxo("BR", modelo, o, destino)
+    const votos = cel ? cel.votos : 0
+    return {
+      barra: `${nome[destino]} · ${modelo === "brown_payne" ? "Brown e Payne" : "lphom"}`,
+      origem: nome[o],
+      votos,
+      fatia: base ? votos / base : 0,
+      "Fração dos válidos": pct(base ? votos / base : null),
+      Votos: fmt(votos)
+    }
+  })
+}))
+Plot.plot({
+  marginLeft: 230,
+  height: 280,
+  width: 860,
+  x: {label: "Fração dos válidos estimados", tickFormat: v => pct(v), grid: true},
+  y: {label: null},
+  color: {legend: true, domain: origensVis.map(o => nome[o]), range: origensVis.map(o => COR[o])},
+  marks: [
+    Plot.barX(faixas, {y: "barra", x: "fatia", fill: "origem", tip: true, order: origensVis.map(o => nome[o])})
+  ]
+})
+```
+
+```{ojs}
+//| echo: false
+pontos = origensVis.flatMap(o => destinosVis.map(d => {
+  const bp = celulaFluxo("BR", "brown_payne", o, d)
+  const lp = celulaFluxo("BR", "lphom", o, d)
+  const gap = divCelula("BR", o, d)
+  return {
+    celula: `${nome[o]} → ${nome[d]}`,
+    bp: bp ? bp.taxa * 100 : null,
+    lp: lp ? lp.taxa * 100 : null,
+    gap: gap == null ? 0 : Math.abs(gap),
+    destaque: gap != null && Math.abs(gap) > 5
+  }
+})).filter(d => d.bp != null && d.lp != null)
+Plot.plot({
+  marginLeft: 50,
+  height: 420,
+  width: 520,
+  x: {label: "Brown e Payne (%)", grid: true},
+  y: {label: "lphom (%)", grid: true},
+  marks: [
+    Plot.line([[0, 0], [100, 100]], {stroke: "#ccc"}),
+    Plot.dot(pontos.filter(d => !d.destaque), {x: "bp", y: "lp", fill: "#1f4e79", r: 4, tip: true}),
+    Plot.dot(pontos.filter(d => d.destaque), {x: "bp", y: "lp", fill: "#a51c1c", r: 6, tip: true}),
+    Plot.text(pontos.filter(d => d.destaque), {x: "bp", y: "lp", text: "celula", dy: -10, fontSize: 10})
+  ]
+})
+```
+
+```{ojs}
+//| echo: false
+md`${pontos.filter(d => d.destaque).length
+  ? `Células com mais de 5 pp (lphom − Brown e Payne): ${pontos.filter(d => d.destaque).map(d => `${d.celula} (${pp(d.lp - d.bp)})`).join("; ")}.`
+  : "Nenhuma célula passa de 5 pp (lphom − Brown e Payne)."}`
+```
+
+```{ojs}
+//| echo: false
+html`<table class="table table-sm">
+  <thead><tr><th>Destino</th><th>Brown e Payne − divulgado</th><th>lphom − divulgado</th></tr></thead>
+  <tbody>${destinosVis.map(d => {
+    const bp = erroRel("BR", "brown_payne", d)
+    const lp = erroRel("BR", "lphom", d)
+    const alto = (bp != null && Math.abs(bp) > 0.01) || (lp != null && Math.abs(lp) > 0.01)
+    return html`<tr class="${alto ? "erro-alto" : ""}">
+      <td>${nome[d]}</td>
+      <td>${textoDif(estimadoColuna("BR", "brown_payne", d), obsDestino("BR", d))}</td>
+      <td>${textoDif(estimadoColuna("BR", "lphom", d), obsDestino("BR", d))}</td>
+    </tr>`
+  })}</tbody>
+</table>
+<p>O fundo vermelho marca erro relativo acima de 1%. A diferença é o estimado menos o divulgado.</p>`
+```
+
+::: {.callout-note collapse="true"}
+## Matriz numérica e ajuste completo
+
+```{ojs}
+//| echo: false
+matrizNumerica = (uf, modelo) => {
+  const grade = origensVis.map(o => destinosVis.map(d => celulaFluxo(uf, modelo, o, d)))
+  const linha = grade.map(cols => cols.reduce((s, c) => s + (c ? c.votos : 0), 0))
+  const taxaLinha = grade.map(cols => cols.reduce((s, c) => s + (c && c.taxa != null ? c.taxa : 0), 0))
+  const coluna = destinosVis.map((_, j) => grade.reduce((s, cols) => s + (cols[j] ? cols[j].votos : 0), 0))
+  return html`<p><strong>${modelo === "brown_payne" ? "Brown e Payne" : "lphom"} · ${uf === "BR" ? "Brasil" : nomeUf(uf)}</strong></p>
+    <div style="overflow-x:auto"><table class="table table-sm">
+      <thead><tr><th>1º turno</th>${destinosVis.map(d => html`<th>${nome[d]}</th>`)}<th>Total</th></tr></thead>
+      <tbody>
+        ${origensVis.map((o, i) => html`<tr>
+          <th>${nome[o]}</th>
+          ${grade[i].map(c => html`<td style="white-space:nowrap">${c ? `${fmt(c.votos)} · ${pct(c.taxa)}` : "—"}</td>`)}
+          <th style="white-space:nowrap">${fmt(linha[i])} · ${pct(taxaLinha[i])}</th>
+        </tr>`)}
+        <tr><th>Total</th>${coluna.map(v => html`<th>${fmt(v)}</th>`)}<th>${fmt(linha.reduce((s, v) => s + v, 0))}</th></tr>
+      </tbody>
+    </table></div>`
+}
+html`${matrizNumerica("BR", "brown_payne")}${matrizNumerica("BR", "lphom")}
+  <table class="table table-sm">
+    <thead><tr><th>2º turno</th><th>Brown e Payne</th><th>lphom</th><th>Divulgado</th><th>Brown e Payne − divulgado</th><th>lphom − divulgado</th></tr></thead>
+    <tbody>${destinosVis.map(d => html`<tr class="${Math.abs(erroRel("BR", "brown_payne", d)) > 0.01 || Math.abs(erroRel("BR", "lphom", d)) > 0.01 ? "erro-alto" : ""}">
+      <td>${nome[d]}</td>
+      <td>${fmt(estimadoColuna("BR", "brown_payne", d))}</td>
+      <td>${fmt(estimadoColuna("BR", "lphom", d))}</td>
+      <td>${fmt(obsDestino("BR", d))}</td>
+      <td>${textoDif(estimadoColuna("BR", "brown_payne", d), obsDestino("BR", d))}</td>
+      <td>${textoDif(estimadoColuna("BR", "lphom", d), obsDestino("BR", d))}</td>
+    </tr>`)}</tbody>
+  </table>`
+```
+:::
+
+```{ojs}
+//| echo: false
+md`## Resultado por estado`
+```
+
+```{ojs}
+//| echo: false
+ordemLula = ufsTurno(2).map(uf => {
+  const v1 = votosGrupo(uf, 1, "13") + votosGrupo(uf, 1, "22") + votosGrupo(uf, 1, "eliminados")
+  const v2 = votosGrupo(uf, 2, "13") + votosGrupo(uf, 2, "22")
+  return {uf, rotulo: nomeUf(uf), delta: (v2 ? votosGrupo(uf, 2, "13") / v2 : 0) - (v1 ? votosGrupo(uf, 1, "13") / v1 : 0)}
+}).sort((a, b) => b.delta - a.delta)
+pontosTurno = ordemLula.flatMap(({uf, rotulo}) => ["13", "22"].map(g => {
+  const v1 = votosGrupo(uf, 1, "13") + votosGrupo(uf, 1, "22") + votosGrupo(uf, 1, "eliminados")
+  const v2 = votosGrupo(uf, 2, "13") + votosGrupo(uf, 2, "22")
+  return {
+    uf: rotulo,
+    quem: nome[g],
+    p1: v1 ? 100 * votosGrupo(uf, 1, g) / v1 : null,
+    p2: v2 ? 100 * votosGrupo(uf, 2, g) / v2 : null,
+    cor: COR[g]
+  }
+}))
+Plot.plot({
+  marginLeft: 90,
+  height: 720,
+  width: 920,
+  x: {label: "% dos válidos", grid: true, tickFormat: v => `${v.toLocaleString("pt-BR")}%`},
+  y: {label: null, domain: ordemLula.map(d => d.rotulo)},
+  color: {legend: true, domain: ["Lula (13)", "Flávio (22)"], range: [COR["13"], COR["22"]]},
+  marks: [
+    Plot.link(pontosTurno, {x1: "p1", x2: "p2", y: "uf", stroke: "cor", strokeOpacity: 0.55}),
+    Plot.dot(pontosTurno, {x: "p1", y: "uf", fill: "#b0b0b0", r: 3.5, title: d => `${d.uf} · ${d.quem} · 1º turno ${d.p1.toLocaleString("pt-BR", {maximumFractionDigits: 1})}%`}),
+    Plot.dot(pontosTurno, {x: "p2", y: "uf", fill: "cor", r: 4, title: d => `${d.uf} · ${d.quem} · 2º turno ${d.p2.toLocaleString("pt-BR", {maximumFractionDigits: 1})}%`})
+  ],
+  fx: {label: null},
+  facet: {data: pontosTurno, x: "quem"}
+})
+```
+
+```{ojs}
+//| echo: false
+md`Cinza: 1º turno. Cor: 2º turno. A ordem é a variação de Lula (13), em pontos percentuais dos válidos.`
+```
+
+::: {.column-screen-inset}
+::: {.callout-note collapse="true"}
+## Dados por estado
+
+```{ojs}
+//| echo: false
+grupoLinha = (uf, turno) => ["13", "22", "eliminados", "branco_nulo", "abstencao"]
+  .filter(g => !(turno === 2 && g === "eliminados"))
+  .reduce((s, g) => s + votosGrupo(uf, turno, g), 0)
+celVal = (uf, turno, g) => {
+  const base = turno === 1
+    ? votosGrupo(uf, 1, "13") + votosGrupo(uf, 1, "22") + votosGrupo(uf, 1, "eliminados")
+    : votosGrupo(uf, 2, "13") + votosGrupo(uf, 2, "22")
+  const v = votosGrupo(uf, turno, g)
+  if (g === "branco_nulo" || g === "abstencao" || (turno === 2 && g === "eliminados")) return "—"
+  return pct(base ? v / base : null)
+}
+celEle = (uf, turno, g) => {
+  if (turno === 2 && g === "eliminados") return "—"
+  const linha = grupoLinha(uf, turno)
+  return pct(linha ? votosGrupo(uf, turno, g) / linha : null)
+}
+ufsDados = ufsTurno(1).filter(uf => ufsTurno(2).includes(uf))
+html`<div style="overflow-x:auto"><table class="table table-sm">
+  <caption>Votos e percentual dos válidos. Branco e nulo e a abstenção ficam fora dos válidos: aí a coluna traz só o voto.</caption>
+  <thead>
+    <tr>
+      <th rowspan="2">UF</th><th rowspan="2">1º</th><th rowspan="2">2º</th>
+      <th colspan="5">Lula (13)</th><th colspan="5">Flávio (22)</th>
+      <th colspan="2">Eliminados</th><th colspan="3">Branco e nulo</th><th colspan="3">Abstenção</th>
+    </tr>
+    <tr>
+      <th>1º votos</th><th>1º % válidos</th><th>2º votos</th><th>2º % válidos</th><th>Δ</th>
+      <th>1º votos</th><th>1º % válidos</th><th>2º votos</th><th>2º % válidos</th><th>Δ</th>
+      <th>1º votos</th><th>1º % válidos</th>
+      <th>1º</th><th>2º</th><th>Δ</th>
+      <th>1º</th><th>2º</th><th>Δ</th>
+    </tr>
+  </thead>
+  <tbody>${ufsDados.map(uf => html`<tr class="${classeUf(uf, 2)}">
+    <td>${nomeUf(uf)}</td>
+    <td>${vencedor(uf, 1) === "lula" ? "Lula" : "Flávio"}</td>
+    <td>${vencedor(uf, 2) === "lula" ? "Lula" : "Flávio"}</td>
+    <td>${fmt(votosGrupo(uf, 1, "13"))}</td><td>${celVal(uf, 1, "13")}</td>
+    <td>${fmt(votosGrupo(uf, 2, "13"))}</td><td>${celVal(uf, 2, "13")}</td>
+    <td>${deltaTxt(votosGrupo(uf, 2, "13"), votosGrupo(uf, 1, "13"))}</td>
+    <td>${fmt(votosGrupo(uf, 1, "22"))}</td><td>${celVal(uf, 1, "22")}</td>
+    <td>${fmt(votosGrupo(uf, 2, "22"))}</td><td>${celVal(uf, 2, "22")}</td>
+    <td>${deltaTxt(votosGrupo(uf, 2, "22"), votosGrupo(uf, 1, "22"))}</td>
+    <td>${fmt(votosGrupo(uf, 1, "eliminados"))}</td><td>${celVal(uf, 1, "eliminados")}</td>
+    <td>${fmt(votosGrupo(uf, 1, "branco_nulo"))}</td><td>${fmt(votosGrupo(uf, 2, "branco_nulo"))}</td>
+    <td>${deltaTxt(votosGrupo(uf, 2, "branco_nulo"), votosGrupo(uf, 1, "branco_nulo"))}</td>
+    <td>${fmt(votosGrupo(uf, 1, "abstencao"))}</td><td>${fmt(votosGrupo(uf, 2, "abstencao"))}</td>
+    <td>${deltaTxt(votosGrupo(uf, 2, "abstencao"), votosGrupo(uf, 1, "abstencao"))}</td>
+  </tr>`)}</tbody>
+</table></div>
+<div style="overflow-x:auto"><table class="table table-sm">
+  <caption>Percentual do eleitorado: fatia da linha, com a abstenção. Fatia do país: parte do total nacional daquele turno.</caption>
+  <thead><tr>
+    <th>UF</th>
+    ${[1, 2].flatMap(turno => ["13", "22", "eliminados", "branco_nulo", "abstencao"]
+      .filter(g => !(turno === 2 && g === "eliminados"))
+      .map(g => html`<th>${nome[g]} ${turno}º % eleitorado</th>`))}
+    <th>Fatia do país 1º</th><th>Fatia do país 2º</th>
+  </tr></thead>
+  <tbody>${ufsDados.map(uf => html`<tr class="${classeUf(uf, 2)}">
+    <td>${nomeUf(uf)}</td>
+    ${[1, 2].flatMap(turno => ["13", "22", "eliminados", "branco_nulo", "abstencao"]
+      .filter(g => !(turno === 2 && g === "eliminados"))
+      .map(g => html`<td>${celEle(uf, turno, g)}</td>`))}
+    <td>${pct(grupoLinha(uf, 1) / totalBoletim(1))}</td>
+    <td>${pct(grupoLinha(uf, 2) / totalBoletim(2))}</td>
+  </tr>`)}</tbody>
+</table></div>`
+```
+:::
+:::
+
+```{ojs}
+//| echo: false
+md`## Migração por estado`
+```
+
+```{ojs}
+//| echo: false
+viewof modeloEstado = Inputs.radio(["brown_payne", "lphom"], {
+  label: "Modelo das taxas",
+  value: "brown_payne",
+  format: m => m === "brown_payne" ? "Brown e Payne" : "lphom"
+})
+viewof ordemMig = Inputs.select([
+  ["uf", "UF"],
+  ["f13", "Fidelidade Lula (13)"],
+  ["f22", "Fidelidade Flávio (22)"],
+  ["e13", "Eliminados → Lula (13)"],
+  ["e22", "Eliminados → Flávio (22)"],
+  ["div", "|lphom − Brown e Payne|"],
+  ["erroCand", "Erro dos candidatos"],
+  ["erroBn", "Erro de branco e nulo"]
+], {label: "Ordenar por", format: d => d[1], value: ["uf", "UF"]})
+```
+
+```{ojs}
+//| echo: false
+corTaxa = taxa => {
+  if (taxa == null || Number.isNaN(+taxa)) return ""
+  const t = Math.max(0, Math.min(1, +taxa))
+  const r = Math.round(255 + (31 - 255) * t)
+  const g = Math.round(255 + (78 - 255) * t)
+  const b = Math.round(255 + (121 - 255) * t)
+  return `background:rgb(${r},${g},${b});color:${t > 0.62 ? "#fff" : "#111"}`
+}
+linhasMig = ufsFluxo.map(uf => ({
+  uf,
+  f13: celulaFluxo(uf, modeloEstado, "13", "13")?.taxa,
+  f22: celulaFluxo(uf, modeloEstado, "22", "22")?.taxa,
+  e13: celulaFluxo(uf, modeloEstado, "eliminados", "13")?.taxa,
+  e22: celulaFluxo(uf, modeloEstado, "eliminados", "22")?.taxa,
+  b13: celulaFluxo(uf, modeloEstado, "branco_nulo", "13")?.taxa,
+  b22: celulaFluxo(uf, modeloEstado, "branco_nulo", "22")?.taxa,
+  a13: celulaFluxo(uf, modeloEstado, "abstencao", "13")?.taxa,
+  a22: celulaFluxo(uf, modeloEstado, "abstencao", "22")?.taxa,
+  elimFav: textoFavorece(uf, "eliminados"),
+  bnFav: textoFavorece(uf, "branco_nulo"),
+  div: divRelevante(uf),
+  erroCand: erroGrupo(uf, ["13", "22"]),
+  erroBn: erroGrupo(uf, ["branco_nulo"]),
+  leitura: leituraUf(uf)
+})).sort((a, b) => {
+  const chave = ordemMig[0]
+  if (chave === "uf") return nomeUf(a.uf).localeCompare(nomeUf(b.uf), "pt")
+  return (b[chave] || 0) - (a[chave] || 0)
+})
+tdTaxa = taxa => html`<td style="white-space:nowrap;${corTaxa(taxa)}">${pct(taxa)}</td>`
+contagemLeitura = ["Robusta", "Sensível", "Indeterminada"].map(nivel => ({
+  nivel,
+  n: linhasMig.filter(r => r.leitura === nivel).length
+}))
+html`<p>Leitura: ${contagemLeitura.map(d => `${d.nivel} ${d.n}`).join(" · ")}. Robusta: saldos concordam e |lphom − Brown e Payne| ≤ 10 pp. Sensível: saldos concordam e a divergência passa de 10 pp. Indeterminada: algum saldo muda de lado conforme o modelo.</p>
+<div style="overflow-x:auto"><table class="table table-sm">
+  <thead><tr>
+    <th>UF</th><th>Lula→Lula</th><th>Flávio→Flávio</th>
+    <th>Elim.→Lula</th><th>Elim.→Flávio</th>
+    <th>BN→Lula</th><th>BN→Flávio</th>
+    <th>Abst.→Lula</th><th>Abst.→Flávio</th>
+    <th>Eliminados favorecem</th><th>Branco e nulo favorecem</th>
+    <th>|lphom − Brown e Payne| (pp)</th>
+    <th>Erro candidatos</th><th>Erro branco e nulo</th><th>Leitura</th>
+  </tr></thead>
+  <tbody>${linhasMig.map(r => html`<tr class="${classeUf(r.uf, 2)}">
+    <td>${nomeUf(r.uf)}</td>
+    ${tdTaxa(r.f13)}${tdTaxa(r.f22)}${tdTaxa(r.e13)}${tdTaxa(r.e22)}
+    ${tdTaxa(r.b13)}${tdTaxa(r.b22)}${tdTaxa(r.a13)}${tdTaxa(r.a22)}
+    <td>${r.elimFav}</td>
+    <td>${r.bnFav}</td>
+    <td style="${r.div > 10 ? "background:#fde8e8" : ""}">${r.div.toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})} pp</td>
+    <td style="${r.erroCand > 0.01 ? "background:#fde8e8" : ""}">${r.erroCand == null ? "—" : pct(r.erroCand)}</td>
+    <td style="${r.erroBn > 0.01 ? "background:#fde8e8" : ""}">${r.erroBn == null ? "—" : pct(r.erroBn)}</td>
+    <td><span class="leitura ${classeLeitura(r.leitura)}">${r.leitura}</span></td>
+  </tr>`)}</tbody>
+</table></div>`
+```
+
+```{ojs}
+//| echo: false
+saldoPar = ufsFluxo.map(uf => {
+  const bp13 = celulaFluxo(uf, "brown_payne", "eliminados", "13")?.votos || 0
+  const bp22 = celulaFluxo(uf, "brown_payne", "eliminados", "22")?.votos || 0
+  const lp13 = celulaFluxo(uf, "lphom", "eliminados", "13")?.votos || 0
+  const lp22 = celulaFluxo(uf, "lphom", "eliminados", "22")?.votos || 0
+  return {uf: nomeUf(uf), bp: bp13 - bp22, lp: lp13 - lp22}
+}).sort((a, b) => b.bp - a.bp)
+saldoLongo = saldoPar.flatMap(d => [
+  {uf: d.uf, modelo: "Brown e Payne", saldo: d.bp},
+  {uf: d.uf, modelo: "lphom", saldo: d.lp}
+])
+Plot.plot({
+  marginLeft: 90,
+  height: 720,
+  width: 760,
+  x: {label: "Eliminados → Lula menos eliminados → Flávio (votos)", grid: true, tickFormat: v => fmt(v)},
+  y: {label: null, domain: saldoPar.map(d => d.uf).slice().reverse()},
+  color: {legend: true, domain: ["Brown e Payne", "lphom"], range: ["#1f4e79", "#c4a35a"]},
+  marks: [
+    Plot.ruleX([0]),
+    Plot.link(saldoPar, {x1: "bp", y1: "uf", x2: "lp", y2: "uf", stroke: "#bbb"}),
+    Plot.dot(saldoLongo, {x: "saldo", y: "uf", fill: "modelo", r: 4.5, tip: true})
+  ]
+})
+```
+
+```{ojs}
+//| echo: false
+md`Positivo: mais eliminados foram para Lula do que para Flávio. A ordem é o saldo do Brown e Payne. O ponto azul é Brown e Payne e o dourado é lphom.`
+```
+
+```{ojs}
+//| echo: false
+viewof ufDrill = Inputs.select(ufsFluxo, {label: "Estado", format: uf => nomeUf(uf)})
+```
+
+::: {.panel-tabset}
+## Diagrama
+
+```{ojs}
+//| echo: false
+sankey(ufDrill, modeloEstado)
+```
+
+## Taxas
+
+```{ojs}
+//| echo: false
+modeloEstado === "lphom" ? heatmapTaxa(ufDrill, "lphom") : heatmapTaxa(ufDrill, "brown_payne")
+```
+
+## lphom − Brown e Payne
+
+```{ojs}
+//| echo: false
+heatmapDif(ufDrill)
+```
+:::
+
+::: {.callout-note collapse="true"}
+## Números deste estado
+
+```{ojs}
+//| echo: false
+html`${matrizNumerica(ufDrill, "brown_payne")}${matrizNumerica(ufDrill, "lphom")}
+  <table class="table table-sm">
+    <thead><tr><th>2º turno</th><th>Brown e Payne</th><th>lphom</th><th>Divulgado</th><th>Brown e Payne − divulgado</th><th>lphom − divulgado</th></tr></thead>
+    <tbody>${destinosVis.map(d => html`<tr>
+      <td>${nome[d]}</td>
+      <td>${fmt(estimadoColuna(ufDrill, "brown_payne", d))}</td>
+      <td>${fmt(estimadoColuna(ufDrill, "lphom", d))}</td>
+      <td>${fmt(obsDestino(ufDrill, d))}</td>
+      <td>${textoDif(estimadoColuna(ufDrill, "brown_payne", d), obsDestino(ufDrill, d))}</td>
+      <td>${textoDif(estimadoColuna(ufDrill, "lphom", d), obsDestino(ufDrill, d))}</td>
+    </tr>`)}</tbody>
+  </table>`
+```
+:::

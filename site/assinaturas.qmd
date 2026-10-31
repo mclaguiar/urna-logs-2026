@@ -1,0 +1,160 @@
+---
+title: "Integridade dos arquivos"
+subtitle: "Autenticidade do pacote da urna — Eleições 2026"
+---
+
+```{ojs}
+//| echo: false
+hw = FileAttachment("data/hw_cadeia.csv").csv({typed: true})
+cob = FileAttachment("data/hw_cobertura.csv").csv({typed: true})
+fmt = (n) => (n == null || n === "" || Number.isNaN(+n) ? "—" : Math.round(+n).toLocaleString("pt-BR"))
+pct = (num, den) => den ? (100 * num / den).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + "%" : "—"
+nomeUf = (uf) => uf === "ZZ" ? "Exterior" : uf
+nSec = hw.reduce((s, d) => s + (+d.secoes || 0), 0)
+nHash = hw.reduce((s, d) => s + (+d.hash_ok || 0), 0)
+nHashFail = hw.reduce((s, d) => s + (+d.hash_falhou || 0), 0)
+nFech = hw.reduce((s, d) => s + (+d.cadeia_fechada || 0), 0)
+nFora = hw.reduce((s, d) => s + (+d.fora || 0), 0)
+```
+
+```{ojs}
+//| echo: false
+md`Esta página verifica autenticidade, se o pacote foi assinado pela urna, e as outras páginas verificam consistência entre arquivos.
+
+Cadeia aberta é a seção UE2013/UE2015 cujo relatório ainda não confrontou o certificado da urna com a chave pública da AC URNA publicada em [acurna.tse.jus.br/crt/acurna.crt](http://acurna.tse.jus.br/crt/acurna.crt), um limite da verificação e não indício de alteração; esse certificado da AC venceu em 18/07/2026, antes da eleição, e onde o relatório já o usa a assinatura confere e a data fica de fora da conta.
+
+O hash de \`bu\`, \`rdv\` e \`log\` confere com o \`.vsc\` em ${fmt(nHash)} de ${fmt(nSec)} seções verificadas.`
+```
+
+```{ojs}
+//| echo: false
+nHashFail
+  ? md`<div class="aviso-falha"><strong>Hash não conferiu em ${fmt(nHashFail)} seções.</strong> Essas linhas estão na coluna de falha da tabela.</div>`
+  : md``
+```
+
+A chave usada na conferência é a do certificado publicado pela própria AC, no repositório indicado na Declaração de Práticas de Certificação ([DPC-PC-ACURNA](http://dpc.acurna.tse.jus.br/DPC-PC-ACURNA.PDF), seções 2.1 e 6.1.4). O arquivo é [acurna.crt](http://acurna.tse.jus.br/crt/acurna.crt). O identificador da chave, `cdaaf4b29701b3f0deb2b54258594a6d34ada48a`, é o mesmo que as urnas UE2013 e UE2015 gravam no `.vsc`. Três certificados de Alagoas, modelos 2015, fecharam a assinatura com essa chave. A página do TSE sobre [assinatura digital e lacração](https://www.tse.jus.br/eleicoes/urna-eletronica/seguranca-da-urna/apresentacao-digital-e-lacracao) publica os resumos dos sistemas e o programa de verificação, e não este certificado.
+
+<style>
+.elos { margin: 0.4rem 0 1rem; }
+.elos h3 { font-size: 1rem; margin: 0.8rem 0 0.35rem; }
+.faixa { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: stretch; }
+.elo { flex: 1 1 7.5rem; border: 1px solid #d0d0d0; border-radius: 0.4rem; padding: 0.45rem 0.55rem; background: #f6f6f6; font-size: 0.92rem; }
+.elo strong { display: block; }
+.elo.ok { border-color: #9dccab; background: #f3faf4; }
+.elo.expira { border-color: #e6d39a; background: #fff6dd; }
+.aviso-falha { background: #fde8e8; border: 1px solid #e7b4b4; border-radius: 0.4rem; padding: 0.55rem 0.75rem; margin: 0.6rem 0 1rem; }
+.aviso-bloco { background: #fff6dd; border: 1px solid #e6d39a; border-radius: 0.4rem; padding: 0.55rem 0.75rem; margin: 0.8rem 0; }
+.cob-uf { display: grid; grid-template-columns: 4.5rem 1fr; gap: 0.35rem; align-items: center; margin: 0.15rem 0; font-size: 0.9rem; }
+.trilha { display: flex; gap: 0.25rem; }
+.barra { height: 0.72rem; border-radius: 0.2rem; min-width: 0; }
+.barra.t1 { background: #94a3b8; }
+.barra.t2 { background: #1f4e79; }
+.legenda { font-size: 0.85rem; color: #444; margin: 0.2rem 0 0.6rem; }
+</style>
+
+## Como a cadeia fecha
+
+<div class="elos">
+<h3>UE2020 e UE2022 · Ed521 · AC embutida no código</h3>
+<div class="faixa">
+  <div class="elo ok"><strong>✓ hash</strong>bu, rdv e log</div>
+  <div class="elo ok"><strong>✓ .vsc</strong>o hash gravado</div>
+  <div class="elo ok"><strong>✓ assinatura</strong>Ed521 com a chave do certificado</div>
+  <div class="elo ok"><strong>✓ certificado da urna</strong>conferido com a AC UE2020 ou UE2022</div>
+  <div class="elo ok"><strong>✓ AC</strong>todos os elos verificados</div>
+</div>
+<h3>UE2013 e UE2015 · ECDSA P-521 · AC URNA publicada</h3>
+<div class="faixa">
+  <div class="elo ok"><strong>✓ hash</strong>bu, rdv e log</div>
+  <div class="elo ok"><strong>✓ .vsc</strong>o hash gravado</div>
+  <div class="elo ok"><strong>✓ assinatura</strong>ECDSA com a chave do certificado</div>
+  <div class="elo ok"><strong>✓ certificado da urna</strong>assinatura confere com a AC publicada</div>
+  <div class="elo expira"><strong>✓ AC, certificado vencido</strong>válido até 18/07/2026, antes da eleição. A conta não usa a data.</div>
+</div>
+</div>
+
+Seção cujo relatório ainda não foi refeito com esse certificado fica com o último elo pendente. Isso não é leitura de que o arquivo mudou.
+
+## Cobertura
+
+```{ojs}
+//| echo: false
+ufs = [...new Set(cob.map(d => d.uf))]
+maxSec = Math.max(1, ...cob.map(d => +d.secoes || 0))
+html`<p class="legenda"><span style="color:#94a3b8">■</span> 1º turno · <span style="color:#1f4e79">■</span> 2º turno. Barra vazia: a UF ainda não tem relatório nesse turno.</p>
+<div>${ufs.map(uf => {
+  const a = cob.find(d => d.uf === uf && +d.turno === 1) || {secoes: 0}
+  const b = cob.find(d => d.uf === uf && +d.turno === 2) || {secoes: 0}
+  const w = (n) => Math.max(+n ? 2 : 0, 100 * (+n || 0) / maxSec)
+  return html`<div class="cob-uf"><span>${nomeUf(uf)}</span><div class="trilha">
+    <div class="barra t1" style="width:${w(a.secoes)}%" title="1º turno: ${fmt(a.secoes)} seções"></div>
+    <div class="barra t2" style="width:${w(b.secoes)}%" title="2º turno: ${fmt(b.secoes)} seções"></div>
+  </div></div>`
+})}</div>`
+```
+
+```{ojs}
+//| echo: false
+porTurno = (turno) => cob.filter(d => +d.turno === turno && +d.secoes > 0)
+lista = (turno) => porTurno(turno).map(d => nomeUf(d.uf)).join(", ") || "nenhuma"
+secTurno = (turno) => porTurno(turno).reduce((s, d) => s + (+d.secoes || 0), 0)
+md`1º turno: ${fmt(porTurno(1).length)} de ${fmt(cob.filter(d => +d.turno === 1).length)} UFs, ${fmt(secTurno(1))} seções (${lista(1)}). 2º turno: ${fmt(porTurno(2).length)} de ${fmt(cob.filter(d => +d.turno === 2).length)} UFs, ${fmt(secTurno(2))} seções (${lista(2)}).`
+```
+
+```{ojs}
+//| echo: false
+linha = (d) => {
+  const den = +d.secoes || 0
+  const modelos = [
+    ["UE2013", +d.n_ue2013 || 0],
+    ["UE2015", +d.n_ue2015 || 0],
+    ["UE2020", +d.n_ue2020 || 0],
+    ["UE2022", +d.n_ue2022 || 0]
+  ].map(([nome, n]) => `${nome} ${pct(n, den)}`).join(" · ")
+  return {
+    UF: nomeUf(d.uf),
+    "Seções verificadas": fmt(d.secoes),
+    "Hash ok": fmt(d.hash_ok),
+    "Hash falhou": fmt(d.hash_falhou),
+    "Cadeia fechada": pct(+d.cadeia_fechada || 0, den),
+    "Cadeia aberta": pct(+d.cadeia_aberta || 0, den),
+    "Urnas por modelo": modelos,
+    ...(nFora ? {"Fora": fmt(d.fora)} : {}),
+    Verificador: d.verificador,
+    Turno: `${d.turno}º`
+  }
+}
+novo = hw.filter(d => d.bloco === "novo").map(linha)
+outro = hw.filter(d => d.bloco !== "novo").map(linha)
+```
+
+```{ojs}
+//| echo: false
+nFora
+  ? md`${fmt(nFora)} seções têm o hash ok e o relatório não gravou o resultado da assinatura de hardware. Elas aparecem na coluna Fora.`
+  : md`Nenhuma seção verificada ficou fora das classes cadeia fechada, cadeia aberta e falha de hash.`
+```
+
+```{ojs}
+//| echo: false
+outro.length
+  ? md`<div class="aviso-bloco"><strong>Estes relatórios não são comparáveis com os de baixo.</strong> Verificador anterior: o programa parava ao ver ECDSA e não conferia a assinatura. Verificador novo com cadeia ainda pendente: o relatório foi gravado antes de fixar o certificado publicado da AC URNA. A coluna de cadeia aberta, aqui, é a frota UE2013/UE2015 com hash ok, não uma conferência da AC.</div>`
+  : md``
+```
+
+```{ojs}
+//| echo: false
+outro.length ? Inputs.table(outro, {height: Math.min(640, 48 + outro.length * 28)}) : md``
+```
+
+## Por UF
+
+```{ojs}
+//| echo: false
+novo.length
+  ? Inputs.table(novo, {height: Math.min(640, 48 + novo.length * 28)})
+  : md`Nenhuma UF foi gravada ainda com o certificado publicado da AC URNA.`
+```
+
+O mecanismo e os termos estão no [Método](metodo.qmd#assinatura-de-hardware).

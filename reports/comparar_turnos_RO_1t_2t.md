@@ -2,7 +2,7 @@
 
 Status: **pronto**
 
-Comparativo 1º×2º preenchido (finalistas 13×22; saldo agregado por seção — não é migração eleitor a eleitor).
+Comparativo 1º×2º preenchido (finalistas 13×22; saldo agregado por seção).
 
 ## Disponibilidade
 

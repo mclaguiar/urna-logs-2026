@@ -1,6 +1,6 @@
 # Auditoria presidente — MG 2º turno
 
-ZIP: `E:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_2t_MG.zip`
+ZIP: `D:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_2t_MG.zip`
 Urnas auditadas: **52,062** · OK: **52,062** · divergentes/erro: **0**
 
 ## Escopo

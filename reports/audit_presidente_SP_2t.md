@@ -1,6 +1,6 @@
 # Auditoria presidente — SP 2º turno
 
-ZIP: `E:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_2t_SP.zip`
+ZIP: `D:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_2t_SP.zip`
 Urnas auditadas: **103,656** · OK: **103,656** · divergentes/erro: **0**
 
 ## Escopo

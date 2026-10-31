@@ -1,0 +1,14 @@
+chave,valor
+protocolo_versao,2026.10.31-b
+protocolo_nota,"A=inconsistência entre arquivos públicos; B=dois ou mais sinais independentes no p99 da UF; C=um sinal no p99 da UF. Sinais: |Δ abstenção|, |Δ margem|, % sem digital no 1º turno, % após 17h no 1º ou no 2º. A cauda só conta se o percentil é maior que zero e a série varia."
+pkg_version,0.1.0
+hash_sha256,1d0a5acc107e9c15e4c9edfb1647a54bd5e9e37f0f7bb6ed7ecd0bc264ff7238
+p_flag_abst,0.99
+p_flag_margem,0.99
+p_flag_sem_dig,0.99
+p_flag_pos17,0.99
+confluencia_min,2
+confluencia_flags,"flag_margem,flag_abstencao,flag_pos17,flag_sem_digital"
+min_secoes,30
+max_linhas_lphom,2500
+confianca,0.95

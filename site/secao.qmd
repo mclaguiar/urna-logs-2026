@@ -1,0 +1,740 @@
+---
+title: "Votos da seção"
+subtitle: "Presidente — totais do boletim"
+---
+
+Escolha o estado, a cidade, a zona e a seção. Em zona e em seção, Todos soma o conjunto.
+
+::: {.callout-note collapse="true"}
+## Como ler
+
+Os números de votos são os do boletim de urna, cargo presidente. O endereço da página guarda a seleção (`?uf=&mun=&zona=&secao=`), para compartilhar o link.
+
+Numa seção, branco e nulo aparecem separados. Em zona ou cidade, ficam somados. Eliminados no 1º turno ficam numa linha que abre os candidatos.
+
+A seção não tem matriz de migração. O 2º turno esperado aplica a matriz da cidade (ou a do estado, se a cidade não tiver a própria) aos votos do 1º turno deste conjunto. O resíduo é esse esperado menos o observado. O percentil de extremo da UF, em `urna_logs.thresholds`, mede |Δ margem| do boletim dentro da UF. Não mede esse resíduo. A linha de Lula ou de Flávio fica em destaque quando o resíduo de Brown e Payne passa de 5% do observado naquele destino.
+
+A curva hora a hora é a da UF. O arquivo da seção guarda a fatia de habilitações após as 17h, não as 24 horas.
+:::
+
+<style>
+.cartoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.6rem; margin: 0.6rem 0 1rem; }
+.cartao { border: 1px solid #e2e2e2; border-radius: 0.45rem; padding: 0.55rem 0.7rem; }
+.cartao span { display: block; color: #555; font-size: 0.85rem; }
+.selo-ok { color: #146c2e; font-weight: 600; }
+.selo-hw { margin: 0.2rem 0 0.8rem; }
+.selo-hw span { display: inline-block; margin-right: 0.75rem; }
+.selo-alerta { color: #8a1c1c; font-weight: 600; }
+.aviso-turno { background: #fff6dd; border: 1px solid #e6d39a; border-radius: 0.4rem; padding: 0.45rem 0.7rem; margin: 0.4rem 0; }
+.nome-13 { color: #a51c1c; font-weight: 600; }
+.nome-22 { color: #1f4e79; font-weight: 600; }
+tr.residuo-alto td { background: #fde8e8; }
+.abas-matriz button { margin: 0 0.25rem 0.5rem 0; }
+.abas-matriz button.ativa { font-weight: 700; }
+.selo { display: inline-block; margin-left: 0.4rem; padding: 0.05rem 0.4rem; border-radius: 0.3rem; background: #fde8e8; font-size: 0.85rem; }
+</style>
+
+```{ojs}
+//| echo: false
+municipios = FileAttachment("data/secao/municipios.csv").csv({typed: true})
+rotulos = FileAttachment("data/secao/rotulos.csv").csv({typed: true})
+protocolo = FileAttachment("data/protocolo.csv").csv({typed: false})
+horas = FileAttachment("data/curva_horaria.csv").csv({typed: true})
+matriz = FileAttachment("data/migracao/matriz.csv").csv({typed: true})
+params = new URLSearchParams(location.search)
+nomeVotavel = new Map(rotulos.map(d => [String(d.votavel), d.nome_votavel]))
+nomeMun = new Map(municipios.map(d => [`${d.uf}:${+d.municipio}`, d.nome]))
+ufs = [...new Set(municipios.map(d => d.uf))].sort()
+vProt = (chave) => {
+  const row = protocolo.find(d => d.chave === chave)
+  return row ? String(row.valor) : ""
+}
+COR = ({"13": "#a51c1c", "22": "#1f4e79", eliminados: "#6b7280", branco_nulo: "#9ca3af", abstencao: "#c4a35a"})
+NOMES = ({
+  "13": "Lula (13)",
+  "22": "Flávio (22)",
+  eliminados: "Eliminados no 1º",
+  branco: "Branco",
+  nulo: "Nulo",
+  branco_nulo: "Branco e nulo",
+  abstencao: "Abstenção"
+})
+LIMIAR_RESIDUO = 0.05
+percentilMargem = (() => {
+  const n = Number(vProt("p_flag_margem"))
+  return Number.isFinite(n) ? n.toLocaleString("pt-BR", {style: "percent", maximumFractionDigits: 0}) : vProt("p_flag_margem")
+})()
+num = (v) => (v == null || v === "" || Number.isNaN(+v) ? null : +v)
+fmt = (n) => (n == null || Number.isNaN(+n) ? "—" : Math.round(+n).toLocaleString("pt-BR"))
+fmtSinal = (n) => {
+  if (n == null || Number.isNaN(+n)) return "—"
+  const r = Math.round(+n)
+  return (r > 0 ? "+" : "") + r.toLocaleString("pt-BR")
+}
+fmtPp = (n) => {
+  if (n == null || Number.isNaN(+n)) return "—"
+  const t = (+n).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})
+  return (n > 0 ? "+" : "") + t + " pp"
+}
+pct1 = (taxa) => taxa == null || Number.isNaN(+taxa)
+  ? "—"
+  : (100 * taxa).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + "%"
+nomeCurto = (cod) => cod === "95" ? "Branco" : cod === "96" ? "Nulo" : (NOMES[cod] || `${(nomeVotavel.get(cod) || cod).split(" ")[0]} (${cod})`)
+nomeCheio = (cod) => nomeVotavel.get(cod) || nomeCurto(cod)
+listaSelect = (opcoes, label, valor) => {
+  const atual = opcoes.find(d => String(d.id) === String(valor)) || opcoes[0]
+  return Inputs.select(new Map(opcoes.map(d => [d.label, d.id])), {
+    label,
+    value: atual ? atual.id : undefined,
+    sort: false
+  })
+}
+```
+
+```{ojs}
+//| echo: false
+viewof uf = Inputs.select(ufs, {
+  label: "Estado",
+  value: ufs.includes(params.get("uf")) ? params.get("uf") : ufs[0]
+})
+```
+
+```{ojs}
+//| echo: false
+votos = {
+  const normaliza = rows => rows.map(d => ({
+    municipio: +d.municipio,
+    zona: +d.zona,
+    secao: +d.secao,
+    t1: d.t1 == null ? "" : String(d.t1),
+    t2: d.t2 == null ? "" : String(d.t2),
+    dif: +d.dif || 0,
+    a1: num(d.a1),
+    a2: num(d.a2),
+    status: d.status == null ? "" : String(d.status),
+    apt1: num(d.aptos_1t),
+    apt2: num(d.aptos_2t),
+    cmp1: num(d.comparecimento_1t),
+    cmp2: num(d.comparecimento_2t),
+    sd1: num(d.pct_sem_digital_1t),
+    sd2: num(d.pct_sem_digital_2t),
+    p171: num(d.pct_apos_17h_1t),
+    p172: num(d.pct_apos_17h_2t),
+    flags: d.flags == null ? "" : String(d.flags),
+    nivel: d.nivel == null ? "" : String(d.nivel),
+    codigos: d.codigos == null ? "" : String(d.codigos),
+    conclusao: d.conclusao_permitida == null ? "" : String(d.conclusao_permitida),
+    ndiv: +d.ndiv || 0,
+    det: d.det == null ? "" : String(d.det)
+  }));
+  if (uf === "AC") return normaliza(await FileAttachment("data/secao/votos_AC.csv").csv({typed: true}));
+  if (uf === "AL") return normaliza(await FileAttachment("data/secao/votos_AL.csv").csv({typed: true}));
+  if (uf === "AM") return normaliza(await FileAttachment("data/secao/votos_AM.csv").csv({typed: true}));
+  if (uf === "AP") return normaliza(await FileAttachment("data/secao/votos_AP.csv").csv({typed: true}));
+  if (uf === "BA") return normaliza(await FileAttachment("data/secao/votos_BA.csv").csv({typed: true}));
+  if (uf === "CE") return normaliza(await FileAttachment("data/secao/votos_CE.csv").csv({typed: true}));
+  if (uf === "DF") return normaliza(await FileAttachment("data/secao/votos_DF.csv").csv({typed: true}));
+  if (uf === "ES") return normaliza(await FileAttachment("data/secao/votos_ES.csv").csv({typed: true}));
+  if (uf === "GO") return normaliza(await FileAttachment("data/secao/votos_GO.csv").csv({typed: true}));
+  if (uf === "MA") return normaliza(await FileAttachment("data/secao/votos_MA.csv").csv({typed: true}));
+  if (uf === "MG") return normaliza(await FileAttachment("data/secao/votos_MG.csv").csv({typed: true}));
+  if (uf === "MS") return normaliza(await FileAttachment("data/secao/votos_MS.csv").csv({typed: true}));
+  if (uf === "MT") return normaliza(await FileAttachment("data/secao/votos_MT.csv").csv({typed: true}));
+  if (uf === "PA") return normaliza(await FileAttachment("data/secao/votos_PA.csv").csv({typed: true}));
+  if (uf === "PB") return normaliza(await FileAttachment("data/secao/votos_PB.csv").csv({typed: true}));
+  if (uf === "PE") return normaliza(await FileAttachment("data/secao/votos_PE.csv").csv({typed: true}));
+  if (uf === "PI") return normaliza(await FileAttachment("data/secao/votos_PI.csv").csv({typed: true}));
+  if (uf === "PR") return normaliza(await FileAttachment("data/secao/votos_PR.csv").csv({typed: true}));
+  if (uf === "RJ") return normaliza(await FileAttachment("data/secao/votos_RJ.csv").csv({typed: true}));
+  if (uf === "RN") return normaliza(await FileAttachment("data/secao/votos_RN.csv").csv({typed: true}));
+  if (uf === "RO") return normaliza(await FileAttachment("data/secao/votos_RO.csv").csv({typed: true}));
+  if (uf === "RR") return normaliza(await FileAttachment("data/secao/votos_RR.csv").csv({typed: true}));
+  if (uf === "RS") return normaliza(await FileAttachment("data/secao/votos_RS.csv").csv({typed: true}));
+  if (uf === "SC") return normaliza(await FileAttachment("data/secao/votos_SC.csv").csv({typed: true}));
+  if (uf === "SE") return normaliza(await FileAttachment("data/secao/votos_SE.csv").csv({typed: true}));
+  if (uf === "SP") return normaliza(await FileAttachment("data/secao/votos_SP.csv").csv({typed: true}));
+  if (uf === "TO") return normaliza(await FileAttachment("data/secao/votos_TO.csv").csv({typed: true}));
+  if (uf === "ZZ") return normaliza(await FileAttachment("data/secao/votos_ZZ.csv").csv({typed: true}));
+  return [];
+}
+```
+
+```{ojs}
+//| echo: false
+hwUf = {
+  const normaliza = rows => rows.map(d => ({
+    municipio: +d.municipio,
+    zona: +d.zona,
+    secao: +d.secao,
+    turno: +d.turno,
+    modelo: d.modelo == null ? "" : String(d.modelo),
+    cadeia: d.cadeia == null ? "" : String(d.cadeia),
+    hash: d.hash == null ? "" : String(d.hash)
+  }));
+  if (uf === "AC") return normaliza(await FileAttachment("data/secao/hw_AC.csv").csv({typed: true}));
+  if (uf === "AL") return normaliza(await FileAttachment("data/secao/hw_AL.csv").csv({typed: true}));
+  if (uf === "AM") return normaliza(await FileAttachment("data/secao/hw_AM.csv").csv({typed: true}));
+  if (uf === "AP") return normaliza(await FileAttachment("data/secao/hw_AP.csv").csv({typed: true}));
+  if (uf === "BA") return normaliza(await FileAttachment("data/secao/hw_BA.csv").csv({typed: true}));
+  if (uf === "CE") return normaliza(await FileAttachment("data/secao/hw_CE.csv").csv({typed: true}));
+  if (uf === "DF") return normaliza(await FileAttachment("data/secao/hw_DF.csv").csv({typed: true}));
+  if (uf === "ES") return normaliza(await FileAttachment("data/secao/hw_ES.csv").csv({typed: true}));
+  if (uf === "GO") return normaliza(await FileAttachment("data/secao/hw_GO.csv").csv({typed: true}));
+  if (uf === "MA") return normaliza(await FileAttachment("data/secao/hw_MA.csv").csv({typed: true}));
+  if (uf === "MG") return normaliza(await FileAttachment("data/secao/hw_MG.csv").csv({typed: true}));
+  if (uf === "MS") return normaliza(await FileAttachment("data/secao/hw_MS.csv").csv({typed: true}));
+  if (uf === "MT") return normaliza(await FileAttachment("data/secao/hw_MT.csv").csv({typed: true}));
+  if (uf === "PA") return normaliza(await FileAttachment("data/secao/hw_PA.csv").csv({typed: true}));
+  if (uf === "PB") return normaliza(await FileAttachment("data/secao/hw_PB.csv").csv({typed: true}));
+  if (uf === "PE") return normaliza(await FileAttachment("data/secao/hw_PE.csv").csv({typed: true}));
+  if (uf === "PI") return normaliza(await FileAttachment("data/secao/hw_PI.csv").csv({typed: true}));
+  if (uf === "PR") return normaliza(await FileAttachment("data/secao/hw_PR.csv").csv({typed: true}));
+  if (uf === "RJ") return normaliza(await FileAttachment("data/secao/hw_RJ.csv").csv({typed: true}));
+  if (uf === "RN") return normaliza(await FileAttachment("data/secao/hw_RN.csv").csv({typed: true}));
+  if (uf === "RO") return normaliza(await FileAttachment("data/secao/hw_RO.csv").csv({typed: true}));
+  if (uf === "RR") return normaliza(await FileAttachment("data/secao/hw_RR.csv").csv({typed: true}));
+  if (uf === "RS") return normaliza(await FileAttachment("data/secao/hw_RS.csv").csv({typed: true}));
+  if (uf === "SC") return normaliza(await FileAttachment("data/secao/hw_SC.csv").csv({typed: true}));
+  if (uf === "SE") return normaliza(await FileAttachment("data/secao/hw_SE.csv").csv({typed: true}));
+  if (uf === "SP") return normaliza(await FileAttachment("data/secao/hw_SP.csv").csv({typed: true}));
+  if (uf === "TO") return normaliza(await FileAttachment("data/secao/hw_TO.csv").csv({typed: true}));
+  if (uf === "ZZ") return normaliza(await FileAttachment("data/secao/hw_ZZ.csv").csv({typed: true}));
+  return [];
+}
+```
+
+```{ojs}
+//| echo: false
+munOpts = {
+  const ids = [...new Set(votos.map(d => d.municipio))]
+  ids.sort((a, b) => (nomeMun.get(`${uf}:${a}`) || "").localeCompare(nomeMun.get(`${uf}:${b}`) || "", "pt") || (a - b))
+  return ids.map(id => ({id, label: `${nomeMun.get(`${uf}:${id}`) || "código " + id} (${id})`}))
+}
+viewof municipio = listaSelect(
+  munOpts.length ? munOpts : [{id: 0, label: "sem dados"}],
+  "Cidade",
+  new URLSearchParams(location.search).get("mun")
+)
+```
+
+```{ojs}
+//| echo: false
+zonaOpts = [
+  {id: "todos", label: "Todos"},
+  ...[...new Set(votos.filter(d => d.municipio === +municipio).map(d => d.zona))]
+    .sort((a, b) => a - b)
+    .map(z => ({id: String(z), label: String(z).padStart(4, "0")}))
+]
+viewof zona = listaSelect(zonaOpts, "Zona", new URLSearchParams(location.search).get("zona") || "todos")
+```
+
+```{ojs}
+//| echo: false
+secaoOpts = zona === "todos"
+  ? [{id: "todos", label: "Todos"}]
+  : [
+      {id: "todos", label: "Todos"},
+      ...[...new Set(votos.filter(d => d.municipio === +municipio && d.zona === +zona).map(d => d.secao))]
+        .sort((a, b) => a - b)
+        .map(s => ({id: String(s), label: String(s).padStart(4, "0")}))
+    ]
+viewof secao = listaSelect(
+  secaoOpts,
+  "Seção",
+  zona === "todos" ? "todos" : (new URLSearchParams(location.search).get("secao") || "todos")
+)
+```
+
+```{ojs}
+//| echo: false
+urlSync = {
+  if (municipio == null || !votos.length) return ""
+  const q = new URLSearchParams()
+  q.set("uf", uf)
+  q.set("mun", String(municipio))
+  q.set("zona", String(zona))
+  q.set("secao", zona === "todos" ? "todos" : String(secao))
+  const next = `?${q}`
+  if (location.search !== next) history.replaceState(null, "", `${location.pathname}${next}`)
+  return next
+}
+```
+
+```{ojs}
+//| echo: false
+linhasEscopo = votos.filter(d =>
+  d.municipio === +municipio
+  && (zona === "todos" || d.zona === +zona)
+  && (zona === "todos" || secao === "todos" || d.secao === +secao)
+)
+unica = zona !== "todos" && secao !== "todos" && linhasEscopo.length === 1
+juntar = (rows, campo) => {
+  const map = new Map()
+  for (const row of rows) {
+    if (!row[campo]) continue
+    for (const part of String(row[campo]).split("|").filter(Boolean)) {
+      const [cod, qtd] = part.split("=")
+      map.set(cod, (map.get(cod) || 0) + (+qtd || 0))
+    }
+  }
+  return map
+}
+mapa1 = juntar(linhasEscopo, "t1")
+mapa2 = juntar(linhasEscopo, "t2")
+somaCampo = (campo) => linhasEscopo.reduce((s, d) => s + (d[campo] || 0), 0)
+apt1 = somaCampo("apt1")
+apt2 = somaCampo("apt2")
+cmp1 = somaCampo("cmp1")
+cmp2 = somaCampo("cmp2")
+abs1 = somaCampo("a1")
+abs2 = somaCampo("a2")
+ppTaxa = (n2, d2, n1, d1) => (!d1 || !d2 ? null : 100 * (n2 / d2 - n1 / d1))
+textoZona = zona === "todos" ? "todas as zonas" : `zona ${String(zona).padStart(4, "0")}`
+textoSecao = zona === "todos" || secao === "todos"
+  ? `todas as seções (${linhasEscopo.length.toLocaleString("pt-BR")})`
+  : `seção ${String(secao).padStart(4, "0")}`
+nomeCidade = nomeMun.get(`${uf}:${+municipio}`) || `código ${municipio}`
+cabeca = linhasEscopo.length ? `${uf} · ${nomeCidade} · ${textoZona} · ${textoSecao}` : "Nenhuma seção neste conjunto."
+so1 = linhasEscopo.filter(d => d.status === "so_1t").length
+so2 = linhasEscopo.filter(d => d.status === "so_2t").length
+nDiv = linhasEscopo.reduce((s, d) => s + (d.ndiv || 0), 0)
+mediaPond = (pct, peso) => {
+  let s = 0, w = 0
+  for (const d of linhasEscopo) {
+    if (d[pct] == null || d[peso] == null) continue
+    s += d[pct] * d[peso]
+    w += d[peso]
+  }
+  return w ? s / w : null
+}
+```
+
+```{ojs}
+//| echo: false
+cartao = (titulo, a, b, deltaVotos, deltaPp) => html`<div class="cartao">
+  <span>${titulo}</span>
+  <div>1º ${fmt(a)}</div>
+  <div>2º ${fmt(b)}</div>
+  <div>Δ ${fmtSinal(deltaVotos)}${deltaPp == null ? "" : ` · ${fmtPp(deltaPp)}`}</div>
+</div>`
+detalhesDiv = linhasEscopo.flatMap(d => String(d.det || "").split("|").filter(Boolean).map(p => {
+  const [turno, cod, rdv, bu, oficial] = p.split(":")
+  return {secao: d, turno, cod, rdv, bu, oficial}
+}))
+html`<p><strong>${cabeca}</strong></p>
+${so1 || so2 ? html`<div class="aviso-turno">${unica
+  ? (so1 ? "Esta seção só existe no 1º turno." : "Esta seção só existe no 2º turno.")
+  : `${so1.toLocaleString("pt-BR")} seções só no 1º turno · ${so2.toLocaleString("pt-BR")} só no 2º.`}</div>` : ""}
+<div class="cartoes">
+  ${cartao("Aptos", apt1, apt2, apt2 - apt1, null)}
+  ${cartao("Comparecimento", cmp1, cmp2, cmp2 - cmp1, ppTaxa(cmp2, apt2, cmp1, apt1))}
+  ${cartao("Abstenção", abs1, abs2, abs2 - abs1, ppTaxa(abs2, apt2, abs1, apt1))}
+</div>
+<p class="${nDiv ? "selo-alerta" : "selo-ok"}">${nDiv
+  ? `⚠ diverge em ${nDiv.toLocaleString("pt-BR")} ${nDiv === 1 ? "votável" : "votáveis"}`
+  : "✓ RDV ≡ BU ≡ CSV oficial"}</p>
+${nDiv ? html`<details><summary>Votáveis que não fecham</summary>
+  <div style="overflow-x:auto"><table class="table table-sm">
+    <thead><tr><th>Seção</th><th>Turno</th><th>Votável</th><th>RDV</th><th>BU</th><th>CSV oficial</th></tr></thead>
+    <tbody>${detalhesDiv.map(d => html`<tr>
+      <td>${String(d.secao.zona).padStart(4, "0")}-${String(d.secao.secao).padStart(4, "0")}</td>
+      <td>${d.turno}º</td>
+      <td title="${nomeCheio(d.cod)}">${nomeCurto(d.cod)}</td>
+      <td>${d.rdv === "" ? "—" : fmt(+d.rdv)}</td>
+      <td>${d.bu === "" ? "—" : fmt(+d.bu)}</td>
+      <td>${d.oficial === "" ? "—" : fmt(+d.oficial)}</td>
+    </tr>`)}</tbody>
+  </table></div>
+</details>` : html`<details><summary>Detalhe da conferência</summary><p>Nenhum votável deste conjunto tem RDV diferente do BU, nem BU diferente do CSV oficial.</p></details>`}`
+```
+
+```{ojs}
+//| echo: false
+validos1 = [...new Set(["13", "22", ...mapa1.keys()])]
+  .filter(c => c !== "95" && c !== "96")
+  .reduce((s, c) => s + (mapa1.get(c) || 0), 0)
+validos2 = (mapa2.get("13") || 0) + (mapa2.get("22") || 0)
+linhaVoto = (cod, n1, n2, sub) => {
+  const cls = cod === "13" ? "nome-13" : cod === "22" ? "nome-22" : ""
+  const pctV = (n, base) => base ? (100 * n / base).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + "%" : "—"
+  const nominal1 = cod !== "95" && cod !== "96" && cod !== "branco_nulo"
+  const nominal2 = cod === "13" || cod === "22"
+  return html`<tr>
+    <td class="${cls}" title="${nomeCheio(cod)}" style="${sub ? "padding-left:1.2rem" : ""}">${nomeCurto(cod)}</td>
+    <td>${fmt(n1)}</td>
+    <td>${fmt(n2)}</td>
+    <td>${fmtSinal(n2 - n1)}</td>
+    <td>${nominal1 ? pctV(n1, validos1) : "—"}</td>
+    <td>${nominal2 ? pctV(n2, validos2) : "—"}</td>
+  </tr>`
+}
+codigosElim = [...new Set([...mapa1.keys(), ...mapa2.keys()])]
+  .filter(c => c !== "13" && c !== "22" && c !== "95" && c !== "96")
+elim = codigosElim
+  .map(c => ({cod: c, n1: mapa1.get(c) || 0, n2: mapa2.get(c) || 0}))
+  .sort((a, b) => b.n1 - a.n1 || b.n2 - a.n2)
+somaElim1 = elim.reduce((s, d) => s + d.n1, 0)
+somaElim2 = elim.reduce((s, d) => s + d.n2, 0)
+linhasFixas = ["13", "22"].map(cod => ({cod, n1: mapa1.get(cod) || 0, n2: mapa2.get(cod) || 0, tipo: "um"})).filter(d => d.n1 || d.n2)
+linhasBranco = unica
+  ? ["95", "96"].map(cod => ({cod, n1: mapa1.get(cod) || 0, n2: mapa2.get(cod) || 0, tipo: "um"})).filter(d => d.n1 || d.n2)
+  : [{cod: "branco_nulo", n1: (mapa1.get("95") || 0) + (mapa1.get("96") || 0), n2: (mapa2.get("95") || 0) + (mapa2.get("96") || 0), tipo: "um"}].filter(d => d.n1 || d.n2)
+linhasTopo = [
+  ...linhasFixas,
+  ...(somaElim1 || somaElim2 ? [{cod: "eliminados", n1: somaElim1, n2: somaElim2, tipo: "elim"}] : []),
+  ...linhasBranco
+].sort((a, b) => b.n1 - a.n1 || b.n2 - a.n2)
+html`<div style="overflow-x:auto"><table class="table table-sm">
+  <thead><tr><th>Votável</th><th>1º</th><th>2º</th><th>Δ</th><th>% válidos 1º</th><th>% válidos 2º</th></tr></thead>
+  <tbody>${linhasTopo.map(d => d.tipo === "elim"
+    ? html`<tr><td colspan="6" style="padding:0">
+        <details>
+          <summary style="display:grid;grid-template-columns:minmax(9rem,1.4fr) repeat(5,minmax(4rem,1fr));padding:0.35rem 0.4rem;cursor:pointer">
+            <span>${NOMES.eliminados}</span><span>${fmt(d.n1)}</span><span>${fmt(d.n2)}</span><span>${fmtSinal(d.n2 - d.n1)}</span>
+            <span>${validos1 ? (100 * d.n1 / validos1).toLocaleString("pt-BR", {maximumFractionDigits: 1}) + "%" : "—"}</span><span>—</span>
+          </summary>
+          <table class="table table-sm" style="margin:0">${elim.map(e => linhaVoto(e.cod, e.n1, e.n2, true))}</table>
+        </details>
+      </td></tr>`
+    : linhaVoto(d.cod, d.n1, d.n2, false))}</tbody>
+</table></div>`
+```
+
+```{ojs}
+//| echo: false
+NOME_FLAG = ({
+  abstencao: "abstenção",
+  margem: "margem",
+  sem_digital_x_margem: "sem digital × margem",
+  pos17: "pós-17h",
+  so_turno: "só um turno"
+})
+flagsDoConjunto = () => {
+  const cont = new Map()
+  for (const d of linhasEscopo) {
+    for (const f of String(d.flags || "").split("|").filter(Boolean)) cont.set(f, (cont.get(f) || 0) + 1)
+  }
+  return [...cont.entries()]
+}
+sinalizadas = linhasEscopo
+  .filter(d => d.flags || d.nivel || d.status === "so_1t" || d.status === "so_2t" || d.ndiv)
+  .slice()
+  .sort((a, b) => (a.nivel || "Z").localeCompare(b.nivel || "Z") || a.zona - b.zona || a.secao - b.secao)
+hrefSecao = (d) => `secao.html?uf=${uf}&mun=${d.municipio}&zona=${d.zona}&secao=${d.secao}`
+fmtPctCampo = (v) => v == null ? "—" : v.toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + "%"
+sd1m = unica ? linhasEscopo[0].sd1 : mediaPond("sd1", "cmp1")
+sd2m = unica ? linhasEscopo[0].sd2 : mediaPond("sd2", "cmp2")
+p1m = unica ? linhasEscopo[0].p171 : mediaPond("p171", "cmp1")
+p2m = unica ? linhasEscopo[0].p172 : mediaPond("p172", "cmp2")
+ficha = unica ? linhasEscopo[0] : null
+horasUf = horas.filter(d => d.uf === uf).map(d => ({turno: +d.turno, hora: +d.hora, habilitacoes: +d.habilitacoes}))
+rotuloCadeia = ({
+  fechada: "cadeia fechada",
+  aberta: "cadeia aberta",
+  falha: "assinatura não conferiu",
+  nao_reprocessada: "cadeia ainda não reprocessada com o certificado publicado",
+  nao_conferida: "assinatura de hardware não consta neste relatório"
+})
+hwDaSecao = unica ? hwUf.filter(d =>
+  d.municipio === linhasEscopo[0].municipio &&
+  d.zona === linhasEscopo[0].zona &&
+  d.secao === linhasEscopo[0].secao
+) : []
+html`<h2>Auditoria da seção</h2>
+${unica ? html`<p class="selo-hw">${hwDaSecao.length
+  ? hwDaSecao.map(d => html`<span class="${d.hash === "ok" && d.cadeia === "fechada" ? "selo-ok" : "selo-alerta"}">${d.turno}º turno · ${d.modelo || "modelo não lido"} · ${rotuloCadeia[d.cadeia] || "sem classe"} · hash ${d.hash === "ok" ? "ok" : "falhou"}</span>`)
+  : "Esta seção não está nos relatórios de verificação. "}
+  <a href="assinaturas.html">Integridade dos arquivos</a></p>` : ""}
+<p>${unica ? "Nesta seção." : "No conjunto, média ponderada pelo comparecimento."} Sem digital é habilitação por biografia mais comparecimento sem biometria, no boletim.</p>
+<div class="cartoes">
+  <div class="cartao"><span>% sem digital</span><div>1º ${fmtPctCampo(sd1m)}</div><div>2º ${fmtPctCampo(sd2m)}</div><div>Δ ${fmtPp(sd1m == null || sd2m == null ? null : sd2m - sd1m)}</div></div>
+  <div class="cartao"><span>% habilitações após as 17h</span><div>1º ${fmtPctCampo(p1m)}</div><div>2º ${fmtPctCampo(p2m)}</div><div>Δ ${fmtPp(p1m == null || p2m == null ? null : p2m - p1m)}</div></div>
+  <div class="cartao"><span>Flags</span><div>${unica
+    ? (ficha.flags ? ficha.flags.split("|").filter(Boolean).map(f => NOME_FLAG[f] || f).join(", ") : "nenhuma")
+    : (flagsDoConjunto().map(([f, n]) => `${NOME_FLAG[f] || f}: ${n.toLocaleString("pt-BR")}`).join(" · ") || "nenhuma")}</div></div>
+  <div class="cartao"><span>Achado</span><div>${unica
+    ? (ficha.nivel ? `Nível ${ficha.nivel}` : "sem ficha")
+    : `A ${linhasEscopo.filter(d => d.nivel === "A").length.toLocaleString("pt-BR")} · B ${linhasEscopo.filter(d => d.nivel === "B").length.toLocaleString("pt-BR")} · C ${linhasEscopo.filter(d => d.nivel === "C").length.toLocaleString("pt-BR")}`}</div></div>
+</div>
+${ficha && ficha.nivel ? html`<p><strong>Ficha ${ficha.nivel}</strong> · ${ficha.codigos || "sem código"}</p><p>${ficha.conclusao || (ficha.nivel === "C" ? "Sinal isolado do comparativo, na cauda da UF." : "")}</p>` : ""}
+${Plot.plot({
+  width: 720,
+  height: 220,
+  marginLeft: 48,
+  x: {label: "Hora (Brasília; ZZ no horário local)", tickFormat: d => String(d).padStart(2, "0")},
+  y: {label: "Habilitações da UF", grid: true},
+  marks: [
+    Plot.line(horasUf.filter(d => d.turno === 1), {x: "hora", y: "habilitacoes", stroke: "#6b7280"}),
+    Plot.line(horasUf.filter(d => d.turno === 2), {x: "hora", y: "habilitacoes", stroke: "#1f4e79"})
+  ]
+})}
+<p>Curva da UF ${uf}, 1º turno em cinza e 2º em azul. A seção entra com a fatia após as 17h, no cartão acima.</p>
+${unica ? "" : html`<details><summary>Seções sinalizadas neste conjunto (${sinalizadas.length.toLocaleString("pt-BR")})</summary>
+  <div style="overflow-x:auto"><table class="table table-sm">
+    <thead><tr><th>Seção</th><th>Nível</th><th>Flags</th><th>% sem digital 1º</th><th>% pós-17h 2º</th></tr></thead>
+    <tbody>${sinalizadas.slice(0, 40).map(d => html`<tr>
+      <td><a href="${hrefSecao(d)}">zona ${String(d.zona).padStart(4, "0")} · seção ${String(d.secao).padStart(4, "0")}</a></td>
+      <td>${d.nivel || "—"}</td>
+      <td>${d.flags || d.status || "—"}</td>
+      <td>${fmtPctCampo(d.sd1)}</td>
+      <td>${fmtPctCampo(d.p172)}</td>
+    </tr>`)}</tbody>
+  </table></div>
+  ${sinalizadas.length > 40 ? html`<p>A lista mostra 40 de ${sinalizadas.length.toLocaleString("pt-BR")}.</p>` : ""}
+</details>`}`
+```
+
+```{ojs}
+//| echo: false
+ORIGENS = ["13", "22", "eliminados", "branco", "nulo", "abstencao"]
+DESTINOS = ["13", "22", "branco", "nulo", "abstencao"]
+VIS_O = ["13", "22", "eliminados", "branco_nulo", "abstencao"]
+VIS_D = ["13", "22", "branco_nulo", "abstencao"]
+partes = (k) => k === "branco_nulo" ? ["branco", "nulo"] : [k]
+votosVis = (margem, k) => partes(k).reduce((s, p) => s + (margem[p] || 0), 0)
+vazioO = () => ({"13": 0, "22": 0, eliminados: 0, branco: 0, nulo: 0, abstencao: 0})
+vazioD = () => ({"13": 0, "22": 0, branco: 0, nulo: 0, abstencao: 0})
+acumula = (spec, dest, turno) => {
+  if (!spec) return
+  for (const part of String(spec).split("|").filter(Boolean)) {
+    const [cod, qtd] = part.split("=")
+    const n = +qtd || 0
+    if (cod === "13") dest["13"] += n
+    else if (cod === "22") dest["22"] += n
+    else if (cod === "95") dest.branco += n
+    else if (cod === "96") dest.nulo += n
+    else if (turno === 1) dest.eliminados += n
+  }
+}
+margemDe = (row) => {
+  const o = vazioO()
+  const d = vazioD()
+  acumula(row.t1, o, 1)
+  acumula(row.t2, d, 2)
+  o.abstencao = row.a1 || 0
+  d.abstencao = row.a2 || 0
+  return {o, d}
+}
+somaMargens = (rows) => {
+  const o = vazioO()
+  const d = vazioD()
+  for (const row of rows) {
+    const m = margemDe(row)
+    for (const k of ORIGENS) o[k] += m.o[k]
+    for (const k of DESTINOS) d[k] += m.d[k]
+  }
+  return {o, d}
+}
+mapaDoModelo = (modelo, mun) => {
+  const cidade = matriz.filter(d => d.uf === uf && String(d.modelo) === modelo && +d.municipio === +mun)
+  const estado = matriz.filter(d => d.uf === uf && String(d.modelo) === modelo && +d.municipio === 0)
+  const linhasTaxa = cidade.length ? cidade : estado
+  const mapa = new Map()
+  for (const d of linhasTaxa) mapa.set(`${String(d.origem)}|${String(d.destino)}`, num(d.taxa))
+  return {mapa, propria: cidade.length > 0, tem: linhasTaxa.length > 0}
+}
+bpMapa = mapaDoModelo("brown_payne", municipio)
+lpMapa = mapaDoModelo("lphom", municipio)
+celulaAplicada = (taxas, o, ok, dk) => {
+  const base = votosVis(o, ok)
+  if (!base || !taxas.tem) return null
+  let votos = 0
+  let tem = false
+  for (const oo of partes(ok)) {
+    for (const dd of partes(dk)) {
+      const taxa = taxas.mapa.get(`${oo}|${dd}`)
+      if (taxa == null) continue
+      tem = true
+      votos += (o[oo] || 0) * taxa
+    }
+  }
+  return tem ? Math.round(votos) : null
+}
+comAbst = linhasEscopo.filter(d => d.a1 != null && d.a2 != null)
+margemConjunto = somaMargens(comAbst)
+cidadeRows = votos.filter(d => d.municipio === +municipio && d.a1 != null && d.a2 != null)
+margemCidade = somaMargens(cidadeRows)
+divModelos = () => {
+  let m = 0
+  for (const o of ORIGENS) for (const d of DESTINOS) {
+    const a = bpMapa.mapa.get(`${o}|${d}`)
+    const b = lpMapa.mapa.get(`${o}|${d}`)
+    if (a == null || b == null) continue
+    m = Math.max(m, Math.abs(a - b) * 100)
+  }
+  return m
+}
+canto = () => {
+  const origens = []
+  for (const o of ORIGENS) {
+    let mx = 0
+    for (const d of DESTINOS) mx = Math.max(mx, bpMapa.mapa.get(`${o}|${d}`) || 0)
+    if (mx >= 0.999) origens.push(o)
+  }
+  return origens
+}
+ajustesCidade = VIS_D.map(dk => {
+  const est = VIS_O.reduce((s, ok) => {
+    const v = celulaAplicada(bpMapa, margemCidade.o, ok, dk)
+    return s + (v || 0)
+  }, 0)
+  const obs = votosVis(margemCidade.d, dk)
+  const rel = obs ? Math.abs(est - obs) / Math.abs(obs) : (est ? 1 : 0)
+  return {dk, est, obs, rel}
+})
+motivos = [
+  divModelos() > 15 ? `divergência de ${divModelos().toLocaleString("pt-BR", {maximumFractionDigits: 1})} pp entre os modelos` : "",
+  canto().length ? `solução de canto em ${canto().map(o => NOMES[o] || o).join(", ")}` : "",
+  ajustesCidade.some(d => d.rel > LIMIAR_RESIDUO) ? "Brown e Payne menos o divulgado da cidade passa de 5% em algum destino" : ""
+].filter(Boolean)
+instavel = motivos.length > 0
+```
+
+```{ojs}
+//| echo: false
+Plotly = require("https://cdn.plot.ly/plotly-2.35.2.min.js")
+fluxoCidade = (taxas) => {
+  if (!taxas.tem) return html``
+  const nos = [
+    ...VIS_O.map(o => ({nome: `${NOMES[o]} · 1º`, cor: COR[o]})),
+    ...VIS_D.map(d => ({nome: `${NOMES[d]} · 2º`, cor: COR[d]}))
+  ]
+  const links = []
+  VIS_O.forEach((ok, i) => {
+    VIS_D.forEach((dk, j) => {
+      const votos = celulaAplicada(taxas, margemCidade.o, ok, dk)
+      if (!votos) return
+      const base = votosVis(margemCidade.o, ok)
+      links.push({
+        source: i,
+        target: VIS_O.length + j,
+        value: votos,
+        rotulo: `${NOMES[ok]} → ${NOMES[dk]}: ${fmt(votos)} (${pct1(base ? votos / base : null)} da origem)`
+      })
+    })
+  })
+  if (!links.length) return html``
+  const div = document.createElement("div")
+  div.style.minHeight = "460px"
+  div.style.margin = "0.2rem 0 0.8rem"
+  Plotly.newPlot(div, [{
+    type: "sankey",
+    orientation: "h",
+    node: {label: nos.map(n => n.nome), color: nos.map(n => n.cor), pad: 14, thickness: 14, line: {color: "#fff", width: 0}},
+    link: {
+      source: links.map(l => l.source),
+      target: links.map(l => l.target),
+      value: links.map(l => l.value),
+      customdata: links.map(l => l.rotulo),
+      hovertemplate: "%{customdata}<extra></extra>",
+      color: "rgba(120,120,120,0.28)"
+    }
+  }], {
+    font: {family: "inherit", size: 12},
+    margin: {l: 8, r: 8, t: 8, b: 8},
+    height: 460
+  }, {displayModeBar: false, responsive: true})
+  return div
+}
+html``
+```
+
+```{ojs}
+//| echo: false
+esperado = (taxas, o, dk) => VIS_O.reduce((s, ok) => s + (celulaAplicada(taxas, o, ok, dk) || 0), 0)
+obsTotal = VIS_D.reduce((s, dk) => s + votosVis(margemConjunto.d, dk), 0)
+estTotal = (taxas) => VIS_D.reduce((s, dk) => s + esperado(taxas, margemConjunto.o, dk), 0)
+ppFatia = (est, obs, totalEst, totalObs) => (totalEst && totalObs)
+  ? 100 * (est / totalEst - obs / totalObs)
+  : null
+relativo = (est, obs) => obs ? Math.abs(est - obs) / Math.abs(obs) : (est ? 1 : 0)
+notaFora = linhasEscopo.length - comAbst.length
+tabelaModelo = (taxas, titulo) => {
+  const o = margemCidade.o
+  const grade = VIS_O.map(ok => VIS_D.map(dk => {
+    const votos = celulaAplicada(taxas, o, ok, dk)
+    const base = votosVis(o, ok)
+    return votos == null ? null : {votos, taxa: base ? votos / base : null}
+  }))
+  const linha = grade.map(cols => cols.reduce((s, c) => s + (c ? c.votos : 0), 0))
+  const taxaLinha = grade.map(cols => cols.reduce((s, c) => s + (c && c.taxa != null ? c.taxa : 0), 0))
+  const coluna = VIS_D.map((_, j) => grade.reduce((s, cols) => s + (cols[j] ? cols[j].votos : 0), 0))
+  return html`<p><strong>${titulo}</strong></p>
+    <div style="overflow-x:auto"><table class="table table-sm">
+      <thead><tr><th>1º turno</th>${VIS_D.map(d => html`<th>${NOMES[d]}</th>`)}<th>Total</th></tr></thead>
+      <tbody>
+        ${VIS_O.map((ok, i) => html`<tr>
+          <th>${NOMES[ok]}</th>
+          ${grade[i].map(c => html`<td style="white-space:nowrap">${c ? `${fmt(c.votos)} · ${pct1(c.taxa)}` : "—"}</td>`)}
+          <th style="white-space:nowrap">${fmt(linha[i])} · ${pct1(taxaLinha[i])}</th>
+        </tr>`)}
+        <tr><th>Total</th>${coluna.map(v => html`<th>${fmt(v)}</th>`)}<th>${fmt(linha.reduce((s, v) => s + v, 0))}</th></tr>
+      </tbody>
+    </table></div>`
+}
+tabelaDif = () => html`<p><strong>Diferença, lphom − Brown e Payne</strong></p>
+  <div style="overflow-x:auto"><table class="table table-sm">
+    <thead><tr><th>1º turno</th>${VIS_D.map(d => html`<th>${NOMES[d]}</th>`)}</tr></thead>
+    <tbody>${VIS_O.map(ok => html`<tr><th>${NOMES[ok]}</th>${VIS_D.map(dk => {
+      let a = 0, b = 0, tem = false
+      for (const oo of partes(ok)) for (const dd of partes(dk)) {
+        const ta = bpMapa.mapa.get(`${oo}|${dd}`)
+        const tb = lpMapa.mapa.get(`${oo}|${dd}`)
+        if (ta == null || tb == null) continue
+        tem = true
+        const peso = (margemCidade.o[oo] || 0)
+        a += peso * ta
+        b += peso * tb
+      }
+      const base = votosVis(margemCidade.o, ok)
+      const pp = tem && base ? 100 * ((b - a) / base) : null
+      return html`<td>${pp == null ? "—" : fmtPp(pp)}</td>`
+    })}</tr>`)}</tbody>
+  </table></div>`
+raizMatriz = html`<details>
+  <summary>Matriz da cidade${bpMapa.propria ? "" : " (herdada do estado)"}</summary>
+  <div class="abas-matriz">
+    <button type="button" class="ativa" data-aba="bp">Brown e Payne</button>
+    <button type="button" data-aba="lp">lphom</button>
+    <button type="button" data-aba="dif">Diferença</button>
+  </div>
+  <p>O diagrama é a matriz da cidade em votos: de cada origem do 1º turno para cada destino do 2º. A tabela embaixo é a mesma conta, com a taxa sobre a origem.</p>
+  <div data-painel="bp">${fluxoCidade(bpMapa)}${tabelaModelo(bpMapa, "Brown e Payne")}</div>
+  <div data-painel="lp" hidden>${fluxoCidade(lpMapa)}${tabelaModelo(lpMapa, "lphom")}</div>
+  <div data-painel="dif" hidden>${tabelaDif()}</div>
+</details>`
+redesenhaFluxo = () => {
+  for (const el of raizMatriz.querySelectorAll(".js-plotly-plot")) Plotly.Plots.resize(el)
+}
+raizMatriz.addEventListener("toggle", () => {
+  if (!raizMatriz.open) return
+  requestAnimationFrame(() => requestAnimationFrame(redesenhaFluxo))
+})
+raizMatriz.querySelector(".abas-matriz").onclick = (ev) => {
+  const aba = ev.target.dataset.aba
+  if (!aba) return
+  for (const el of raizMatriz.querySelectorAll("[data-painel]")) el.hidden = el.dataset.painel !== aba
+  for (const b of raizMatriz.querySelectorAll(".abas-matriz button")) b.classList.toggle("ativa", b.dataset.aba === aba)
+  redesenhaFluxo()
+}
+html`<h2>Migração ${instavel ? html`<span class="selo" title="${motivos.join(". ")}">estimativa instável</span>` : ""}</h2>
+<p>A seção não tem matriz própria. O esperado é a matriz ${bpMapa.propria ? "da cidade" : "do estado"} aplicada aos votos do 1º turno deste conjunto. O observado é o boletim do 2º turno do mesmo conjunto.</p>
+${notaFora ? html`<p>${notaFora.toLocaleString("pt-BR")} seções sem abstenção nos dois turnos ficam de fora.</p>` : ""}
+${comAbst.length && bpMapa.tem ? html`<div style="overflow-x:auto"><table class="table table-sm">
+  <thead><tr><th>Destino</th><th>Esperado Brown e Payne</th><th>Esperado lphom</th><th>Observado</th><th>Resíduo Brown e Payne</th><th>Resíduo lphom</th></tr></thead>
+  <tbody>${VIS_D.map(dk => {
+    const bp = esperado(bpMapa, margemConjunto.o, dk)
+    const lp = esperado(lpMapa, margemConjunto.o, dk)
+    const obs = votosVis(margemConjunto.d, dk)
+    const alto = (dk === "13" || dk === "22") && relativo(bp, obs) > LIMIAR_RESIDUO
+    return html`<tr class="${alto ? "residuo-alto" : ""}">
+      <td class="${dk === "13" ? "nome-13" : dk === "22" ? "nome-22" : ""}">${NOMES[dk]}</td>
+      <td>${fmt(bp)}</td><td>${fmt(lp)}</td><td>${fmt(obs)}</td>
+      <td>${fmtSinal(bp - obs)} · ${fmtPp(ppFatia(bp, obs, estTotal(bpMapa), obsTotal))}</td>
+      <td>${fmtSinal(lp - obs)} · ${fmtPp(ppFatia(lp, obs, estTotal(lpMapa), obsTotal))}</td>
+    </tr>`
+  })}</tbody>
+</table></div>
+<p>O destaque usa 5% do observado em Lula ou Flávio, no Brown e Payne. O extremo da UF no protocolo é o percentil ${percentilMargem} de |Δ margem| do boletim, outra conta.</p>
+${raizMatriz}` : html`<p>Sem margem de abstenção ou sem matriz neste conjunto.</p>`}`
+```

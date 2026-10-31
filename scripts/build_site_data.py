@@ -90,31 +90,35 @@ def _sem_digital_por_uf() -> pd.DataFrame:
     return _sem_digital_turno(1)
 
 
-def _cruzar_por_uf() -> pd.DataFrame:
-    df = _read_glob("cruzar_oficial_summary_*_1t.csv", multi_name="cruzar_oficial_summary_MULTI_1t.csv")
+def _cruzar_por_uf(turno: int = 1) -> pd.DataFrame:
+    df = _read_glob(
+        f"cruzar_oficial_summary_*_{turno}t.csv",
+        multi_name=f"cruzar_oficial_summary_MULTI_{turno}t.csv",
+    )
     if df is None or df.empty:
         return pd.DataFrame()
     df = df.drop_duplicates(["uf"], keep="last").copy()
     df["uf"] = df["uf"].astype(str).str.upper()
-    df["pct_secoes_ok_oficial_1t"] = df.apply(
+    pct_col = f"pct_secoes_ok_oficial_{turno}t"
+    df[pct_col] = df.apply(
         lambda r: round(100 * r["secoes_ok"] / r["secoes"], 4) if r.get("secoes") else None,
         axis=1,
     )
-    return df.rename(
+    df = df.rename(
         columns={
-            "secoes": "secoes_oficial_1t",
-            "secoes_ok": "secoes_ok_oficial_1t",
-            "secoes_divergentes": "secoes_divergentes_1t",
+            "secoes": f"secoes_oficial_{turno}t",
+            "secoes_ok": f"secoes_ok_oficial_{turno}t",
+            "secoes_divergentes": f"secoes_divergentes_{turno}t",
         }
-    )[
-        [
-            "uf",
-            "secoes_oficial_1t",
-            "secoes_ok_oficial_1t",
-            "secoes_divergentes_1t",
-            "pct_secoes_ok_oficial_1t",
-        ]
+    )
+    keep = [
+        "uf",
+        f"secoes_oficial_{turno}t",
+        f"secoes_ok_oficial_{turno}t",
+        f"secoes_divergentes_{turno}t",
+        pct_col,
     ]
+    return df[[c for c in keep if c in df.columns]]
 
 
 def _horario_summary_por_turno(turno: int) -> pd.DataFrame:
@@ -224,7 +228,8 @@ def build_painel_uf() -> pd.DataFrame:
     parts = [
         _sem_digital_por_uf(),
         _sem_digital_turno(2),
-        _cruzar_por_uf(),
+        _cruzar_por_uf(1),
+        _cruzar_por_uf(2),
         _horario_summary_por_turno(1),
         _horario_summary_por_turno(2),
         _comparar_por_uf(),
@@ -385,6 +390,11 @@ def build_outliers_sem_digital() -> pd.DataFrame:
                     "delta_margem",
                     "flags",
                     "pct_sem_digital_1t",
+                    "votos_fa_1t",
+                    "votos_fb_1t",
+                    "votos_eliminados_1t",
+                    "votos_fa_2t",
+                    "votos_fb_2t",
                 )
                 if c in cmp.columns
             ]
@@ -398,6 +408,7 @@ def build_outliers_sem_digital() -> pd.DataFrame:
         # Preferir seções com flag; senão top % sem digital
         if "flags" not in ok.columns:
             ok["flags"] = ""
+        ok["delta_margem_pp"] = _delta_margem_pp(ok)
         flag_mask = ok["flags"].fillna("").astype(str).str.len() > 0
         flagged = ok[flag_mask]
         if not flagged.empty:
@@ -417,6 +428,7 @@ def build_outliers_sem_digital() -> pd.DataFrame:
                 "pct_sem_digital",
                 "delta_abstencao",
                 "delta_margem",
+                "delta_margem_pp",
                 "flags",
             )
             if c in top.columns
@@ -445,6 +457,29 @@ def build_outliers_sem_digital() -> pd.DataFrame:
     return all_top.reset_index(drop=True)
 
 
+def _delta_margem_pp(df: pd.DataFrame) -> pd.Series:
+    """Δ da margem em pp dos válidos. Sinal: Lula (13) − Flávio (22)."""
+    need = (
+        "votos_fa_1t",
+        "votos_fb_1t",
+        "votos_eliminados_1t",
+        "votos_fa_2t",
+        "votos_fb_2t",
+    )
+    if any(c not in df.columns for c in need):
+        return pd.Series(pd.NA, index=df.index)
+    v13_1 = pd.to_numeric(df["votos_fa_1t"], errors="coerce")
+    v22_1 = pd.to_numeric(df["votos_fb_1t"], errors="coerce")
+    elim = pd.to_numeric(df["votos_eliminados_1t"], errors="coerce").fillna(0)
+    v13_2 = pd.to_numeric(df["votos_fa_2t"], errors="coerce")
+    v22_2 = pd.to_numeric(df["votos_fb_2t"], errors="coerce")
+    val1 = v13_1 + v22_1 + elim
+    val2 = v13_2 + v22_2
+    m1 = (v13_1 - v22_1) / val1.where(val1 > 0)
+    m2 = (v13_2 - v22_2) / val2.where(val2 > 0)
+    return (100 * (m2 - m1)).round(2)
+
+
 def build_anomalias_secao() -> pd.DataFrame:
     """Seções do piloto com flags no comparativo (para scatter do painel)."""
     frames: list[pd.DataFrame] = []
@@ -457,6 +492,7 @@ def build_anomalias_secao() -> pd.DataFrame:
         both = df[df["status"] == "ambos"].copy()
         if both.empty:
             continue
+        both["delta_margem_pp"] = _delta_margem_pp(both)
         keep = [
             c
             for c in (
@@ -467,6 +503,7 @@ def build_anomalias_secao() -> pd.DataFrame:
                 "secao",
                 "pct_sem_digital_1t",
                 "delta_margem",
+                "delta_margem_pp",
                 "delta_abstencao",
                 "pct_apos_17h_2t",
                 "flags",
@@ -477,6 +514,13 @@ def build_anomalias_secao() -> pd.DataFrame:
     if not frames:
         return pd.DataFrame()
     out = pd.concat(frames, ignore_index=True)
+    ach_path = REPORTS / "achados_MULTI_1t_2t.parquet"
+    if ach_path.exists():
+        ach = pd.read_parquet(ach_path, columns=["uf", "join_key", "nivel"])
+        ach = ach.drop_duplicates(["uf", "join_key"])
+        out = out.merge(ach, on=["uf", "join_key"], how="left")
+    else:
+        out["nivel"] = pd.NA
     return out.reset_index(drop=True)
 
 
@@ -517,6 +561,73 @@ def _pack_turno(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def _divergencias_votavel(
+    bruto: list[tuple[int, pd.DataFrame]],
+    cruzamentos: list[tuple[int, pd.DataFrame]],
+) -> pd.DataFrame:
+    """Conta votáveis em que RDV≠BU ou BU≠oficial. Só grava o detalhe quando há diferença."""
+    keys = ["municipio", "zona", "secao"]
+    partes: list[pd.DataFrame] = []
+    for turno, raw in bruto:
+        work = raw.copy()
+        work["code"] = [
+            _votavel_code(t, n) for t, n in zip(work["tipo"], work["numero"], strict=False)
+        ]
+        work = work[work["code"].notna()]
+        if work.empty:
+            continue
+        work["rdv"] = pd.to_numeric(work["votos_rdv"], errors="coerce")
+        work["bu"] = pd.to_numeric(work["votos_bu"], errors="coerce")
+        g = work.groupby([*keys, "code"], as_index=False).agg(rdv=("rdv", "sum"), bu=("bu", "sum"))
+        g["turno"] = turno
+        ruim = g[g["rdv"].notna() & g["bu"].notna() & g["rdv"].ne(g["bu"])]
+        if ruim.empty:
+            continue
+        ruim = ruim.copy()
+        ruim["pedaco"] = (
+            ruim["turno"].astype(str)
+            + ":"
+            + ruim["code"].astype(str)
+            + ":"
+            + ruim["rdv"].astype("int64").astype(str)
+            + ":"
+            + ruim["bu"].astype("int64").astype(str)
+            + ":"
+        )
+        partes.append(ruim[[*keys, "pedaco"]])
+    for turno, cruz in cruzamentos:
+        if cruz.empty or "votavel" not in cruz.columns:
+            continue
+        c = cruz.copy()
+        c["code"] = pd.to_numeric(c["votavel"], errors="coerce")
+        c = c[c["code"].notna()]
+        c["bu"] = pd.to_numeric(c["votos_bu"], errors="coerce")
+        c["oficial"] = pd.to_numeric(c["votos_oficial"], errors="coerce")
+        ruim = c[c["bu"].notna() & c["oficial"].notna() & c["bu"].ne(c["oficial"])]
+        if ruim.empty:
+            continue
+        ruim = ruim.copy()
+        ruim["pedaco"] = (
+            str(turno)
+            + ":"
+            + ruim["code"].astype("int64").astype(str)
+            + "::"
+            + ruim["bu"].astype("int64").astype(str)
+            + ":"
+            + ruim["oficial"].astype("int64").astype(str)
+        )
+        partes.append(ruim[[*keys, "pedaco"]])
+    if not partes:
+        return pd.DataFrame(columns=[*keys, "ndiv", "det"])
+    tudo = pd.concat(partes, ignore_index=True)
+    tudo["chave_v"] = tudo["pedaco"].str.split(":").str[:2].str.join(":")
+    out = tudo.groupby(keys, as_index=False).agg(
+        ndiv=("chave_v", "nunique"),
+        det=("pedaco", "|".join),
+    )
+    return out
+
+
 def build_secao_lookup() -> None:
     """CSVs por UF para a consulta de seção no site (totais do BU, presidente)."""
     dest = OUT / "secao"
@@ -554,16 +665,29 @@ def build_secao_lookup() -> None:
     total_bytes = 0
     for uf in UFS:
         frames = []
+        bruto: list[tuple[int, pd.DataFrame]] = []
+        cruzamentos: list[tuple[int, pd.DataFrame]] = []
         for turno in (1, 2):
             path = REPORTS / f"audit_presidente_votos_{uf}_{turno}t.parquet"
-            if not path.exists():
-                continue
-            raw = pd.read_parquet(
-                path,
-                columns=["municipio", "zona", "secao", "tipo", "numero", "votos_bu", "votos_rdv"],
-            )
-            packed = _pack_turno(raw).rename(columns={"bit": f"t{turno}", "bad": f"bad_{turno}"})
-            frames.append(packed)
+            if path.exists():
+                raw = pd.read_parquet(
+                    path,
+                    columns=["municipio", "zona", "secao", "tipo", "numero", "votos_bu", "votos_rdv"],
+                )
+                bruto.append((turno, raw))
+                packed = _pack_turno(raw).rename(columns={"bit": f"t{turno}", "bad": f"bad_{turno}"})
+                frames.append(packed)
+            cruz_path = REPORTS / f"cruzar_oficial_{uf}_{turno}t.parquet"
+            if cruz_path.exists():
+                cruzamentos.append(
+                    (
+                        turno,
+                        pd.read_parquet(
+                            cruz_path,
+                            columns=["municipio", "zona", "secao", "votavel", "votos_bu", "votos_oficial"],
+                        ),
+                    )
+                )
         if not frames:
             print(f"sem votos {uf}")
             continue
@@ -581,29 +705,142 @@ def build_secao_lookup() -> None:
             merged[bad] = merged[bad].fillna(False).astype(bool)
         merged["dif"] = (merged["bad_1"] | merged["bad_2"]).astype(int)
         cmp_path = REPORTS / f"comparar_turnos_{uf}_1t_2t.parquet"
+        cmp_cols = [
+            "municipio",
+            "zona",
+            "secao",
+            "status",
+            "aptos_1t",
+            "aptos_2t",
+            "comparecimento_1t",
+            "comparecimento_2t",
+            "abstencao_1t",
+            "abstencao_2t",
+            "pct_sem_digital_1t",
+            "pct_sem_digital_2t",
+            "pct_apos_17h_1t",
+            "pct_apos_17h_2t",
+            "flags",
+        ]
         if cmp_path.exists():
-            cmp = pd.read_parquet(
-                cmp_path,
-                columns=["municipio", "zona", "secao", "abstencao_1t", "abstencao_2t"],
-            )
+            cmp = pd.read_parquet(cmp_path, columns=cmp_cols)
             cmp["a1"] = pd.to_numeric(cmp["abstencao_1t"], errors="coerce")
             cmp["a2"] = pd.to_numeric(cmp["abstencao_2t"], errors="coerce")
             merged = merged.merge(
-                cmp[["municipio", "zona", "secao", "a1", "a2"]],
+                cmp.drop(columns=["abstencao_1t", "abstencao_2t"]),
                 on=["municipio", "zona", "secao"],
                 how="left",
             )
         else:
             merged["a1"] = pd.NA
             merged["a2"] = pd.NA
-        out = merged[["municipio", "zona", "secao", "t1", "t2", "dif", "a1", "a2"]].sort_values(
-            ["municipio", "zona", "secao"]
-        )
+            for col in cmp_cols[3:]:
+                if col not in ("abstencao_1t", "abstencao_2t"):
+                    merged[col] = pd.NA
+        div = _divergencias_votavel(bruto, cruzamentos)
+        if div.empty:
+            merged["ndiv"] = 0
+            merged["det"] = ""
+        else:
+            merged = merged.merge(div, on=["municipio", "zona", "secao"], how="left")
+            merged["ndiv"] = merged["ndiv"].fillna(0).astype(int)
+            merged["det"] = merged["det"].fillna("")
+        ach_uf = REPORTS / f"achados_{uf}_1t_2t.parquet"
+        if ach_uf.exists():
+            ach = pd.read_parquet(
+                ach_uf, columns=["municipio", "zona", "secao", "nivel", "codigos", "conclusao_permitida"]
+            )
+            ach["conclusao_permitida"] = ach["conclusao_permitida"].where(
+                ach["nivel"].isin(["A", "B"]), ""
+            )
+            merged = merged.merge(ach, on=["municipio", "zona", "secao"], how="left")
+        else:
+            merged["nivel"] = pd.NA
+            merged["codigos"] = pd.NA
+            merged["conclusao_permitida"] = pd.NA
+        for col in ("status", "flags", "nivel", "codigos", "conclusao_permitida"):
+            merged[col] = merged[col].fillna("").astype(str)
+        out = merged[
+            [
+                "municipio",
+                "zona",
+                "secao",
+                "t1",
+                "t2",
+                "dif",
+                "a1",
+                "a2",
+                "status",
+                "aptos_1t",
+                "aptos_2t",
+                "comparecimento_1t",
+                "comparecimento_2t",
+                "pct_sem_digital_1t",
+                "pct_sem_digital_2t",
+                "pct_apos_17h_1t",
+                "pct_apos_17h_2t",
+                "flags",
+                "nivel",
+                "codigos",
+                "conclusao_permitida",
+                "ndiv",
+                "det",
+            ]
+        ].sort_values(["municipio", "zona", "secao"])
         out_path = dest / f"votos_{uf}.csv"
         out.to_csv(out_path, index=False)
         total_bytes += out_path.stat().st_size
         print(f"escrito {out_path.name} ({len(out)} seções)")
     print(f"consulta de seção: {total_bytes / 1e6:.1f} MB")
+
+
+def escrever_protocolo() -> None:
+    """Grava os limiares registrados para o site ler, sem copiar o número na página."""
+    import hashlib
+
+    from urna_logs import __version__
+    from urna_logs.thresholds import (
+        CONFLUENCIA_FLAGS,
+        CONFLUENCIA_MIN,
+        P_FLAG_ABST,
+        P_FLAG_MARGEM,
+        P_FLAG_POS17,
+        P_FLAG_SEM_DIG,
+        PROTOCOLO_NOTA,
+        PROTOCOLO_VERSAO,
+    )
+    from urna_logs.transferencia import CONFIANCA, MAX_LINHAS_LPHOM, MIN_SECOES
+
+    canon = "|".join(
+        [
+            PROTOCOLO_VERSAO,
+            f"abst={P_FLAG_ABST}",
+            f"margem={P_FLAG_MARGEM}",
+            f"sem_dig={P_FLAG_SEM_DIG}",
+            f"pos17={P_FLAG_POS17}",
+            f"confluencia_min={CONFLUENCIA_MIN}",
+            "flags=" + ",".join(CONFLUENCIA_FLAGS),
+            PROTOCOLO_NOTA,
+        ]
+    )
+    rows = [
+        ("protocolo_versao", PROTOCOLO_VERSAO),
+        ("protocolo_nota", PROTOCOLO_NOTA),
+        ("pkg_version", __version__),
+        ("hash_sha256", hashlib.sha256(canon.encode("utf-8")).hexdigest()),
+        ("p_flag_abst", P_FLAG_ABST),
+        ("p_flag_margem", P_FLAG_MARGEM),
+        ("p_flag_sem_dig", P_FLAG_SEM_DIG),
+        ("p_flag_pos17", P_FLAG_POS17),
+        ("confluencia_min", CONFLUENCIA_MIN),
+        ("confluencia_flags", ",".join(CONFLUENCIA_FLAGS)),
+        ("min_secoes", MIN_SECOES),
+        ("max_linhas_lphom", MAX_LINHAS_LPHOM),
+        ("confianca", CONFIANCA),
+    ]
+    out = OUT / "protocolo.csv"
+    pd.DataFrame(rows, columns=["chave", "valor"]).to_csv(out, index=False)
+    print(f"escrito {out}")
 
 
 def main() -> None:
@@ -654,6 +891,8 @@ def main() -> None:
 
     build_secao_lookup()
     build_migracao_site()
+    escrever_protocolo()
+    build_hw_cadeia()
 
     # limpa CSVs antigos do site que o painel não usa mais
     for legacy in (
@@ -697,7 +936,7 @@ def build_migracao_site() -> None:
         pd.concat(matrizes, ignore_index=True).to_csv(dest / "matriz.csv", index=False)
     else:
         pd.DataFrame(
-            columns=["uf", "municipio", "origem", "destino", "taxa", "taxa_lo", "taxa_hi"]
+            columns=["uf", "municipio", "modelo", "origem", "destino", "taxa", "taxa_lo", "taxa_hi"]
         ).to_csv(dest / "matriz.csv", index=False)
     fluxo = _fluxo_com_brasil(fluxos)
     fluxo.to_csv(dest / "fluxo.csv", index=False)
@@ -801,9 +1040,12 @@ def _ler_transferencias() -> tuple[list[pd.DataFrame], list[pd.DataFrame], list[
         if "nivel" not in df.columns:
             continue
         presentes.append(uf)
-        bp = df.loc[(df["modelo"] == "brown_payne") & (df["nivel"].isin(["estado", "municipio"]))]
-        if not bp.empty:
-            out = bp.copy()
+        taxas = df.loc[
+            df["modelo"].isin(["brown_payne", "lphom"])
+            & df["nivel"].isin(["estado", "municipio"])
+        ]
+        if not taxas.empty:
+            out = taxas.copy()
             mun = out["municipio"].fillna("").astype(str).str.replace(r"\.0$", "", regex=True)
             out["municipio"] = mun.where(out["nivel"] == "municipio", "0")
             out["uf"] = uf
@@ -811,7 +1053,7 @@ def _ler_transferencias() -> tuple[list[pd.DataFrame], list[pd.DataFrame], list[
                 if col not in out.columns:
                     out[col] = pd.NA
             matrizes.append(
-                out[["uf", "municipio", "origem", "destino", "taxa", "taxa_lo", "taxa_hi"]]
+                out[["uf", "municipio", "modelo", "origem", "destino", "taxa", "taxa_lo", "taxa_hi"]]
             )
         soma = df.loc[df["nivel"] == "estado_soma"].copy()
         if not soma.empty:
@@ -867,8 +1109,170 @@ def _fluxo_com_brasil(partes: list[pd.DataFrame]) -> pd.DataFrame:
     return pd.concat([base[colunas], pd.DataFrame(pais)], ignore_index=True)
 
 
+_MODELOS = {"13": "UE2013", "15": "UE2015", "20": "UE2020", "22": "UE2022"}
+
+
+def _parte_join(join_key: str) -> tuple[int, int, int] | None:
+    partes = str(join_key).split(":")
+    if len(partes) != 4:
+        return None
+    try:
+        return int(partes[1]), int(partes[2]), int(partes[3])
+    except ValueError:
+        return None
+
+
+def build_hw_cadeia() -> None:
+    """Agrega verificar-vsc por UF e turno e grava o selo por seção.
+
+    Não grava votos. Cadeia fechada é Ed521 conferido, ou ECDSA cuja mensagem
+    já diz que a AC URNA publicada conferiu. Relatório sem a coluna hw_cadeia
+    fica no bloco anterior. Relatório com cadeia pendente foi gravado antes
+    de fixar o certificado publicado.
+    """
+    from urna_logs.config import UFS
+
+    OUT.mkdir(parents=True, exist_ok=True)
+    secao_dir = OUT / "secao"
+    secao_dir.mkdir(parents=True, exist_ok=True)
+    resumo = []
+    por_uf: dict[str, list[dict]] = {uf: [] for uf in UFS}
+
+    for path in sorted(REPORTS.glob("verificar_vsc_*_*t.csv")):
+        if "MULTI" in path.name:
+            continue
+        df = pd.read_csv(path, dtype=str)
+        if df.empty or "uf" not in df.columns or "turno" not in df.columns:
+            continue
+        uf = str(df["uf"].iloc[0])
+        turno = int(df["turno"].iloc[0])
+        modelo = df["modelo_hw"].fillna("")
+        alg = df["alg_hw"].fillna("")
+        hash_fail = pd.to_numeric(df["n_hash_fail"], errors="coerce").fillna(0)
+        criticos = df["criticos_ok"].fillna("") == "True"
+        hw_txt = df["hw_sig_ok"].fillna("")
+        hw_ok = hw_txt == "True"
+        hw_falhou = hw_txt == "False"
+        nivel = pd.to_numeric(df["nivel_ok"], errors="coerce").fillna(0)
+        tem = df["tem_vsc"].fillna("") == "True"
+        parse = df["parse_ok"].fillna("") == "True"
+        verificadas = tem & parse
+        hashes_ok = verificadas & (hash_fail == 0) & criticos
+        cadeia_col = df["hw_cadeia"] if "hw_cadeia" in df.columns else pd.Series([""] * len(df))
+        msg = df["hw_sig_msg"].fillna("") if "hw_sig_msg" in df.columns else pd.Series([""] * len(df))
+        ecdsa_ok = msg.str.startswith("ECDSA ok") | (cadeia_col == "ok") & modelo.isin(["13", "15"])
+        ed521 = (
+            hashes_ok
+            & modelo.isin(["20", "22"])
+            & (alg == "4")
+            & hw_ok
+            & (nivel >= 2)
+        )
+        ecdsa_fecha = hashes_ok & modelo.isin(["13", "15"]) & (alg == "2") & ecdsa_ok & hw_ok
+        fechada = ed521 | ecdsa_fecha
+        antiga = "hw_cadeia" not in df.columns
+        ecdsa_hash = hashes_ok & modelo.isin(["13", "15"]) & (alg == "2") & ~fechada
+        if antiga:
+            bloco = "anterior"
+            aberta = ecdsa_hash
+        elif bool((cadeia_col == "pendente").any()):
+            bloco = "pre_ac"
+            aberta = ecdsa_hash
+        else:
+            bloco = "novo"
+            aberta = ecdsa_hash & (cadeia_col == "pendente")
+        falha_cadeia = hashes_ok & ~fechada & ~aberta & (
+            (cadeia_col == "falha") | hw_falhou
+        )
+        hash_falhou = verificadas & ~hashes_ok
+        fora = verificadas & ~hash_falhou & ~fechada & ~aberta & ~falha_cadeia
+        classe_pre = bloco in {"anterior", "pre_ac"}
+
+        linhas = []
+        for i, rec in enumerate(df.itertuples(index=False)):
+            if not bool(verificadas.iloc[i]):
+                continue
+            chave = _parte_join(getattr(rec, "join_key"))
+            if chave is None:
+                continue
+            mun, zona, secao = chave
+            if bool(fechada.iloc[i]):
+                rotulo = "fechada"
+            elif bool(aberta.iloc[i]) and (antiga or classe_pre):
+                rotulo = "nao_reprocessada"
+            elif bool(aberta.iloc[i]):
+                rotulo = "aberta"
+            elif bool(falha_cadeia.iloc[i]):
+                rotulo = "falha"
+            elif bool(fora.iloc[i]):
+                rotulo = "nao_conferida"
+            else:
+                rotulo = ""
+            linhas.append(
+                {
+                    "municipio": mun,
+                    "zona": zona,
+                    "secao": secao,
+                    "turno": turno,
+                    "modelo": _MODELOS.get(str(modelo.iloc[i]), str(modelo.iloc[i])),
+                    "cadeia": rotulo,
+                    "hash": "ok" if bool(hashes_ok.iloc[i]) else "falhou",
+                }
+            )
+        por_uf.setdefault(uf, []).extend(linhas)
+        n = int(verificadas.sum())
+        resumo.append(
+            {
+                "uf": uf,
+                "turno": turno,
+                "secoes": n,
+                "hash_ok": int(hashes_ok.sum()),
+                "hash_falhou": int(hash_falhou.sum()),
+                "cadeia_fechada": int(fechada.sum()),
+                "cadeia_aberta": int(aberta.sum()),
+                "fora": int(fora.sum()),
+                "n_ue2013": int((verificadas & (modelo == "13")).sum()),
+                "n_ue2015": int((verificadas & (modelo == "15")).sum()),
+                "n_ue2020": int((verificadas & (modelo == "20")).sum()),
+                "n_ue2022": int((verificadas & (modelo == "22")).sum()),
+                "verificador": "anterior" if antiga else "novo",
+                "bloco": bloco,
+            }
+        )
+
+    frame = pd.DataFrame(resumo)
+    if not frame.empty:
+        frame = frame.sort_values(["turno", "uf"])
+    out = OUT / "hw_cadeia.csv"
+    frame.to_csv(out, index=False)
+
+    cobertura = []
+    for uf in UFS:
+        for turno in (1, 2):
+            hit = frame[(frame["uf"] == uf) & (frame["turno"] == turno)] if not frame.empty else frame
+            secoes = int(hit["secoes"].iloc[0]) if len(hit) else 0
+            bloco = str(hit["bloco"].iloc[0]) if len(hit) else ""
+            cobertura.append({"uf": uf, "turno": turno, "secoes": secoes, "bloco": bloco})
+    out_c = OUT / "hw_cobertura.csv"
+    pd.DataFrame(cobertura).to_csv(out_c, index=False)
+
+    cabecalho = ["municipio", "zona", "secao", "turno", "modelo", "cadeia", "hash"]
+    for uf in UFS:
+        destino = secao_dir / f"hw_{uf}.csv"
+        linhas = por_uf.get(uf) or []
+        pd.DataFrame(linhas, columns=cabecalho).to_csv(destino, index=False)
+    print(f"escrito {out} ({len(frame)} linhas)")
+    print(f"escrito {out_c} ({len(cobertura)} UF×turno)")
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "migracao":
         build_migracao_site()
+    elif len(sys.argv) > 1 and sys.argv[1] == "protocolo":
+        escrever_protocolo()
+    elif len(sys.argv) > 1 and sys.argv[1] == "secao":
+        build_secao_lookup()
+    elif len(sys.argv) > 1 and sys.argv[1] == "hw":
+        build_hw_cadeia()
     else:
         main()

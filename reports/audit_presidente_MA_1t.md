@@ -1,6 +1,6 @@
 # Auditoria presidente — MA 1º turno
 
-ZIP: `E:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_1t_MA.zip`
+ZIP: `D:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_1t_MA.zip`
 Urnas auditadas: **18,093** · OK: **18,092** · divergentes/erro: **1**
 
 ## Escopo
@@ -42,3 +42,4 @@ Votos contabilizados: **4,160,124**
 - RDV: cada `Voto` do cargo presidente é contado
 - Tipos especiais RDV (nulo/branco após suspensão etc.) normalizados para o enum do BU
 - Legenda (se houver): digitação do RDV reduzida aos 2 dígitos do partido
+- Sem divergência = **integridade entre arquivos públicos** (RDV ≡ BU), não auditoria do hardware nem da origem do voto

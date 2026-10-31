@@ -1,6 +1,6 @@
 # Auditoria presidente — AP 1º turno
 
-ZIP: `E:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_1t_AP.zip`
+ZIP: `D:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_1t_AP.zip`
 Urnas auditadas: **1,914** · OK: **1,914** · divergentes/erro: **0**
 
 ## Escopo
@@ -40,3 +40,4 @@ Nenhuma divergência entre **RDV** e **BU** nas urnas processadas. Isso indica a
 - RDV: cada `Voto` do cargo presidente é contado
 - Tipos especiais RDV (nulo/branco após suspensão etc.) normalizados para o enum do BU
 - Legenda (se houver): digitação do RDV reduzida aos 2 dígitos do partido
+- Sem divergência = **integridade entre arquivos públicos** (RDV ≡ BU), não auditoria do hardware nem da origem do voto

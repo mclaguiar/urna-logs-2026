@@ -1,0 +1,318 @@
+---
+title: "Auditoria"
+subtitle: "O que mudou do 1º para o 2º turno — Eleições 2026"
+---
+
+A hierarquia A, B e C e os limiares estão no [Método](metodo.qmd).
+
+```{ojs}
+//| echo: false
+painel = FileAttachment("data/painel_uf.csv").csv({typed: true})
+horas = FileAttachment("data/curva_horaria.csv").csv({typed: true})
+outliers = FileAttachment("data/outliers_sem_digital.csv").csv({typed: true})
+anomalias = FileAttachment("data/anomalias_secao.csv").csv({typed: true})
+```
+
+```{ojs}
+//| echo: false
+num = v => (v == null || v === "" || Number.isNaN(+v) ? null : +v)
+fmt = n => (n == null || Number.isNaN(+n)) ? "—" : Math.round(+n).toLocaleString("pt-BR")
+fmt1 = n => (n == null || Number.isNaN(+n)) ? "—" : (+n).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})
+fmt2 = n => (n == null || Number.isNaN(+n)) ? "—" : (+n).toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2})
+pp = n => {
+  if (n == null || Number.isNaN(+n)) return "—"
+  const v = +n
+  return (v > 0 ? "+" : "") + v.toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " pp"
+}
+nomeUf = uf => uf === "ZZ" ? "Exterior" : uf
+rows = painel.map(d => ({
+  uf: d.uf,
+  secoes: num(d.secoes_1t),
+  pct_sem_digital_1t: num(d.pct_sem_digital_1t),
+  pct_sem_digital_2t: num(d.pct_sem_digital_2t),
+  delta_pct_sem_digital: num(d.delta_pct_sem_digital),
+  delta_abstencao_pp: num(d.delta_abstencao_pp),
+  delta_comparecimento: num(d.delta_comparecimento),
+  pct_apos_17h_1t: num(d.pct_apos_17h_1t),
+  pct_apos_17h_2t: num(d.pct_apos_17h_2t),
+  delta_pct_apos_17h: num(d.delta_pct_apos_17h),
+  div1: num(d.secoes_divergentes_1t) || 0,
+  div2: num(d.secoes_divergentes_2t) || 0,
+  achados_A: num(d.achados_A) || 0,
+  achados_B: num(d.achados_B) || 0,
+  achados_C: num(d.achados_C) || 0
+})).sort((a, b) => nomeUf(a.uf).localeCompare(nomeUf(b.uf), "pt"))
+sumA = rows.reduce((s, d) => s + d.achados_A, 0)
+sumB = rows.reduce((s, d) => s + d.achados_B, 0)
+sumC = rows.reduce((s, d) => s + d.achados_C, 0)
+divOficial = rows.reduce((s, d) => s + d.div1 + d.div2, 0)
+tetoDe = chave => Math.max(1, ...rows.map(d => Math.abs(d[chave] || 0)))
+tinta = (v, teto) => {
+  if (v == null || !teto) return ""
+  const a = Math.min(1, Math.abs(v) / teto)
+  const rgb = v >= 0 ? "165, 28, 28" : "31, 78, 121"
+  return `background: rgba(${rgb}, ${(0.12 + 0.5 * a).toFixed(3)})`
+}
+tabela = (cols) => html`<div style="overflow-x:auto"><table class="table table-sm">
+  <thead><tr>${cols.map(c => html`<th>${c.rotulo}</th>`)}</tr></thead>
+  <tbody>${rows.map(d => html`<tr>${cols.map(c => html`<td style="${c.delta ? tinta(d[c.chave], tetoDe(c.chave)) : ""}">${c.texto(d[c.chave])}</td>`)}</tr>`)}</tbody>
+</table></div>`
+```
+
+```{ojs}
+//| echo: false
+md`BU ≡ CSV oficial nas seções conferidas dos dois turnos (${divOficial.toLocaleString("pt-BR")} divergências nessa etapa). Achados A (${sumA.toLocaleString("pt-BR")}) medem a cadeia inteira, RDV ≡ BU ≡ CSV. ${sumA ? "A seção em que RDV ≠ BU está na [Visão geral](index.qmd)." : "A cadeia fecha em todas as seções."} O indicador antigo de seções divergentes olhava só o CSV oficial.`
+```
+
+## O que mudou
+
+::: {.panel-tabset}
+
+## Comparecimento
+
+```{ojs}
+//| echo: false
+tabela([
+  {rotulo: "UF", chave: "uf", texto: nomeUf, delta: false},
+  {rotulo: "Seções", chave: "secoes", texto: fmt, delta: false},
+  {rotulo: "Δ abstenção (pp)", chave: "delta_abstencao_pp", texto: pp, delta: true},
+  {rotulo: "Δ comparecimento", chave: "delta_comparecimento", texto: n => n == null ? "—" : (n > 0 ? "+" : "") + fmt(n), delta: true}
+])
+```
+
+## Sem digital
+
+```{ojs}
+//| echo: false
+tabela([
+  {rotulo: "UF", chave: "uf", texto: nomeUf, delta: false},
+  {rotulo: "% sem digital 1º", chave: "pct_sem_digital_1t", texto: v => v == null ? "—" : fmt1(v) + "%", delta: false},
+  {rotulo: "% sem digital 2º", chave: "pct_sem_digital_2t", texto: v => v == null ? "—" : fmt1(v) + "%", delta: false},
+  {rotulo: "Δ (pp)", chave: "delta_pct_sem_digital", texto: pp, delta: true}
+])
+```
+
+## Horário
+
+```{ojs}
+//| echo: false
+tabela([
+  {rotulo: "UF", chave: "uf", texto: nomeUf, delta: false},
+  {rotulo: "% após 17h 1º", chave: "pct_apos_17h_1t", texto: v => v == null ? "—" : fmt1(v) + "%", delta: false},
+  {rotulo: "% após 17h 2º", chave: "pct_apos_17h_2t", texto: v => v == null ? "—" : fmt1(v) + "%", delta: false},
+  {rotulo: "Δ (pp)", chave: "delta_pct_apos_17h", texto: pp, delta: true}
+])
+```
+
+## Achados
+
+```{ojs}
+//| echo: false
+tabela([
+  {rotulo: "UF", chave: "uf", texto: nomeUf, delta: false},
+  {rotulo: "A", chave: "achados_A", texto: fmt, delta: false},
+  {rotulo: "B", chave: "achados_B", texto: fmt, delta: false},
+  {rotulo: "C", chave: "achados_C", texto: fmt, delta: false}
+])
+```
+
+:::
+
+```{ojs}
+//| echo: false
+md`**Total:** seções **${fmt(rows.reduce((s, d) => s + (d.secoes || 0), 0))}** · Achados A/B/C = **${fmt(sumA)}** / **${fmt(sumB)}** / **${fmt(sumC)}**.`
+```
+
+::: {.callout-note collapse="true"}
+## Como ler
+
+Cada linha é uma UF. O fundo das colunas Δ fica mais forte quanto maior o módulo: vermelho quando o 2º turno sobe em relação ao 1º, azul quando desce. Na margem, mais adiante, o mesmo par de cores segue o sinal Lula (13) − Flávio (22).
+
+Sem digital no boletim é habilitado por biografia (ano de nascimento) mais quem compareceu sem biometria cadastrada. Não é voto em candidato. O percentual do log (`sem_biometria` + `manual_falha`) é outro indicador e não entra nesta tabela.
+
+% após 17h é a fatia das habilitações do dia oficial, no horário de Brasília (no exterior, no horário local do posto).
+:::
+
+## Onde olhar
+
+Seções com % sem digital alto no 1º turno e Δ margem extremo na própria UF. O ponto no extremo é prioridade de leitura, não um veredito.
+
+```{ojs}
+//| echo: false
+viewof ufAnom = Inputs.select(
+  ["ALL", ...rows.map(d => d.uf)],
+  {label: "UF", format: d => d === "ALL" ? "Todas" : nomeUf(d), value: "ALL"}
+)
+```
+
+```{ojs}
+//| echo: false
+pts = anomalias
+  .filter(d => ufAnom === "ALL" || d.uf === ufAnom)
+  .map(d => ({
+    uf: d.uf,
+    join_key: d.join_key,
+    pct_sem_digital_1t: num(d.pct_sem_digital_1t),
+    delta_margem_pp: num(d.delta_margem_pp),
+    nivel: String(d.nivel || "").toUpperCase()
+  }))
+  .filter(d => d.pct_sem_digital_1t != null && d.delta_margem_pp != null)
+nivelB = pts.filter(d => d.nivel === "B")
+nPts = pts.length
+nB = nivelB.length
+Plot.plot({
+  marginLeft: 64,
+  marginBottom: 48,
+  width: 1000,
+  height: 480,
+  x: {label: "% sem digital no 1º turno", grid: true},
+  y: {label: "Δ margem (pp dos válidos, Lula − Flávio)", grid: true},
+  color: {scheme: "Blues", legend: true, label: "Seções"},
+  marks: [
+    Plot.rect(pts, Plot.bin({fill: "count"}, {x: "pct_sem_digital_1t", y: "delta_margem_pp"})),
+    Plot.dot(nivelB, {x: "pct_sem_digital_1t", y: "delta_margem_pp", fill: "#a51c1c", r: 3, tip: true}),
+    Plot.ruleY([0], {stroke: "#999"})
+  ]
+})
+```
+
+```{ojs}
+//| echo: false
+md`**${ufAnom === "ALL" ? "Todas as UFs" : nomeUf(ufAnom)}:** ${nPts.toLocaleString("pt-BR")} seções no mapa · ${nB.toLocaleString("pt-BR")} de nível B em vermelho. Positivo: a margem Lula (13) − Flávio (22), em pontos percentuais dos válidos, cresceu no 2º turno.`
+```
+
+```{ojs}
+//| echo: false
+lista = outliers
+  .filter(d => ufAnom === "ALL" || d.uf === ufAnom)
+  .slice()
+  .sort((a, b) => (num(b.pct_sem_digital) || 0) - (num(a.pct_sem_digital) || 0))
+html`<div style="overflow-x:auto"><table class="table table-sm">
+  <thead><tr><th>Seção</th><th>UF</th><th>Município</th><th>Comparecimento</th><th>% sem digital</th><th>Δ margem (pp, Lula − Flávio)</th><th>Flags</th></tr></thead>
+  <tbody>${lista.map(d => html`<tr>
+    <td><a href="secao.html?uf=${d.uf}&mun=${+d.municipio}&zona=${+d.zona}&secao=${+d.secao}">${d.join_key}</a></td>
+    <td>${nomeUf(d.uf)}</td>
+    <td>${d.nome}</td>
+    <td>${fmt(d.bu_comparecimento)}</td>
+    <td>${fmt1(num(d.pct_sem_digital))}%</td>
+    <td>${pp(num(d.delta_margem_pp))}</td>
+    <td>${d.flags || "—"}</td>
+  </tr>`)}</tbody>
+</table></div>`
+```
+
+::: {.callout-note}
+## % sem digital muito alto
+
+Dois caminhos do boletim empurram esse percentual para cima, e os dois são previstos no fluxo da urna. Quem já tinha biometria cadastrada pode ser habilitado pelo ano de nascimento quando a digital não confirma. Quem não tinha biometria cadastrada comparece por esse outro caminho. Nenhum dos dois é voto em candidato.
+
+O Espírito Santo fica em 27,3% no 1º turno. Nas demais UFs a mediana é 10,4% e o maior valor, em Minas Gerais, é 17,9%.
+:::
+
+::: {.callout-note collapse="true"}
+## Como ler
+
+O mapa de fundo é a densidade de todas as seções. Os pontos vermelhos são só o nível B: dois ou mais sinais independentes no percentil 99 da própria UF. A lista traz seções no topo de % sem digital, com o link da consulta por seção.
+:::
+
+## Fluxo do dia
+
+Habilitação no log, não voto em candidato. O eixo é a fatia do dia, para os dois turnos caberem na mesma escala. Horário de Brasília; no exterior, horário local do posto.
+
+```{ojs}
+//| echo: false
+ufsComHora = [...new Set(horas.map(d => d.uf))].sort()
+viewof ufHora = Inputs.select(["BR", ...ufsComHora], {
+  label: "UF",
+  format: d => d === "BR" ? "Brasil (sem o exterior)" : nomeUf(d),
+  value: "BR"
+})
+```
+
+```{ojs}
+//| echo: false
+aggPorBrt = (subset, turno) => {
+  const m = new Map(d3.range(24).map(h => [h, {hora: h, n: 0, turno}]));
+  for (const d of subset) {
+    if (+d.turno !== turno) continue
+    const h = +d.hora_brasilia
+    if (!m.has(h)) continue
+    m.get(h).n += +d.habilitacoes
+  }
+  return [...m.values()].sort((a, b) => a.hora - b.hora)
+}
+baseHoras = ufHora === "BR" ? horas.filter(d => d.uf !== "ZZ") : horas.filter(d => d.uf === ufHora)
+serie1 = aggPorBrt(baseHoras, 1)
+serie2 = aggPorBrt(baseHoras, 2)
+tot1 = d3.sum(serie1, d => d.n)
+tot2 = d3.sum(serie2, d => d.n)
+apos1 = d3.sum(serie1.filter(d => d.hora >= 17), d => d.n)
+apos2 = d3.sum(serie2.filter(d => d.hora >= 17), d => d.n)
+emPct = (serie, tot) => serie.map(d => ({...d, pct: tot ? 100 * d.n / tot : 0}))
+p1 = emPct(serie1, tot1)
+p2 = emPct(serie2, tot2)
+eixoLabel = ufHora === "ZZ" ? "Hora local (exterior)" : "Hora de Brasília"
+```
+
+```{ojs}
+//| echo: false
+Plot.plot({
+  marginLeft: 56,
+  marginBottom: 44,
+  width: 1000,
+  height: 420,
+  x: {label: eixoLabel, domain: d3.range(24), ticks: 24},
+  y: {label: "% das habilitações do dia", grid: true, tickFormat: d => d.toLocaleString("pt-BR")},
+  marks: [
+    Plot.ruleY([0]),
+    Plot.ruleX([17], {stroke: "#a51c1c", strokeOpacity: 0.35, strokeDasharray: "4,4"}),
+    Plot.lineY(p1, {x: "hora", y: "pct", stroke: "#1f4e79", strokeWidth: 2, curve: "step"}),
+    Plot.lineY(p2, {x: "hora", y: "pct", stroke: "#c47d1a", strokeWidth: 2, curve: "step", strokeDasharray: "6,3"})
+  ]
+})
+```
+
+Azul contínuo = 1º turno. Âmbar tracejado = 2º turno. A linha vertical é 17h.
+
+```{ojs}
+//| echo: false
+horaTabela = d3.range(24).flatMap(h => {
+  const a = p1.find(d => d.hora === h)
+  const b = p2.find(d => d.hora === h)
+  const n1 = a ? a.n : 0
+  const n2 = b ? b.n : 0
+  if (!n1 && !n2) return []
+  return [{
+    hora: h,
+    n1, n2,
+    q1: tot1 ? 100 * n1 / tot1 : 0,
+    q2: tot2 ? 100 * n2 / tot2 : 0
+  }]
+})
+html`<details>
+  <summary>Hora a hora</summary>
+  <div style="overflow-x:auto"><table class="table table-sm">
+    <thead><tr><th>Hora</th><th>Habilitações 1º</th><th>% do dia 1º</th><th>Habilitações 2º</th><th>% do dia 2º</th></tr></thead>
+    <tbody>${horaTabela.map(d => html`<tr>
+      <td>${String(d.hora).padStart(2, "0")}h${d.hora >= 17 ? " · após 17h" : ""}</td>
+      <td>${fmt(d.n1)}</td><td>${fmt1(d.q1)}%</td>
+      <td>${fmt(d.n2)}</td><td>${fmt1(d.q2)}%</td>
+    </tr>`)}</tbody>
+  </table></div>
+</details>`
+```
+
+```{ojs}
+//| echo: false
+md`**${ufHora === "BR" ? "Brasil, sem o exterior" : nomeUf(ufHora)}.** Habilitações 1º **${fmt(tot1)}** · 2º **${fmt(tot2)}** · após 17h **${fmt2(tot1 ? 100 * apos1 / tot1 : null)}%** no 1º e **${fmt2(tot2 ? 100 * apos2 / tot2 : null)}%** no 2º.`
+```
+
+No país, cerca de 2,9% das habilitações do 1º turno e 0,02% das do 2º caem às 17h ou depois. Os dois turnos usam a mesma regra: dia oficial mais ou menos 3 dias, e a mesma conversão para o horário de Brasília. O pacote do 2º turno traz o histórico do 1º, e esse histórico fica de fora da curva. O pacote do 1º turno não tem outro dia dentro da tolerância. O que sobra é a fila do encerramento. No 1º turno a hora das 17h ainda carrega uma fatia da tarde, mais forte no Norte e no Nordeste (Alagoas 9,1%, Bahia 7,3%). No 2º turno essa hora praticamente zera. O fuso não produz o salto: nos estados em UTC−3 a hora local e a de Brasília são a mesma, e o 1º turno continua alto.
+
+::: {.callout-note collapse="true"}
+## Como ler
+
+A curva é o ritmo de habilitação no log do dia oficial. Pico fora de 8h–17h pede checagem de relógio e de evento de outro dia, não leitura de voto. O 1º turno teve mais cargos na cédula; a fila das 17h é compatível com isso. O 2º turno esvazia antes do encerramento.
+:::
+
+A assinatura de hardware, com a cadeia fechada e a cadeia aberta, está em [Integridade dos arquivos](assinaturas.qmd).

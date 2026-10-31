@@ -1,6 +1,6 @@
 # Auditoria presidente — MS 2º turno
 
-ZIP: `E:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_2t_MS.zip`
+ZIP: `D:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_2t_MS.zip`
 Urnas auditadas: **7,106** · OK: **7,106** · divergentes/erro: **0**
 
 ## Escopo

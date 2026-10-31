@@ -1,6 +1,6 @@
 # Auditoria presidente — PE 2º turno
 
-ZIP: `E:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_2t_PE.zip`
+ZIP: `D:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_2t_PE.zip`
 Urnas auditadas: **21,418** · OK: **21,418** · divergentes/erro: **0**
 
 ## Escopo

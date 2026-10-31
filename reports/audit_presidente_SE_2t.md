@@ -1,6 +1,6 @@
 # Auditoria presidente — SE 2º turno
 
-ZIP: `E:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_2t_SE.zip`
+ZIP: `D:\urna-logs-2026\data\raw\bu_imgbu_logjez_rdv_vscmr_2026_2t_SE.zip`
 Urnas auditadas: **5,923** · OK: **5,923** · divergentes/erro: **0**
 
 ## Escopo
