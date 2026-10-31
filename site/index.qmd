@@ -11,6 +11,7 @@ O 2º turno contado, a cadeia pública dos arquivos e o caminho para o detalhe.
 turnos = FileAttachment("data/migracao/turnos.csv").csv({typed: true})
 painel = FileAttachment("data/painel_uf.csv").csv({typed: true})
 achadosAb = FileAttachment("data/achados_ab.csv").csv({typed: true})
+hwSelo = FileAttachment("data/hw_cadeia.csv").csv({typed: true})
 ```
 
 ```{ojs}
@@ -44,6 +45,13 @@ linkSecao = jk => {
   const p = String(jk).split(":")
   return `secao.html?uf=${p[0]}&mun=${+p[1]}&zona=${+p[2]}&secao=${+p[3]}`
 }
+nSelo = hwSelo.reduce((s, d) => s + (+d.secoes || 0), 0)
+okSelo = hwSelo.reduce((s, d) => s + (+d.hash_ok || 0), 0)
+hwNovo = hwSelo.filter(d => d.bloco === "novo")
+secNovo = hwNovo.reduce((s, d) => s + (+d.secoes || 0), 0)
+fechNovo = hwNovo.reduce((s, d) => s + (+d.cadeia_fechada || 0), 0)
+nUfHash = new Set(hwSelo.filter(d => +d.secoes > 0).map(d => d.uf)).size
+nGrupos = new Set(painel.map(d => d.uf)).size
 ```
 
 <style>
@@ -60,6 +68,9 @@ linkSecao = jk => {
 .nav-cards a:hover { border-color: #1f4e79; }
 .nav-cards strong { display: block; margin-bottom: 0.25rem; }
 .selo { display: inline-block; background: #e5f6ec; border-radius: 0.35rem; padding: 0.35rem 0.6rem; }
+@media (min-width: 992px) {
+  #quarto-document-content { max-width: 795px; }
+}
 </style>
 
 ```{ojs}
@@ -74,12 +85,11 @@ html`<div class="kpi-grid">
 ```{ojs}
 //| echo: false
 html`<p><span class="selo">RDV ≡ BU ≡ CSV oficial em ${fmt(fecha)} de ${fmt(mSec)} seções</span></p>
+<p>Hash confere em ${fmt(okSelo)} de ${fmt(nSelo)} seções verificadas (${fmt(nUfHash)} de ${fmt(nGrupos)} grupos, ${pct(mSec ? nSelo / mSec : null)} das seções). <a href="assinaturas.html">Integridade dos arquivos</a>.</p>
 <p>BU ≡ CSV oficial em todas as seções conferidas nos dois turnos (${fmt(divOficial)} divergências). ${sumA
-  ? `A cadeia quebra em ${fmt(sumA)} seção${sumA === 1 ? "" : "ões"}, em que RDV ≠ BU.`
+  ? html`A cadeia quebra em ${fmt(sumA)} seção${sumA === 1 ? "" : "ões"}, em que RDV ≠ BU${fichaA.length ? html`: ${fichaA.map(d => html`<a href="${linkSecao(d.join_key)}">Achado A · ${d.join_key}</a>`)}` : ""}.`
   : "RDV, BU e CSV oficial fecham em todas as seções."} Nível B: <strong>${fmt(sumB)}</strong> seções com dois ou mais sinais no extremo da UF.</p>
-${fichaA.length
-  ? html`<p>${fichaA.map(d => html`<a href="${linkSecao(d.join_key)}">Achado A · ${d.join_key}</a>`)}</p>`
-  : ""}`
+<p>No verificador comparável, a cadeia de certificado fecha em ${fmt(fechNovo)} de ${fmt(secNovo)} seções (${pct(secNovo ? fechNovo / secNovo : null)}). A tabela inteira de integridade mistura o verificador anterior, marcado lá como não comparável; esse total não entra nesta frase.</p>`
 ```
 
 ::: {.nav-cards}
@@ -96,15 +106,3 @@ ${fichaA.length
 
 :::
 
-```{ojs}
-//| echo: false
-hwSelo = FileAttachment("data/hw_cadeia.csv").csv({typed: true})
-fmtSelo = (n) => Math.round(+n || 0).toLocaleString("pt-BR")
-nSelo = hwSelo.reduce((s, d) => s + (+d.secoes || 0), 0)
-okSelo = hwSelo.reduce((s, d) => s + (+d.hash_ok || 0), 0)
-fechSelo = hwSelo.reduce((s, d) => s + (+d.cadeia_fechada || 0), 0)
-pctSelo = nSelo
-  ? (100 * fechSelo / nSelo).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})
-  : "—"
-md`[Hash de BU, RDV e log confere com o .vsc em ${fmtSelo(okSelo)} de ${fmtSelo(nSelo)} seções verificadas · cadeia de certificado fechada em ${pctSelo}%](assinaturas.html)`
-```
