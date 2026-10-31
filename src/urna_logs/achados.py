@@ -101,7 +101,7 @@ def classify_row(
 
     # --- Nível B: confluência ou regra composta pré-registrada ---
     n_conf = sum(1 for f in CONFLUENCIA_FLAGS if bool(row.get(f)))
-    if bool(row.get("flag_sem_digital_x_margem")):
+    if bool(row.get("flag_sem_digital")) and bool(row.get("flag_margem")):
         codes.append("B_sem_digital_x_margem")
     if bool(row.get("flag_margem")) and bool(row.get("flag_pos17")):
         codes.append("B_margem_x_pos17")
@@ -122,6 +122,8 @@ def classify_row(
         codes.append("C_margem_isolada")
     if bool(row.get("flag_abstencao")):
         codes.append("C_abstencao_isolada")
+    if bool(row.get("flag_sem_digital")):
+        codes.append("C_sem_digital_isolada")
     if bool(row.get("flag_pos17")):
         codes.append("C_pos17_isolada")
 

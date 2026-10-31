@@ -454,8 +454,9 @@ def _markdown_uf(uf: str, turno: int, df: pd.DataFrame, nivel: int | None) -> st
         "- Nível 2 segue o par declarado em `origemAssinaturaHW`. "
         "UE2020/UE2022 com `eddsa`: Ed521 e AC UE2020 ou UE2022. "
         "UE2013/UE2015 com `ecdsa`: ECDSA P-521; a mensagem dos arquivos é "
-        "SHA-512 do hash gravado. Sem a AC URNA fixada, essa assinatura confere "
-        "com a chave do certificado e a cadeia fica pendente (nível 1). "
+        "SHA-512 do hash gravado. O certificado da urna é conferido com a "
+        "AC URNA publicada em http://acurna.tse.jus.br/crt/acurna.crt "
+        "(válido até 2026-07-18; a conta confere a assinatura, não a data). "
         "Certificado de outro algoritmo é falha, sem segunda tentativa. "
         "Não valida a chave de software da cerimônia.",
         "",

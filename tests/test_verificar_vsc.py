@@ -347,7 +347,19 @@ def test_ecdsa_cadeia_pendente_nao_sobe_nivel_2():
             },
         },
     )
-    r = verificar_stem(_zip_urna(files, vsc), _STEM, _members())
+    from urna_logs import vsc_hw
+
+    guardado = dict(vsc_hw._AC_ECDSA_B64)
+    vsc_hw._AC_ECDSA_B64.clear()
+    vsc_hw._chave_ac_ecdsa.cache_clear()
+    vsc_hw._validade_ac_urna.cache_clear()
+    try:
+        r = verificar_stem(_zip_urna(files, vsc), _STEM, _members())
+    finally:
+        vsc_hw._AC_ECDSA_B64.clear()
+        vsc_hw._AC_ECDSA_B64.update(guardado)
+        vsc_hw._chave_ac_ecdsa.cache_clear()
+        vsc_hw._validade_ac_urna.cache_clear()
     assert r.n_hash_fail == 0
     assert r.criticos_ok is True
     assert r.hw_sig_ok is True
@@ -389,8 +401,10 @@ def test_ecdsa_com_ac_sobe_nivel_2_e_assinatura_ruim_falha():
         },
     }
     blob = base64.b64encode(cert_ac).decode()
+    guardado = dict(vsc_hw._AC_ECDSA_B64)
     vsc_hw._AC_ECDSA_B64["AC URNA"] = blob
     vsc_hw._chave_ac_ecdsa.cache_clear()
+    vsc_hw._validade_ac_urna.cache_clear()
     try:
         ok, cadeia, msg = vsc_hw.verificar_hw(ent, arquivos)
         assert ok is True
@@ -406,8 +420,10 @@ def test_ecdsa_com_ac_sobe_nivel_2_e_assinatura_ruim_falha():
         assert cadeia == "falha"
         assert msg == "assinatura HW inválida: bu.dat"
     finally:
-        vsc_hw._AC_ECDSA_B64.pop("AC URNA", None)
+        vsc_hw._AC_ECDSA_B64.clear()
+        vsc_hw._AC_ECDSA_B64.update(guardado)
         vsc_hw._chave_ac_ecdsa.cache_clear()
+        vsc_hw._validade_ac_urna.cache_clear()
 
 
 def test_certificado_ecdsa_nao_entra_no_caminho_ed521():

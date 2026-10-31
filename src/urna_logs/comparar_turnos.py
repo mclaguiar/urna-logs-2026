@@ -62,6 +62,7 @@ COMPARE_COLS = [
     "delta_pct_apos_17h_secao",
     "flag_abstencao",
     "flag_margem",
+    "flag_sem_digital",
     "flag_sem_digital_x_margem",
     "flag_pos17",
     "flag_so_turno",
@@ -247,12 +248,25 @@ def _pct_threshold(series: pd.Series, q: float) -> float | None:
     return float(s.quantile(q))
 
 
+def _cauda(series: pd.Series, q: float) -> pd.Series:
+    """True na cauda q da UF. Série constante ou percentil ≤ 0 não marca ninguém."""
+    s = pd.to_numeric(series, errors="coerce")
+    valid = s.dropna()
+    if valid.empty or int(valid.nunique()) <= 1:
+        return pd.Series(False, index=series.index)
+    thr = float(valid.quantile(q))
+    if thr <= 0:
+        return pd.Series(False, index=series.index)
+    return s.ge(thr).fillna(False)
+
+
 def apply_anomaly_flags(df: pd.DataFrame) -> pd.DataFrame:
-    """Flags por percentis da UF (apenas status=ambos quando aplicável)."""
+    """Flags no p99 da UF (apenas status=ambos quando aplicável)."""
     out = df.copy()
     for col in (
         "flag_abstencao",
         "flag_margem",
+        "flag_sem_digital",
         "flag_sem_digital_x_margem",
         "flag_pos17",
         "flag_so_turno",
@@ -260,38 +274,26 @@ def apply_anomaly_flags(df: pd.DataFrame) -> pd.DataFrame:
         out[col] = False
 
     ambos = out["status"] == "ambos"
-    thr_abst = _pct_threshold(out.loc[ambos, "delta_abstencao"].abs(), P_FLAG_ABST)
-    thr_marg = _pct_threshold(out.loc[ambos, "delta_margem"].abs(), P_FLAG_MARGEM)
-    thr_sd = _pct_threshold(out.loc[ambos, "pct_sem_digital_1t"], P_FLAG_SEM_DIG)
-    thr_pos = _pct_threshold(out.loc[ambos, "pct_apos_17h_2t"], P_FLAG_POS17)
-    thr_dpos = _pct_threshold(
-        out.loc[ambos, "delta_pct_apos_17h_secao"].abs(), P_FLAG_POS17
+    base = out.loc[ambos]
+    out.loc[ambos, "flag_abstencao"] = _cauda(
+        base["delta_abstencao"].abs(), P_FLAG_ABST
+    ).to_numpy()
+    out.loc[ambos, "flag_margem"] = _cauda(
+        base["delta_margem"].abs(), P_FLAG_MARGEM
+    ).to_numpy()
+    if "pct_sem_digital_1t" in out.columns:
+        out.loc[ambos, "flag_sem_digital"] = _cauda(
+            base["pct_sem_digital_1t"], P_FLAG_SEM_DIG
+        ).to_numpy()
+    out["flag_sem_digital_x_margem"] = (
+        out["flag_sem_digital"] & out["flag_margem"]
     )
-
-    if thr_abst is not None and thr_abst > 0:
-        out.loc[
-            ambos & (out["delta_abstencao"].abs() >= thr_abst), "flag_abstencao"
-        ] = True
-    if thr_marg is not None and thr_marg > 0:
-        out.loc[ambos & (out["delta_margem"].abs() >= thr_marg), "flag_margem"] = True
-    if thr_sd is not None and thr_marg is not None and thr_marg > 0:
-        out.loc[
-            ambos
-            & (out["pct_sem_digital_1t"] >= thr_sd)
-            & (out["delta_margem"].abs() >= thr_marg),
-            "flag_sem_digital_x_margem",
-        ] = True
-    # Evita marcar todas as seções quando a série é constante (p90 == max == min)
-    if thr_pos is not None:
-        series_pos = pd.to_numeric(out.loc[ambos, "pct_apos_17h_2t"], errors="coerce")
-        if series_pos.nunique(dropna=True) > 1:
-            out.loc[
-                ambos & (out["pct_apos_17h_2t"] >= thr_pos), "flag_pos17"
-            ] = True
-    if thr_dpos is not None and thr_dpos > 0:
-        out.loc[
-            ambos & (out["delta_pct_apos_17h_secao"].abs() >= thr_dpos), "flag_pos17"
-        ] = True
+    pos = pd.Series(False, index=out.index)
+    for col in ("pct_apos_17h_1t", "pct_apos_17h_2t"):
+        if col not in out.columns:
+            continue
+        pos.loc[ambos] = pos.loc[ambos] | _cauda(base[col], P_FLAG_POS17).to_numpy()
+    out["flag_pos17"] = pos
 
     out["flag_so_turno"] = out["status"].isin(["so_1t", "so_2t"])
 
@@ -301,6 +303,8 @@ def apply_anomaly_flags(df: pd.DataFrame) -> pd.DataFrame:
             names.append("abstencao")
         if r["flag_margem"]:
             names.append("margem")
+        if r["flag_sem_digital"]:
+            names.append("sem_digital")
         if r["flag_sem_digital_x_margem"]:
             names.append("sem_digital_x_margem")
         if r["flag_pos17"]:
@@ -455,6 +459,7 @@ def build_compare(uf: str, turno_a: int, turno_b: int) -> tuple[pd.DataFrame, di
         "votos_disponiveis": False,
         "n_flag_abstencao": 0,
         "n_flag_margem": 0,
+        "n_flag_sem_digital": 0,
         "n_flag_sem_digital_x_margem": 0,
         "n_flag_pos17": 0,
         "n_flag_so_turno": 0,
@@ -622,6 +627,7 @@ def build_compare(uf: str, turno_a: int, turno_b: int) -> tuple[pd.DataFrame, di
 
     meta["n_flag_abstencao"] = int(merged["flag_abstencao"].sum())
     meta["n_flag_margem"] = int(merged["flag_margem"].sum())
+    meta["n_flag_sem_digital"] = int(merged["flag_sem_digital"].sum())
     meta["n_flag_sem_digital_x_margem"] = int(merged["flag_sem_digital_x_margem"].sum())
     meta["n_flag_pos17"] = int(merged["flag_pos17"].sum())
     meta["n_flag_so_turno"] = int(merged["flag_so_turno"].sum())
@@ -688,7 +694,9 @@ def write_compare_report(
         "",
         f"- `|Δ abstenção|` ≥ p{int(P_FLAG_ABST*100)}: **{meta.get('n_flag_abstencao', 0)}**",
         f"- `|Δ margem|` ≥ p{int(P_FLAG_MARGEM*100)}: **{meta.get('n_flag_margem', 0)}**",
-        f"- alto % sem digital 1º × `|Δ margem|`: "
+        f"- % sem digital 1º ≥ p{int(P_FLAG_SEM_DIG*100)}: "
+        f"**{meta.get('n_flag_sem_digital', 0)}**",
+        f"- interseção sem digital × `|Δ margem|`: "
         f"**{meta.get('n_flag_sem_digital_x_margem', 0)}**",
         f"- cauda pós-17h atípica: **{meta.get('n_flag_pos17', 0)}**",
         f"- só em um turno: **{meta.get('n_flag_so_turno', 0)}**",

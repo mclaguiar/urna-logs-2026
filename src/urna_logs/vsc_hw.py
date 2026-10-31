@@ -5,8 +5,9 @@ tentativa se o certificado for de outro algoritmo.
 
 - UE2020/UE2022 e `eddsa`: Ed521, certificado conferido com a AC UE2020 ou UE2022.
 - UE2013/UE2015 e `ecdsa`: ECDSA P-521. A assinatura dos arquivos é conferida
-  com a chave do certificado. A cadeia só fecha quando a AC URNA estiver
-  fixada em `_AC_ECDSA_B64`; até lá o resultado é cadeia pendente.
+  com a chave do certificado. A cadeia confere o certificado da urna com a
+  AC URNA publicada em `_AC_ECDSA_B64`. Sem essa chave, o resultado é cadeia
+  pendente. A conta não olha a data de validade do certificado da AC.
 
 A mensagem assinada dos arquivos é SHA-512 do hash já gravado no arquivo.
 No ECDSA esse digest entra direto na verificação. A assinatura do certificado
@@ -84,10 +85,36 @@ _EMISSORES_B64 = {
     "AC UE2022": _AC_UE2022_B64,
 }
 
-# Certificado público da AC URNA (ECDSA P-521). Vazio até a chave publicada
-# ser fixada no mesmo formato das AC UE2020/UE2022. Sem ela, o ECDSA confere
-# a chave do certificado da urna e a cadeia fica pendente.
-_AC_ECDSA_B64: dict[str, str] = {}
+# AC URNA (ECDSA P-521), http://acurna.tse.jus.br/crt/acurna.crt
+# Emissor AC RAIZ UE. Identificador da chave
+# cdaaf4b29701b3f0deb2b54258594a6d34ada48a.
+# Validade do certificado: 2011-07-22 a 2026-07-18.
+_AC_URNA_B64 = """
+MIID+jCCA1ygAwIBAgIBAzAKBggqhkjOPQQDBDCBgjELMAkGA1UEBhMCQlIxDDAK
+BgNVBAoTA1RTRTEMMAoGA1UECxMDU1RJMRMwEQYDVQQDEwpBQyBSQUlaIFVFMQsw
+CQYDVQQIEwJERjERMA8GA1UEBxMIQnJhc2lsaWExIjAgBgkqhkiG9w0BCQEWE2Fj
+cmFpenVlQHRzZS5qdXMuYnIwHhcNMTEwNzIyMjE1OTU3WhcNMjYwNzE4MjE1OTU3
+WjB9MRAwDgYDVQQDEwdBQyBVUk5BMQswCQYDVQQIEwJERjELMAkGA1UEBhMCQlIx
+IDAeBgkqhkiG9w0BCQEWEWFjdXJuYUB0c2UuanVzLmJyMQwwCgYDVQQKEwNUU0Ux
+DDAKBgNVBAsTA1NUSTERMA8GA1UEBxMIQnJhc2lsaWEwgZswEAYHKoZIzj0CAQYF
+K4EEACMDgYYABACBR0E65ux46ll8Z41Fi0QJf+LWQqUZDI2wIvB4+F9vHqrw0/tb
+6pasdXwwxxdRia5oI21UrKsN2f0VxCtWGPAzzwHPPXSY4w9bSIg/evLDXFZ9QNKK
+EWt83xzz1U6nsd2H+XI2sNSOWQS485ZYQ7nnThRgPhRsYsbCKb6Gmt7JTNudkqOC
+AYIwggF+MAwGA1UdEwQFMAMBAf8wga8GA1UdIwSBpzCBpIAUhmiDe7vjSM0ZthAw
+pInV395nQsChgYikgYUwgYIxCzAJBgNVBAYTAkJSMQwwCgYDVQQKEwNUU0UxDDAK
+BgNVBAsTA1NUSTETMBEGA1UEAxMKQUMgUkFJWiBVRTELMAkGA1UECBMCREYxETAP
+BgNVBAcTCEJyYXNpbGlhMSIwIAYJKoZIhvcNAQkBFhNhY3JhaXp1ZUB0c2UuanVz
+LmJyggEBMB0GA1UdDgQWBBTNqvSylwGz8N6ytUJYWUptNK2kijALBgNVHQ8EBAMC
+AYYwPAYDVR0fBDUwMzAxoC+gLYYraHR0cDovL2xjci5hY3JhaXp1ZS50c2UuanVz
+LmJyL2FjcmFpenVlLmNybDBSBgNVHSAESzBJMEcGAwAAADBAMD4GCCsGAQUFBwIB
+FjJodHRwOi8vZHBjLmFjcmFpenVlLnRzZS5qdXMuYnIvRFBDLVBDLUFDUkFJWlVF
+LnBkZjAKBggqhkjOPQQDBAOBiwAwgYcCQS2Qnvfn3wF8Ft96nAjZH5tp/0VKwp0j
+iJYy1+7Bx5PB94lW6D7Hqvfe6XClC9faSrNTQL1XFdZg2yw/hMROUb2uAkIBe8l4
+fiGIaXNVTLstkxNGYoXCjJvGtBc1zeFBRXKA3S95lskEMn8QJ06vYRK6PiUu5foM
+yaLcujRjcz9Mb7zpTfo=
+"""
+
+_AC_ECDSA_B64: dict[str, str] = {_CN_AC_URNA: _AC_URNA_B64}
 
 
 def _b(data) -> bytes:
@@ -244,6 +271,31 @@ def _chave_ac_ecdsa(blob: str):
     return _chave_p521(ponto)
 
 
+def _data_utc(bruto: bytes) -> str:
+    texto = bruto.decode()
+    ano = int(texto[:2])
+    ano += 2000 if ano < 50 else 1900
+    return f"{ano:04d}-{texto[2:4]}-{texto[4:6]}"
+
+
+@lru_cache(maxsize=2)
+def _validade_ac_urna() -> str:
+    """Data final do certificado da AC URNA, ou string vazia se não der para ler."""
+    blob = _AC_ECDSA_B64.get(_CN_AC_URNA, "")
+    if not blob.strip():
+        return ""
+    try:
+        der = base64.b64decode("".join(blob.split()))
+        body = next(_der_items(der))[1]
+        tbs = list(_der_items(body))[0][1]
+        campos = list(_der_items(tbs))
+        idx = 1 if campos and campos[0][0] == 0xA0 else 0
+        tempos = list(_der_items(campos[idx + 3][1]))
+        return _data_utc(tempos[1][1])
+    except Exception:
+        return ""
+
+
 def _mensagem(hash_arquivo: bytes) -> bytes:
     return hashlib.sha512(_b(hash_arquivo)).digest()
 
@@ -364,7 +416,9 @@ def _verificar_ecdsa(tbs, assinatura_cert, emissor, ponto, arquivos, auto):
         if detalhe and detalhe != "falha":
             msg = f"{msg}: {detalhe}"
         return False, "falha", msg
-    return True, "ok", f"ECDSA ok ({len(arquivos)} arquivos + auto + AC URNA)"
+    ate = _validade_ac_urna()
+    extra = f", certificado até {ate}" if ate else ""
+    return True, "ok", f"ECDSA ok ({len(arquivos)} arquivos + auto + AC URNA{extra})"
 
 
 def verificar_hw(ent: dict, arquivos: list[dict]) -> tuple[bool, str, str]:
