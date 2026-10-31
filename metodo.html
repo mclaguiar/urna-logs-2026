@@ -81,7 +81,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-17888a1159294d3eb470f19f6f52f5a5.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-166690b9c768161ed89deb9505a7d440.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-172be6f1f5c41365eb071b07eeb4d519.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -109,6 +109,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Procurar"
   }
 }</script>
+<script type="module" src="site_libs/quarto-ojs/quarto-ojs-runtime.js"></script>
+<link href="site_libs/quarto-ojs/quarto-ojs.css" rel="stylesheet">
 
 
 </head>
@@ -132,11 +134,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
     <a class="nav-link" href="./index.html"> 
-<span class="menu-text">Painel</span></a>
+<span class="menu-text">Visão geral</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./migracao.html"> 
+<span class="menu-text">Migração dos votos</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./auditoria.html"> 
+<span class="menu-text">Auditoria</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./secao.html"> 
+<span class="menu-text">Consulta por seção</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="./metodo.html" aria-current="page"> 
 <span class="menu-text">Método</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./assinaturas.html"> 
+<span class="menu-text">Integridade dos arquivos</span></a>
   </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
@@ -162,13 +180,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
    
   <ul>
   <li><a href="#cadeia-auditada" id="toc-cadeia-auditada" class="nav-link active" data-scroll-target="#cadeia-auditada">Cadeia auditada</a></li>
-  <li><a href="#hierarquia-de-evidência-a-b-c" id="toc-hierarquia-de-evidência-a-b-c" class="nav-link" data-scroll-target="#hierarquia-de-evidência-a-b-c">Hierarquia de evidência (A / B / C)</a></li>
-  <li><a href="#o-que-o-painel-responde" id="toc-o-que-o-painel-responde" class="nav-link" data-scroll-target="#o-que-o-painel-responde">O que o painel responde</a></li>
-  <li><a href="#inferência-ecológica-de-fluxo-1º2º" id="toc-inferência-ecológica-de-fluxo-1º2º" class="nav-link" data-scroll-target="#inferência-ecológica-de-fluxo-1º2º">Inferência ecológica de fluxo (1º→2º)</a></li>
-  <li><a href="#hipóteses-observáveis-agregado-não-conclusões" id="toc-hipóteses-observáveis-agregado-não-conclusões" class="nav-link" data-scroll-target="#hipóteses-observáveis-agregado-não-conclusões">Hipóteses → observáveis (agregado; não conclusões)</a></li>
-  <li><a href="#dados-deste-site" id="toc-dados-deste-site" class="nav-link" data-scroll-target="#dados-deste-site">Dados deste site</a></li>
+  <li><a href="#assinatura-de-hardware" id="toc-assinatura-de-hardware" class="nav-link" data-scroll-target="#assinatura-de-hardware">Assinatura de hardware</a></li>
+  <li><a href="#hierarquia-a-b-c" id="toc-hierarquia-a-b-c" class="nav-link" data-scroll-target="#hierarquia-a-b-c">Hierarquia A / B / C</a></li>
+  <li><a href="#transferência-1º2º" id="toc-transferência-1º2º" class="nav-link" data-scroll-target="#transferência-1º2º">Transferência 1º→2º</a></li>
+  <li><a href="#limitações" id="toc-limitações" class="nav-link" data-scroll-target="#limitações">Limitações</a></li>
+  <li><a href="#hipóteses-observáveis" id="toc-hipóteses-observáveis" class="nav-link" data-scroll-target="#hipóteses-observáveis">Hipóteses → observáveis</a></li>
+  <li><a href="#o-que-o-site-responde" id="toc-o-que-o-site-responde" class="nav-link" data-scroll-target="#o-que-o-site-responde">O que o site responde</a></li>
   <li><a href="#glossário" id="toc-glossário" class="nav-link" data-scroll-target="#glossário">Glossário</a></li>
-  <li><a href="#publicação" id="toc-publicação" class="nav-link" data-scroll-target="#publicação">Publicação</a></li>
+  <li><a href="#dados-deste-site" id="toc-dados-deste-site" class="nav-link" data-scroll-target="#dados-deste-site">Dados deste site</a></li>
   </ul>
 </nav>
     </div>
@@ -194,159 +213,236 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
+<p>O site confere a consistência entre os arquivos públicos do TSE (Eleições 2026, cargo presidente) e descreve padrões agregados por seção, cidade, UF e país.</p>
+<p>Não afirma integridade da urna, fraude, causalidade nem o voto de uma pessoa. Os totais publicados entram como dado. A leitura não valida nem invalida se eles são o que aconteceu na urna.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code hidden" id="cb1" data-startfrom="10" data-source-offset="-0"><pre class="sourceCode js code-with-copy"><code class="sourceCode javascript" style="counter-reset: source-line 9;"><span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>proto <span class="op">=</span> <span class="fu">FileAttachment</span>(<span class="st">"data/protocolo.csv"</span>)<span class="op">.</span><span class="fu">csv</span>({<span class="dt">typed</span><span class="op">:</span> <span class="kw">false</span>})</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>v <span class="op">=</span> (chave) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> row <span class="op">=</span> proto<span class="op">.</span><span class="fu">find</span>((d) <span class="kw">=&gt;</span> d<span class="op">.</span><span class="at">chave</span> <span class="op">===</span> chave)<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> row <span class="op">?</span> <span class="bu">String</span>(row<span class="op">.</span><span class="at">valor</span>) <span class="op">:</span> <span class="st">""</span><span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="fu">md</span><span class="vs">`Extração usada neste site: protocolo de limiares **</span><span class="sc">${</span><span class="fu">v</span>(<span class="st">"protocolo_versao"</span>)<span class="sc">}</span><span class="vs">**, pacote </span><span class="sc">\`${</span><span class="fu">v</span>(<span class="st">"pkg_version"</span>)<span class="sc">}\`</span><span class="vs">. Hash SHA-256 do registro dos limiares: </span><span class="sc">\`${</span><span class="fu">v</span>(<span class="st">"hash_sha256"</span>)<span class="sc">}\`</span><span class="vs">.`</span></span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div>
+<div id="ojs-cell-1-1" data-nodetype="declaration">
+
+</div>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<div id="ojs-cell-1-2" data-nodetype="declaration">
+
+</div>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<div id="ojs-cell-1-3" data-nodetype="expression">
+
+</div>
+</div>
+</div>
+</div>
+<style>
+.cadeia { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.5rem; margin: 1rem 0 1.25rem; }
+.caixa { flex: 1 1 9rem; border: 1px solid #d0d0d0; border-radius: 0.45rem; padding: 0.75rem 0.85rem; background: #f6f6f6; }
+.caixa strong { display: block; margin-bottom: 0.2rem; }
+.seta { flex: 1 1 8rem; font-size: 0.88rem; padding: 0.35rem 0.2rem; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin: 0.5rem 0 1rem; }
+.card-link { display: block; border: 1px solid #e2e2e2; border-radius: 0.5rem; padding: 0.85rem 1rem; text-decoration: none; color: inherit; }
+.card-link:hover { border-color: #888; }
+.card-link strong { display: block; margin-bottom: 0.25rem; }
+</style>
 <section id="cadeia-auditada" class="level2">
 <h2 class="anchored" data-anchor-id="cadeia-auditada">Cadeia auditada</h2>
-<pre class="text"><code>RDV (recontar votos)  →  BU da urna  →  CSV oficial divulgado</code></pre>
-<p>Trabalhamos só com <strong>arquivos públicos</strong> do TSE: inconsistências, saldos e taxas com hierarquia de evidência. Relatórios descrevem consistência e padrões agregados; interpretação causal ou jurídica fica com o leitor.</p>
-<p>Divergência entre camadas = as publicações <strong>não fecham</strong> na chave. Concordância = RDV ≡ BU ≡ CSV oficial <strong>nessa chave</strong> (totais de seção).</p>
+<p>A chave de todas as setas é <code>join_key</code>: <code>UF:municipio:zona:secao</code>.</p>
+<div class="cadeia">
+<div class="caixa">
+<strong>RDV</strong>Registro digital do voto. Recontagem do presidente, sem identificar eleitor.
+</div>
+<div class="seta">
+<strong>RDV → BU</strong><br>Os votos recontados no RDV batem com os totais do boletim, na mesma seção.
+</div>
+<div class="caixa">
+<strong>BU</strong>Boletim de urna. Aptos, comparecimento, votos e o detalhe de habilitação.
+</div>
+<div class="seta">
+<strong>BU → CSV oficial</strong><br>Os totais do boletim batem com a votação oficial por seção, na mesma chave.
+</div>
+<div class="caixa">
+<strong>CSV oficial</strong>Votação publicada pelo TSE, por seção.
+</div>
+</div>
+<p>Divergência: as publicações não fecham nessa chave. Concordância: RDV, BU e CSV oficial fecham nos totais da seção. Fechar entre si não prova a causa do número nem o voto de alguém.</p>
 </section>
-<section id="hierarquia-de-evidência-a-b-c" class="level2">
-<h2 class="anchored" data-anchor-id="hierarquia-de-evidência-a-b-c">Hierarquia de evidência (A / B / C)</h2>
-<p>Limiares pré-registrados em <code>urna_logs.thresholds</code> (versão do protocolo no relatório de achados).</p>
+<section id="assinatura-de-hardware" class="level2">
+<h2 class="anchored" data-anchor-id="assinatura-de-hardware">Assinatura de hardware</h2>
+<p>O <code>-vota.vsc</code> guarda o hash SHA-512 de <code>bu</code>, <code>rdv</code> e <code>log</code>, o certificado da urna e a assinatura de hardware desses hashes. O par modelo/algoritmo declarado no arquivo escolhe o verificador. A contagem por UF está em <a href="./assinaturas.html">Integridade dos arquivos</a>.</p>
+<p>UE2020 e UE2022 declaram Ed521. O certificado da urna é conferido com a AC UE2020 ou UE2022, fixada no código, e a assinatura dos arquivos é conferida com a chave desse certificado.</p>
+<p>UE2013 e UE2015 declaram ECDSA P-521. A assinatura dos arquivos é conferida com a chave do certificado da urna. O certificado da urna é conferido com a AC URNA publicada em <a href="http://acurna.tse.jus.br/crt/acurna.crt">acurna.crt</a>, o repositório da Declaração de Práticas de Certificação (<a href="http://dpc.acurna.tse.jus.br/DPC-PC-ACURNA.PDF">DPC-PC-ACURNA</a>, seções 2.1 e 6.1.4). Esse certificado da AC venceu em 18/07/2026, antes da eleição. A conta confere a assinatura e não consulta a data. As AC UE2020 e UE2022 são de outra geração e não assinam esses certificados.</p>
+<p>Cadeia fechada amarra o hash dos três arquivos à chave da urna e essa chave ao certificado da AC correspondente. Trocar só os arquivos, deixando o certificado original, quebra o hash ou a assinatura. Trocar o pacote inteiro exige um certificado emitido por essa AC. Relatório gravado antes de fixar o certificado publicado não entra nessa conta: na página, essa seção aparece como cadeia ainda não reprocessada.</p>
+<p>A assinatura de software da cerimônia não entra nesta conta. O verificador só confere o hash desse bloco.</p>
+</section>
+<section id="hierarquia-a-b-c" class="level2">
+<h2 class="anchored" data-anchor-id="hierarquia-a-b-c">Hierarquia A / B / C</h2>
+<p>O extremo da UF é um percentil calculado dentro da própria UF, só nas seções presentes nos dois turnos. O corte em votos muda de UF para UF. O que fica registrado é o percentil, lido de <code>urna_logs.thresholds</code> no build (<code>site/data/protocolo.csv</code>).</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code hidden" id="cb2" data-startfrom="60" data-source-offset="-0"><pre class="sourceCode js code-with-copy"><code class="sourceCode javascript" style="counter-reset: source-line 59;"><span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>pct <span class="op">=</span> (chave) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> n <span class="op">=</span> <span class="bu">Number</span>(<span class="fu">v</span>(chave))<span class="op">;</span></span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="bu">Number</span><span class="op">.</span><span class="fu">isFinite</span>(n) <span class="op">?</span> n<span class="op">.</span><span class="fu">toLocaleString</span>(<span class="st">"pt-BR"</span><span class="op">,</span> { <span class="dt">style</span><span class="op">:</span> <span class="st">"percent"</span><span class="op">,</span> <span class="dt">maximumFractionDigits</span><span class="op">:</span> <span class="dv">0</span> }) <span class="op">:</span> <span class="fu">v</span>(chave)<span class="op">;</span></span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>cauda <span class="op">=</span> (chave) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> n <span class="op">=</span> <span class="bu">Number</span>(<span class="fu">v</span>(chave))<span class="op">;</span></span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="bu">Number</span><span class="op">.</span><span class="fu">isFinite</span>(n) <span class="op">?</span> ((<span class="dv">1</span> <span class="op">-</span> n) <span class="op">*</span> <span class="dv">100</span>)<span class="op">.</span><span class="fu">toLocaleString</span>(<span class="st">"pt-BR"</span><span class="op">,</span> { <span class="dt">maximumFractionDigits</span><span class="op">:</span> <span class="dv">0</span> }) <span class="op">+</span> <span class="st">"%"</span> <span class="op">:</span> <span class="st">""</span><span class="op">;</span></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a><span class="fu">html</span><span class="vs">`&lt;table class="table table-sm"&gt;</span></span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a><span class="vs">  &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Flag&lt;/th&gt;&lt;th&gt;O que marca&lt;/th&gt;&lt;th&gt;Percentil&lt;/th&gt;&lt;th&gt;Cauda, por construção&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;</span></span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a><span class="vs">  &lt;tbody&gt;</span></span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a><span class="vs">    &lt;tr&gt;&lt;td&gt;&lt;code&gt;flag_margem&lt;/code&gt;&lt;/td&gt;&lt;td&gt;|Δ margem|&lt;/td&gt;&lt;td&gt;</span><span class="sc">${</span><span class="fu">pct</span>(<span class="st">"p_flag_margem"</span>)<span class="sc">}</span><span class="vs">&lt;/td&gt;&lt;td&gt;cerca de </span><span class="sc">${</span><span class="fu">cauda</span>(<span class="st">"p_flag_margem"</span>)<span class="sc">}</span><span class="vs"> das seções da UF&lt;/td&gt;&lt;/tr&gt;</span></span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a><span class="vs">    &lt;tr&gt;&lt;td&gt;&lt;code&gt;flag_abstencao&lt;/code&gt;&lt;/td&gt;&lt;td&gt;|Δ abstenção|&lt;/td&gt;&lt;td&gt;</span><span class="sc">${</span><span class="fu">pct</span>(<span class="st">"p_flag_abst"</span>)<span class="sc">}</span><span class="vs">&lt;/td&gt;&lt;td&gt;cerca de </span><span class="sc">${</span><span class="fu">cauda</span>(<span class="st">"p_flag_abst"</span>)<span class="sc">}</span><span class="vs"> das seções da UF&lt;/td&gt;&lt;/tr&gt;</span></span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a><span class="vs">    &lt;tr&gt;&lt;td&gt;&lt;code&gt;flag_pos17&lt;/code&gt;&lt;/td&gt;&lt;td&gt;% de habilitações após as 17h no 2º turno, ou |Δ| dessa fatia&lt;/td&gt;&lt;td&gt;</span><span class="sc">${</span><span class="fu">pct</span>(<span class="st">"p_flag_pos17"</span>)<span class="sc">}</span><span class="vs">&lt;/td&gt;&lt;td&gt;cerca de </span><span class="sc">${</span><span class="fu">cauda</span>(<span class="st">"p_flag_pos17"</span>)<span class="sc">}</span><span class="vs"> das seções da UF&lt;/td&gt;&lt;/tr&gt;</span></span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a><span class="vs">    &lt;tr&gt;&lt;td&gt;&lt;code&gt;flag_sem_digital_x_margem&lt;/code&gt;&lt;/td&gt;&lt;td&gt;% sem digital do 1º turno e, ao mesmo tempo, |Δ margem| no extremo&lt;/td&gt;&lt;td&gt;sem digital </span><span class="sc">${</span><span class="fu">pct</span>(<span class="st">"p_flag_sem_dig"</span>)<span class="sc">}</span><span class="vs">; margem </span><span class="sc">${</span><span class="fu">pct</span>(<span class="st">"p_flag_margem"</span>)<span class="sc">}</span><span class="vs">&lt;/td&gt;&lt;td&gt;interseção, menor que cada cauda&lt;/td&gt;&lt;/tr&gt;</span></span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a><span class="vs">    &lt;tr&gt;&lt;td&gt;&lt;code&gt;flag_so_turno&lt;/code&gt;&lt;/td&gt;&lt;td&gt;seção só no 1º ou só no 2º turno&lt;/td&gt;&lt;td&gt;não é percentil&lt;/td&gt;&lt;td&gt;entra como achado A&lt;/td&gt;&lt;/tr&gt;</span></span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a><span class="vs">  &lt;/tbody&gt;</span></span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a><span class="vs">&lt;/table&gt;</span></span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a><span class="vs">&lt;p&gt;Confluência (nível B): pelo menos &lt;strong&gt;</span><span class="sc">${</span><span class="fu">v</span>(<span class="st">"confluencia_min"</span>)<span class="sc">}</span><span class="vs">&lt;/strong&gt; destas flags na mesma seção: &lt;code&gt;</span><span class="sc">${</span><span class="fu">v</span>(<span class="st">"confluencia_flags"</span>)<span class="sc">}</span><span class="vs">&lt;/code&gt;.&lt;/p&gt;</span></span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a><span class="vs">&lt;p&gt;</span><span class="sc">${</span><span class="fu">v</span>(<span class="st">"protocolo_nota"</span>)<span class="sc">}</span><span class="vs">&lt;/p&gt;`</span></span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div>
+<div id="ojs-cell-2-1" data-nodetype="declaration">
+
+</div>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<div id="ojs-cell-2-2" data-nodetype="declaration">
+
+</div>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<div id="ojs-cell-2-3" data-nodetype="expression">
+
+</div>
+</div>
+</div>
+</div>
+<p><strong>Margem</strong> na seção é votos do 13 menos votos do 22, naquele turno. <strong>Δ margem</strong> é a margem do 2º turno menos a margem do 1º.</p>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 25%">
-<col style="width: 25%">
-<col style="width: 25%">
-<col style="width: 25%">
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
 </colgroup>
 <thead>
 <tr class="header">
 <th>Nível</th>
 <th>O quê</th>
-<th>Exemplo</th>
 <th>Leitura</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td><strong>A</strong></td>
-<td>Inconsistência <strong>documental</strong></td>
-<td>RDV≠BU; BU≠CSV oficial; seção só num turno</td>
-<td>Listar e checar a cadeia pública</td>
+<td>Os arquivos públicos da seção não fecham (RDV≠BU, BU≠CSV oficial) ou a seção só existe num turno</td>
+<td>Abrir a cadeia dessa chave</td>
 </tr>
 <tr class="even">
 <td><strong>B</strong></td>
-<td>Anomalia <strong>operacional</strong> (confluência)</td>
-<td><code>% sem digital</code> alto × <code>|Δ margem|</code>; margem×pós-17h; ≥2 flags</td>
-<td>Priorizar revisão (extremos da UF)</td>
+<td>Dois ou mais sinais no extremo da própria UF</td>
+<td>Priorizar a revisão da seção</td>
 </tr>
 <tr class="odd">
 <td><strong>C</strong></td>
-<td>Padrão <strong>ecológico</strong> / contexto</td>
-<td>Flag isolada; taxas IPF; elim. “forçado” só por bounds</td>
-<td>Saldos e taxas agregadas</td>
+<td>Uma flag do comparativo, sem confluência</td>
+<td>Contexto. O tamanho dessa lista é a cauda que a regra recorta</td>
 </tr>
 </tbody>
 </table>
-<p>Comando: <code>urna-logs achados --ufs ALL</code> → fichas em <code>reports/achados_*</code>.</p>
 </section>
-<section id="o-que-o-painel-responde" class="level2">
-<h2 class="anchored" data-anchor-id="o-que-o-painel-responde">O que o painel responde</h2>
-<ol type="1">
-<li><strong>O que mudou 1º→2º</strong> — Δ abstenção / comparecimento, votos dos finalistas e margem por seção (<code>join_key</code>).</li>
-<li><strong>Onde olhar</strong> — achados A/B + <code>% sem digital</code> × Δ; flags isoladas ficam como C.</li>
-<li><strong>Fluxo do dia</strong> — curva de habilitações no log (pós-17h em Brasília; exterior = horário local); overlay do 2º.</li>
-<li><strong>Fluxo ecológico</strong> — anexo de saldos e taxas (Nível C).</li>
-</ol>
-<p><strong>Escopo:</strong> totais por seção; sem microdado de eleitor (sigilo do voto).</p>
+<section id="transferência-1º2º" class="level2">
+<h2 class="anchored" data-anchor-id="transferência-1º2º">Transferência 1º→2º</h2>
+<p>Sem o voto de cada pessoa, a matriz de origem e destino da seção não tem uma solução só. A estimativa usada é a <code>transferencia</code>: uma matriz comum às seções da unidade. A página <a href="./migracao.html">Migração dos Votos</a> mostra essa matriz em votos, somados até a UF e o Brasil.</p>
+<p><strong>Brown e Payne</strong> (1986, <em>Aggregate data, ecological regression, and voting transitions</em>, JASA) é inferência ecológica: uma matriz de transição a partir das margens da seção. Nesta auditoria a conta é mínimos quadrados nas contagens, com cada linha somando 1 (softmax) e várias partidas. Não é o IGLS com efeito aleatório do artigo, nem um modelo multinomial-Dirichlet.</p>
+<p><strong>lphom</strong> (pacote R <code>lphom</code>, cenário <code>simultaneous</code>; Pavía) estima a mesma matriz por programação linear. É uma estimativa pontual.</p>
+<p>A premissa é homogeneidade: dentro da unidade, as seções compartilham a mesma matriz. A taxa é uma média da unidade. Ler essa média como o caminho de um eleitor é a falácia ecológica.</p>
+<p>Origens: 13, 22, eliminados, branco, nulo e abstenção. Destinos: 13, 22, branco, nulo e abstenção. <strong>Eliminados</strong> reúne os demais votos nominais do 1º turno: o modelo não separa cada candidato que saiu. Branco e nulo são estimados em separado; a página de migração soma os dois só na exibição. A abstenção entra na matriz para as duas margens fecharem.</p>
+<p>A observação é a seção. A cidade ganha matriz própria quando tem pelo menos o mínimo de seções do protocolo; abaixo disso, herda a matriz do estado. Brown e Payne usa todas as seções. O lphom usa a seção até o teto de linhas; acima disso, soma por zona (município + zona), depois por município e, por último, em blocos. O teto limita só o lphom.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code hidden" id="cb3" data-startfrom="104" data-source-offset="0"><pre class="sourceCode js code-with-copy"><code class="sourceCode javascript" style="counter-reset: source-line 103;"><span id="cb3-104"><a href="#cb3-104" aria-hidden="true" tabindex="-1"></a><span class="fu">html</span><span class="vs">`&lt;p&gt;Mínimo para a cidade ter matriz própria: &lt;strong&gt;</span><span class="sc">${</span><span class="fu">v</span>(<span class="st">"min_secoes"</span>)<span class="sc">}</span><span class="vs">&lt;/strong&gt; seções. Teto de linhas do lphom: &lt;strong&gt;</span><span class="sc">${</span><span class="bu">Number</span>(<span class="fu">v</span>(<span class="st">"max_linhas_lphom"</span>))<span class="op">.</span><span class="fu">toLocaleString</span>(<span class="st">"pt-BR"</span>)<span class="sc">}</span><span class="vs">&lt;/strong&gt;.&lt;/p&gt;`</span></span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="ojs-cell-3" data-nodetype="expression">
+
+</div>
+</div>
+</div>
+<p>A UF e o Brasil <strong>somam os votos transferidos</strong> (votos da origem na cidade × taxa da cidade). Não é a média das taxas. Cidade pequena entra com a taxa do estado e com os votos dela. O Brasil é a soma das UFs incluídas. É essa soma que a página de migração exibe.</p>
+<p>O estimado não é o divulgado. Uma matriz por cidade não reproduz o 2º turno de cada seção. A tabela de diferença é o 2º turno estimado menos o 2º turno do boletim. Onde Brown e Payne e lphom divergem, a distância é incerteza do modelo ecológico. Um número só nessa célula seria um fato que o outro modelo não sustenta.</p>
+<p><strong>Eleitorado entre turnos.</strong> Entra na matriz a seção presente nos dois turnos. Seção só num turno fica fora e aparece como achado A (<code>so_1t</code> / <code>so_2t</code>). Aptos podem mudar na mesma seção. O programa iguala a soma da origem e a soma do destino: a diferença do lado menor vai para a abstenção daquele lado. Por isso a abstenção de origem da matriz não é a abstenção publicada do 1º turno. A do boletim é aptos menos comparecimento. A da matriz inclui esse ajuste para as duas margens terem o mesmo total. A página de migração imprime os dois números e a diferença. Trocar a abstenção da matriz pela do boletim quebraria as taxas, que foram ajustadas na base com o acréscimo.</p>
+<p>O intervalo de 95% de Brown e Payne fica nos arquivos da transferência (<code>taxa_lo</code>, <code>taxa_hi</code>) nas células afastadas de 0 e de 1. Célula colada na fronteira não tem intervalo. O lphom não tem intervalo. A página de migração mostra a estimativa pontual, em votos e em taxa, e não esse intervalo.</p>
 </section>
-<section id="inferência-ecológica-de-fluxo-1º2º" class="level2">
-<h2 class="anchored" data-anchor-id="inferência-ecológica-de-fluxo-1º2º">Inferência ecológica de fluxo (1º→2º)</h2>
-<p>Sem voto individual, o sistema de transferências por seção é <strong>subdeterminado</strong>. Empilhamos três camadas:</p>
-<ol type="1">
-<li><strong>Duncan–Davis</strong> — para cada origem→destino, o intervalo <strong>matematicamente possível</strong> dados só os totais da seção (<code>max(0, o+d−N)</code> … <code>min(o,d)</code>). Intervalo estreito = quase identificável; largo = pouco se sabe sem hipóteses.</li>
-<li><strong>Taxa média UF</strong> — por seção, matriz IPF (RAS) que casa totais de origem e destino (semente = independência); taxas = fluxo/origem, agregadas com peso; <strong>IC</strong> = percentis 5–95 do bootstrap de seções. Duncan–Davis permanece como intervalo factível sem modelo.</li>
-<li><strong>Resíduo preditivo</strong> — reconstituir totais 2º com as taxas UF × origens 1º; o que sobra é o que o modelo médio não explica.</li>
-</ol>
-<p>Inferência ecológica = agregados → taxas médias. Intervalos factíveis ≠ certeza individual; correlação ≠ identificação de mecanismo.</p>
-<p>Comandos:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> fluxo-ecologico <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> validar-fluxo <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span>   <span class="co"># go/no-go antes do nacional</span></span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="limitações" class="level2">
+<h2 class="anchored" data-anchor-id="limitações">Limitações</h2>
+<p>Comparações múltiplas. Cada flag de percentil recorta a cauda da própria UF. O tamanho dessa cauda está na tabela de flags: é 1 menos o percentil, aplicado às seções da UF que existem nos dois turnos. O nível C é essa cauda quando o sinal não encontra um segundo. A contagem de fichas C não é um excedente sobre o acaso: o corte fabrica a cauda. Quatro testes na mesma seção aumentam a chance de um sinal isolado. Confluência (dois ou mais) é o que a hierarquia trata como prioridade, e mesmo assim é associação na seção, não causa.</p>
+<p>Associação não é causa. Sem digital alto junto de |Δ margem| grande descreve a seção. Não atribui o voto a um candidato nem a um horário.</p>
+<p>Falácia ecológica. A matriz é da cidade ou do estado. Não é o trajeto de um eleitor.</p>
+<p>Concordância entre camadas prova que os arquivos públicos fecham naquela chave. Não prova como o eleitor votou, nem por que a margem mudou, nem que a publicação é o que aconteceu. Divergência prova que, naquela chave, as publicações não fecham.</p>
+<p>A cadeia de hardware está em <a href="./assinaturas.html">Integridade dos arquivos</a>. Onde o relatório já usa a AC publicada, a assinatura do certificado da urna confere; o certificado da AC URNA venceu em 18/07/2026 e a conta não usa a data. Relatório ainda não refeito com essa chave não fecha o último elo.</p>
 </section>
-<section id="hipóteses-observáveis-agregado-não-conclusões" class="level2">
-<h2 class="anchored" data-anchor-id="hipóteses-observáveis-agregado-não-conclusões">Hipóteses → observáveis (agregado; não conclusões)</h2>
+<section id="hipóteses-observáveis" class="level2">
+<h2 class="anchored" data-anchor-id="hipóteses-observáveis">Hipóteses → observáveis</h2>
+<p>Nenhuma linha abaixo é uma conclusão. É o que se esperaria ver, e onde olhar.</p>
 <table class="caption-top table">
-<colgroup>
-<col style="width: 50%">
-<col style="width: 50%">
-</colgroup>
 <thead>
 <tr class="header">
 <th>Hipótese</th>
-<th>Observável</th>
+<th>Padrão se for verdadeira</th>
+<th>Padrão se for falsa</th>
+<th>Onde ver</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Transferência aparente dos eliminados</td>
-<td><code>votos_eliminados_1t</code> ≈ <code>ganho_finalistas</code> − <code>delta_comparecimento</code> (<code>gap_transferencia</code>); taxas <code>p_elim_to_fa</code> / <code>p_elim_to_fb</code> + IC</td>
+<td>Os arquivos públicos fecham entre si</td>
+<td>RDV, BU e CSV oficial iguais na <code>join_key</code></td>
+<td>Diferença de totais na mesma chave, ou seção só num turno</td>
+<td><a href="./auditoria.html">Auditoria</a>, fichas A</td>
 </tr>
 <tr class="even">
-<td>Eliminados <em>forçados</em> a um finalista</td>
-<td>limite inferior Duncan–Davis &gt; 50% da origem Elim</td>
+<td>A margem da seção mudou no extremo da UF</td>
+<td>|Δ margem| na cauda da UF, sozinha (C) ou com outro sinal (B)</td>
+<td>A seção fica fora dessa cauda</td>
+<td><a href="./auditoria.html">Auditoria</a></td>
 </tr>
 <tr class="odd">
-<td>Branco/nulo “migraram”</td>
-<td><code>p_branco_to_*</code>, <code>p_nulo_to_*</code></td>
+<td>O fluxo do dia concentra habilitação tarde</td>
+<td>% após as 17h na cauda da UF</td>
+<td>A seção acompanha o restante da UF</td>
+<td><a href="./auditoria.html">Auditoria</a></td>
 </tr>
 <tr class="even">
-<td>Abstenção seletiva</td>
-<td>corr(% Elim 1º, Δ abstenção); <code>p_abst_to_fa/fb</code></td>
+<td>A transferência 1º→2º cabe numa matriz homogênea</td>
+<td>Os dois modelos próximos entre si e do 2º turno publicado</td>
+<td>Modelos distantes, ou estimado longe do publicado</td>
+<td><a href="./migracao.html">Migração dos Votos</a></td>
 </tr>
 <tr class="odd">
-<td>Risco operacional</td>
-<td>alto <code>% sem digital</code> × <code>|Δ margem|</code></td>
-</tr>
-<tr class="even">
-<td>Cauda horária</td>
-<td>alto <code>% ≥17h</code> × Δ comparecimento/margem</td>
-</tr>
-<tr class="odd">
-<td>Contingência / troca de urna</td>
-<td>status <code>so_1t</code> / <code>so_2t</code></td>
+<td>A seção mudou de eleitorado entre os turnos</td>
+<td>Status <code>so_1t</code> ou <code>so_2t</code>, ou aptos diferentes nos dois turnos</td>
+<td>A seção existe nos dois, com a mesma base</td>
+<td><a href="./secao.html">Seção</a> e fichas A</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="dados-deste-site" class="level2">
-<h2 class="anchored" data-anchor-id="dados-deste-site">Dados deste site</h2>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 50%">
-<col style="width: 50%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Arquivo</th>
-<th>Conteúdo</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>site/data/painel_uf.csv</code></td>
-<td>KPIs por UF (1º + colunas 2º/Δ + taxas de fluxo)</td>
-</tr>
-<tr class="even">
-<td><code>site/data/curva_horaria.csv</code></td>
-<td>Habilitações por hora (BRT) × UF × turno</td>
-</tr>
-<tr class="odd">
-<td><code>site/data/outliers_sem_digital.csv</code></td>
-<td>Top seções % sem digital + Δ/flags do comparativo</td>
-</tr>
-<tr class="even">
-<td><code>site/data/anomalias_secao.csv</code></td>
-<td>Seções do comparativo (scatter % sem digital × Δ margem)</td>
-</tr>
-<tr class="odd">
-<td><code>site/data/achados_ab.csv</code></td>
-<td>Fichas níveis A e B (documental / operacional)</td>
-</tr>
-</tbody>
-</table>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/build_site_data.py</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render site</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="o-que-o-site-responde" class="level2">
+<h2 class="anchored" data-anchor-id="o-que-o-site-responde">O que o site responde</h2>
+<div class="cards">
+<p><a class="card-link" href="./auditoria.html"><strong>Auditoria</strong>O que mudou do 1º para o 2º turno, onde a seção está no extremo da UF e como as habilitações se distribuíram no dia.</a> <a class="card-link" href="./assinaturas.html"><strong>Integridade dos arquivos</strong>Se o pacote foi assinado pela urna: hash do <code>.vsc</code>, assinatura e certificado, por modelo e por UF.</a> <a class="card-link" href="./secao.html"><strong>Seção (Resultado por Seção)</strong>Totais da seção, da zona ou da cidade, e a mesma matriz de migração aplicada a esse conjunto.</a> <a class="card-link" href="./migracao.html"><strong>Migração dos Votos</strong>De onde a estimativa manda cada origem, nos dois modelos, por UF e no Brasil, e a diferença para o divulgado.</a> <a class="card-link" href="./metodo.html"><strong>Método</strong>Cadeia, limiares, transferência, limitações e o glossário desta página.</a></p>
+</div>
 </section>
 <section id="glossário" class="level2">
 <h2 class="anchored" data-anchor-id="glossário">Glossário</h2>
@@ -359,97 +455,350 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>TSE</strong></td>
-<td>Tribunal Superior Eleitoral — publica os arquivos abertos</td>
+<td><strong>Abstenção</strong></td>
+<td>Aptos menos comparecimento, no boletim. Na matriz de transferência, pode incluir o ajuste que iguala as duas margens</td>
 </tr>
 <tr class="even">
-<td><strong>UF</strong></td>
-<td>Unidade da Federação; <strong>ZZ</strong> = exterior</td>
+<td><strong>Achado A/B/C</strong></td>
+<td>Classificação da evidência: A documental, B confluência, C sinal isolado</td>
 </tr>
 <tr class="odd">
-<td><strong>Seção</strong></td>
-<td>Unidade de votação (município + zona + seção)</td>
+<td><strong>Aptos</strong></td>
+<td>Eleitores aptos a votar na seção, no boletim</td>
 </tr>
 <tr class="even">
+<td><strong>Brown e Payne</strong></td>
+<td>Inferência ecológica de 1986. Aqui: mínimos quadrados nas contagens da seção, linha somando 1</td>
+</tr>
+<tr class="odd">
 <td><strong>BU</strong></td>
-<td>Boletim de Urna — totais da urna (aptos, comparecimento, votos, detalhe biométrico)</td>
-</tr>
-<tr class="odd">
-<td><strong>RDV</strong></td>
-<td>Registro Digital do Voto — sequência de votos <strong>sem</strong> identificar eleitor; base da recontagem</td>
+<td>Boletim de urna: aptos, comparecimento, votos e detalhe de habilitação</td>
 </tr>
 <tr class="even">
-<td><strong>Log / logjez</strong></td>
-<td>Eventos da urna; fonte do horário e do tipo de habilitação</td>
+<td><strong>AC</strong></td>
+<td>Autoridade certificadora. Emite o certificado da urna</td>
+</tr>
+<tr class="odd">
+<td><strong>AC URNA</strong></td>
+<td>Autoridade das urnas UE2013 e UE2015. Certificado em <a href="http://acurna.tse.jus.br/crt/acurna.crt">acurna.crt</a>, válido até 18/07/2026</td>
+</tr>
+<tr class="even">
+<td><strong>Autenticidade</strong></td>
+<td>O pacote foi assinado pela urna. É o que <a href="./assinaturas.html">Integridade dos arquivos</a> mede</td>
+</tr>
+<tr class="odd">
+<td><strong>Cadeia aberta</strong></td>
+<td>Seção UE2013/UE2015 cujo relatório ainda não confrontou o certificado com a AC URNA publicada. Limite da verificação, não indício de alteração</td>
+</tr>
+<tr class="even">
+<td><strong>Cadeia fechada</strong></td>
+<td>Hash ok e o certificado da urna conferido com a AC do modelo. Em UE2020/UE2022, AC embutida (Ed521). Em UE2013/UE2015, AC URNA publicada (ECDSA P-521); a conta não usa a data de validade</td>
+</tr>
+<tr class="odd">
+<td><strong>Certificado da urna</strong></td>
+<td>Certificado dentro do <code>.vsc</code>, com a chave que assina os hashes. O emissor é a AC do modelo</td>
+</tr>
+<tr class="even">
+<td><strong>Consistência</strong></td>
+<td>Os arquivos públicos fecham entre si na mesma chave (RDV, BU, CSV). Não diz quem assinou</td>
+</tr>
+<tr class="odd">
+<td><strong>ECDSA P-521</strong></td>
+<td>Assinatura das urnas UE2013 e UE2015, curva secp521r1. A AC é a AC URNA</td>
+</tr>
+<tr class="even">
+<td><strong>Ed521</strong></td>
+<td>Assinatura das urnas UE2020 e UE2022. A AC correspondente está no código</td>
+</tr>
+<tr class="odd">
+<td><strong>Comparecimento</strong></td>
+<td>Eleitores que compareceram na seção</td>
+</tr>
+<tr class="even">
+<td><strong>Confluência</strong></td>
+<td>Dois ou mais sinais do protocolo na mesma seção. É o nível B</td>
+</tr>
+<tr class="odd">
+<td><strong>Contingência</strong></td>
+<td>Seção presente só num turno (<code>so_1t</code> ou <code>so_2t</code>). Entra como achado A e fica fora da matriz</td>
+</tr>
+<tr class="even">
+<td><strong>CSV oficial</strong></td>
+<td><a href="https://dadosabertos.tse.jus.br/dataset/resultados-2026">Resultados 2026</a>, votação por seção</td>
+</tr>
+<tr class="odd">
+<td><strong>Delta (Δ)</strong></td>
+<td>Diferença 2º menos 1º. Δ margem é a margem do 2º menos a do 1º</td>
+</tr>
+<tr class="even">
+<td><strong>Eliminados</strong></td>
+<td>Votos nominais do 1º turno que não são 13 nem 22, somados numa origem só</td>
+</tr>
+<tr class="odd">
+<td><strong>Flag</strong></td>
+<td>Marca de que a seção caiu na cauda da UF, ou de que só existe num turno</td>
+</tr>
+<tr class="even">
+<td><strong>Fuso (log)</strong></td>
+<td>O relógio do log é a hora local. AC fica cerca de 2 horas atrás de Brasília; AM, MT, MS, RO e RR, cerca de 1 hora</td>
 </tr>
 <tr class="odd">
 <td><strong>Habilitação</strong></td>
-<td>Liberação do eleitor para votar (<code>Eleitor foi habilitado</code>)</td>
+<td>Liberação do eleitor para votar, no log (<code>Eleitor foi habilitado</code>). Não é o voto num candidato</td>
 </tr>
 <tr class="even">
-<td><strong>Sem digital (BU)</strong></td>
-<td><strong>Canônico no painel:</strong> biografia + sem biometria no BU (não é voto em candidato)</td>
+<td><strong>Inferência ecológica</strong></td>
+<td>Estimar uma transição individual a partir de totais de grupo. A premissa aqui é uma matriz comum à unidade</td>
 </tr>
 <tr class="odd">
-<td><strong>Sem digital (log)</strong></td>
-<td>Proxy no log: <code>sem_biometria</code> + <code>manual_falha</code> (ano de nascimento + digital do mesário). Não misturar com o % do BU</td>
+<td><strong><code>join_key</code></strong></td>
+<td><code>UF:municipio:zona:secao</code>. Chave do 1º com o 2º e do BU com o oficial</td>
+</tr>
+<tr class="even">
+<td><strong>Log / logjez</strong></td>
+<td>Eventos da urna. Fonte do horário e do tipo de habilitação</td>
+</tr>
+<tr class="odd">
+<td><strong>lphom</strong></td>
+<td>Programa linear do pacote R <code>lphom</code>, cenário <code>simultaneous</code>. Estimativa pontual da mesma matriz</td>
+</tr>
+<tr class="even">
+<td><strong>Margem</strong></td>
+<td>Votos do 13 menos votos do 22, na seção e no turno</td>
+</tr>
+<tr class="odd">
+<td><strong>Parquet</strong></td>
+<td>Detalhe local em <code>reports/</code>. Não sobe ao GitHub Pages</td>
 </tr>
 <tr class="even">
 <td><strong>Pós-17h</strong></td>
-<td>Habilitações ≥ 17:00 no <strong>horário de Brasília</strong> (relógio local convertido pelo fuso da UF). <strong>ZZ</strong> (exterior): ≥ 17:00 no horário local do posto. Um único helper: <code>urna_logs.fuso.apos_encerramento_oficial</code></td>
+<td>Habilitações a partir das 17:00 no horário de Brasília. No exterior (ZZ), 17:00 no horário local do posto</td>
 </tr>
 <tr class="odd">
-<td><strong>Fuso (log)</strong></td>
-<td>Relógio do log = hora local; AC ≈ UTC−5 (−2h vs BRT), AM/MT/MS/RO/RR ≈ UTC−4 (−1h); demais UTC−3</td>
+<td><strong>Protocolo</strong></td>
+<td>Versão, data e hash dos limiares em <code>urna_logs.thresholds</code></td>
 </tr>
 <tr class="even">
-<td><strong>Abstenção</strong></td>
-<td>Aptos − comparecimento</td>
+<td><strong>RDV</strong></td>
+<td>Registro digital do voto. Sequência sem identificar eleitor; base da recontagem</td>
+</tr>
+<tr class="odd">
+<td><strong>Seção</strong></td>
+<td>Unidade de votação: município + zona + seção</td>
+</tr>
+<tr class="even">
+<td><strong>Sem digital (BU)</strong></td>
+<td>Habilitados por biografia (ano de nascimento) mais quem compareceu sem biometria cadastrada. Não é voto em candidato</td>
+</tr>
+<tr class="odd">
+<td><strong>Sem digital (log)</strong></td>
+<td>Proxy do log: <code>sem_biometria</code> + <code>manual_falha</code>. Não misturar com o percentual do BU</td>
+</tr>
+<tr class="even">
+<td><strong>Transferência</strong></td>
+<td>Matriz estimada do 1º para o 2º turno. A página soma votos, não a média das taxas</td>
+</tr>
+<tr class="odd">
+<td><strong>TSE</strong></td>
+<td>Tribunal Superior Eleitoral. Publica os arquivos abertos</td>
+</tr>
+<tr class="even">
+<td><strong>UF</strong></td>
+<td>Unidade da Federação. ZZ é o exterior</td>
 </tr>
 <tr class="odd">
 <td><strong>Votável</strong></td>
-<td>Código no CSV oficial; branco=<code>95</code>, nulo=<code>96</code></td>
+<td>Código no CSV oficial. Branco = <code>95</code>, nulo = <code>96</code></td>
 </tr>
 <tr class="even">
-<td><strong><code>join_key</code></strong></td>
-<td><code>UF:municipio:zona:secao</code> — chave 1º×2º e BU×oficial</td>
+<td><strong>Votos válidos</strong></td>
+<td>No 1º turno, 13 + 22 + eliminados. No 2º, 13 + 22. Branco, nulo e abstenção ficam fora desse percentual</td>
 </tr>
 <tr class="odd">
-<td><strong>CSV oficial</strong></td>
-<td><a href="https://dadosabertos.tse.jus.br/dataset/resultados-2026">Resultados 2026</a> (ex.: presidente por seção)</td>
-</tr>
-<tr class="even">
-<td><strong>Parquet</strong></td>
-<td>Detalhe local da auditoria (não sobe ao GitHub Pages)</td>
-</tr>
-<tr class="odd">
-<td><strong>Duncan–Davis</strong></td>
-<td>Limites factíveis de uma célula numa tabela de contingência agregada</td>
-</tr>
-<tr class="even">
-<td><strong>Fluxo ecológico</strong></td>
-<td>Estimativa de taxas origem→destino 1º→2º sem microdados de eleitor (evidência <strong>C</strong>)</td>
-</tr>
-<tr class="odd">
-<td><strong>Achado A/B/C</strong></td>
-<td>Classificação de evidência da auditoria (<code>urna-logs achados</code>)</td>
-</tr>
-<tr class="even">
-<td><strong>Protocolo</strong></td>
-<td>Versão dos limiares/regras em <code>urna_logs.thresholds</code></td>
+<td><strong><code>.vsc</code></strong></td>
+<td>Arquivo <code>-vota.vsc</code>. Guarda o hash SHA-512 de <code>bu</code>, <code>rdv</code> e <code>log</code>, o certificado da urna e a assinatura de hardware</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="publicação" class="level2">
-<h2 class="anchored" data-anchor-id="publicação">Publicação</h2>
-<p>GitHub Actions (<code>.github/workflows/quarto-publish.yml</code>) → branch <code>gh-pages</code>.<br>
-README do repositório: <a href="https://github.com/mclaguiar/urna-logs-2026">github.com/mclaguiar/urna-logs-2026</a>.</p>
+<section id="dados-deste-site" class="level2">
+<h2 class="anchored" data-anchor-id="dados-deste-site">Dados deste site</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Arquivo</th>
+<th>Conteúdo</th>
+<th>Download</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>site/data/painel_uf.csv</code></td>
+<td>Indicadores por UF, 1º e 2º turno</td>
+<td><a href="data/painel_uf.csv">painel_uf.csv</a></td>
+</tr>
+<tr class="even">
+<td><code>site/data/curva_horaria.csv</code></td>
+<td>Habilitações por hora, UF e turno</td>
+<td><a href="data/curva_horaria.csv">curva_horaria.csv</a></td>
+</tr>
+<tr class="odd">
+<td><code>site/data/outliers_sem_digital.csv</code></td>
+<td>Seções no topo de % sem digital</td>
+<td><a href="data/outliers_sem_digital.csv">outliers_sem_digital.csv</a></td>
+</tr>
+<tr class="even">
+<td><code>site/data/anomalias_secao.csv</code></td>
+<td>Seções do comparativo</td>
+<td><a href="data/anomalias_secao.csv">anomalias_secao.csv</a></td>
+</tr>
+<tr class="odd">
+<td><code>site/data/achados_ab.csv</code></td>
+<td>Fichas A e B</td>
+<td><a href="data/achados_ab.csv">achados_ab.csv</a></td>
+</tr>
+<tr class="even">
+<td><code>site/data/protocolo.csv</code></td>
+<td>Limiares lidos no build</td>
+<td><a href="data/protocolo.csv">protocolo.csv</a></td>
+</tr>
+<tr class="odd">
+<td><code>site/data/hw_cadeia.csv</code></td>
+<td>Seções verificadas por UF e turno: hash, cadeia e modelo</td>
+<td><a href="data/hw_cadeia.csv">hw_cadeia.csv</a></td>
+</tr>
+<tr class="even">
+<td><code>site/data/hw_cobertura.csv</code></td>
+<td>Seções verificadas em cada UF e turno, inclusive zero</td>
+<td><a href="data/hw_cobertura.csv">hw_cobertura.csv</a></td>
+</tr>
+<tr class="odd">
+<td><code>site/data/secao/hw_{UF}.csv</code></td>
+<td>Selo da seção: modelo, cadeia e hash</td>
+<td><a href="data/secao/hw_AC.csv">exemplo AC</a></td>
+</tr>
+<tr class="even">
+<td><code>site/data/migracao/fluxo.csv</code></td>
+<td>Votos transferidos por UF e no Brasil</td>
+<td><a href="data/migracao/fluxo.csv">fluxo.csv</a></td>
+</tr>
+<tr class="odd">
+<td><code>site/data/migracao/turnos.csv</code></td>
+<td>Totais publicados por UF, turno e grupo</td>
+<td><a href="data/migracao/turnos.csv">turnos.csv</a></td>
+</tr>
+<tr class="even">
+<td><code>site/data/migracao/matriz.csv</code></td>
+<td>Taxas por cidade e do estado, nos dois modelos</td>
+<td><a href="data/migracao/matriz.csv">matriz.csv</a></td>
+</tr>
+<tr class="odd">
+<td><code>site/data/migracao/conferencia.csv</code></td>
+<td>BU × CSV oficial, por grupo</td>
+<td><a href="data/migracao/conferencia.csv">conferencia.csv</a></td>
+</tr>
+<tr class="even">
+<td><code>site/data/migracao/cobertura.csv</code></td>
+<td>Quantas UFs têm matriz</td>
+<td><a href="data/migracao/cobertura.csv">cobertura.csv</a></td>
+</tr>
+<tr class="odd">
+<td><code>site/data/secao/votos_{UF}.csv</code></td>
+<td>Consulta da seção. Um arquivo por UF</td>
+<td><a href="data/secao/votos_AC.csv">exemplo AC</a></td>
+</tr>
+<tr class="even">
+<td><code>site/data/secao/municipios.csv</code></td>
+<td>Código e nome do município</td>
+<td><a href="data/secao/municipios.csv">municipios.csv</a></td>
+</tr>
+<tr class="odd">
+<td><code>site/data/secao/rotulos.csv</code></td>
+<td>Código votável e nome</td>
+<td><a href="data/secao/rotulos.csv">rotulos.csv</a></td>
+</tr>
+</tbody>
+</table>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Dicionário de colunas
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p><strong>painel_uf.csv.</strong> <code>uf</code>. <code>secoes_1t</code>, <code>secoes_2t</code>. <code>pct_sem_digital_1t</code>, <code>pct_sem_digital_2t</code>, <code>delta_pct_sem_digital</code>. <code>delta_abstencao_pp</code>, <code>delta_comparecimento</code>. <code>pct_apos_17h_1t</code>, <code>pct_apos_17h_2t</code>, <code>hora_pico_1t</code>. <code>pct_secoes_ok_oficial_1t</code>, <code>secoes_divergentes_1t</code>. <code>n_flag_margem</code>. <code>achados_A</code>, <code>achados_B</code>, <code>achados_C</code>. <code>protocolo_versao</code>. Colunas <code>p_elim_*</code> e <code>fluxo_*</code> são de uma estimativa antiga de independência. A migração do site não usa essas colunas.</p>
+<p><strong>curva_horaria.csv.</strong> <code>uf</code>, <code>turno</code>, <code>hora</code>, <code>habilitacoes</code>, <code>pct</code>, <code>hora_brasilia</code>, <code>after_17h</code>. Por tipo: <code>hab_biometrica</code>, <code>hab_manual</code>, <code>hab_sem_biometria</code>, <code>hab_desconhecido</code>, e o percentual de cada uma.</p>
+<p><strong>outliers_sem_digital.csv.</strong> <code>uf</code>, <code>join_key</code>, <code>municipio</code>, <code>zona</code>, <code>secao</code>, <code>bu_comparecimento</code>, <code>pct_abstencao</code>, <code>pct_sem_digital</code>, <code>delta_abstencao</code>, <code>delta_margem</code>, <code>flags</code>, <code>nome</code>, <code>turno</code>.</p>
+<p><strong>anomalias_secao.csv.</strong> <code>uf</code>, <code>join_key</code>, <code>municipio</code>, <code>zona</code>, <code>secao</code>, <code>pct_sem_digital_1t</code>, <code>delta_margem</code>, <code>delta_abstencao</code>, <code>pct_apos_17h_2t</code>, <code>flags</code>.</p>
+<p><strong>achados_ab.csv.</strong> <code>uf</code>, <code>join_key</code>, <code>municipio</code>, <code>zona</code>, <code>secao</code>, <code>nivel</code>, <code>nivel_desc</code>, <code>codigos</code>, <code>conclusao_permitida</code>, <code>status</code>, <code>delta_margem</code>, <code>delta_abstencao</code>, <code>pct_sem_digital_1t</code>, <code>pct_apos_17h_2t</code>, <code>flags_comparar</code>, <code>protocolo_versao</code>, <code>pkg_version</code>.</p>
+<p><strong>fluxo.csv.</strong> <code>uf</code> (<code>BR</code> é o país), <code>modelo</code> (<code>brown_payne</code> ou <code>lphom</code>), <code>origem</code>, <code>destino</code>, <code>votos</code>, <code>taxa</code>, <code>taxa_lo</code>, <code>taxa_hi</code>. O intervalo só vem preenchido em parte das células de Brown e Payne. A página de migração não o exibe.</p>
+<p><strong>turnos.csv.</strong> <code>uf</code>, <code>turno</code>, <code>grupo</code> (<code>13</code>, <code>22</code>, <code>eliminados</code>, <code>branco</code>, <code>nulo</code>, <code>abstencao</code>), <code>votos</code> do boletim.</p>
+<p><strong>matriz.csv.</strong> <code>uf</code>, <code>municipio</code> (<code>0</code> é a matriz do estado), <code>modelo</code>, <code>origem</code>, <code>destino</code>, <code>taxa</code>, <code>taxa_lo</code>, <code>taxa_hi</code>.</p>
+<p><strong>conferencia.csv.</strong> <code>uf</code>, <code>turno</code>, <code>grupo</code>, <code>votos_bu</code>, <code>votos_oficial</code>. A abstenção não entra neste arquivo.</p>
+<p><strong>cobertura.csv.</strong> <code>presentes</code>, <code>faltam</code>, <code>n_presentes</code>, <code>n_ufs</code>.</p>
+<p><strong>hw_cadeia.csv.</strong> <code>uf</code>, <code>turno</code>, <code>secoes</code>, <code>hash_ok</code>, <code>hash_falhou</code>, <code>cadeia_fechada</code>, <code>cadeia_aberta</code>, <code>fora</code>, <code>n_ue2013</code>, <code>n_ue2015</code>, <code>n_ue2020</code>, <code>n_ue2022</code>, <code>verificador</code> (<code>novo</code> ou <code>anterior</code>), <code>bloco</code> (<code>novo</code>, <code>pre_ac</code> ou <code>anterior</code>). Sem votos.</p>
+<p><strong>hw_cobertura.csv.</strong> <code>uf</code>, <code>turno</code>, <code>secoes</code>, <code>bloco</code>. Uma linha por UF e turno, inclusive quando a contagem é zero.</p>
+<p><strong>hw_{UF}.csv.</strong> <code>municipio</code>, <code>zona</code>, <code>secao</code>, <code>turno</code>, <code>modelo</code>, <code>cadeia</code> (<code>fechada</code>, <code>aberta</code>, <code>falha</code> ou <code>nao_reprocessada</code>), <code>hash</code> (<code>ok</code> ou <code>falhou</code>).</p>
+<p><strong>votos_{UF}.csv.</strong> <code>municipio</code>, <code>zona</code>, <code>secao</code>. <code>t1</code> e <code>t2</code>: pares código=votos. <code>dif</code>: alguma diferença RDV×BU na seção. <code>a1</code> e <code>a2</code>: abstenção. <code>aptos_1t</code>, <code>aptos_2t</code>, <code>comparecimento_1t</code>, <code>comparecimento_2t</code>. <code>pct_sem_digital_1t</code>, <code>pct_sem_digital_2t</code>, <code>pct_apos_17h_1t</code>, <code>pct_apos_17h_2t</code>. <code>status</code>, <code>flags</code>, <code>nivel</code>, <code>codigos</code>, <code>conclusao_permitida</code> (texto só em A e B). <code>ndiv</code> e <code>det</code>: votáveis em que RDV≠BU ou BU≠oficial.</p>
+<p><strong>municipios.csv.</strong> <code>uf</code>, <code>municipio</code>, <code>nome</code>.</p>
+<p><strong>rotulos.csv.</strong> <code>votavel</code>, <code>nome_votavel</code>.</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Nota</span>Reproduzir
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-2" class="callout-2-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Os comandos abaixo refazem os relatórios e o site. O passo a passo completo está no <a href="https://github.com/mclaguiar/urna-logs-2026/blob/main/README.md">README</a>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> download <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span> <span class="at">--turno</span> 1</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> audit <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span> <span class="at">--turno</span> 1</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> cruzar-oficial <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span> <span class="at">--turno</span> 1</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> horario <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span> <span class="at">--turno</span> 1 <span class="at">--por-secao</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> download <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span> <span class="at">--turno</span> 2</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> audit <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span> <span class="at">--turno</span> 2</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> cruzar-oficial <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span> <span class="at">--turno</span> 2</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> horario <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span> <span class="at">--turno</span> 2 <span class="at">--por-secao</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> comparar-turnos <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> achados <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> transferencia <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="ex">urna-logs</span> verificar-vsc <span class="at">--ufs</span> <span class="st">"AC RR AP ZZ"</span> <span class="at">--turno</span> 1</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p>O detalhe por seção fica em Parquet, em <code>reports/</code> (<code>audit_presidente_*</code>, <code>cruzar_oficial_*</code>, <code>horario_*</code>, <code>comparar_turnos_*</code>, <code>achados_*</code>, <code>transferencia_*</code>, <code>verificar_vsc_*</code>). Esse detalhe não entra no site. O site lê CSV.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/build_site_data.py</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render site</span></code></pre></div><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>build_site_data.py protocolo</code> regrava só <code>site/data/protocolo.csv</code>. <code>build_site_data.py migracao</code> regrava só os CSV da migração. <code>build_site_data.py hw</code> regrava <code>hw_cadeia.csv</code>, <code>hw_cobertura.csv</code> e <code>secao/hw_{UF}.csv</code> a partir dos <code>verificar_vsc_*_*t.csv</code> já gravados.</p>
+<p>A publicação é o GitHub Actions em <code>.github/workflows/quarto-publish.yml</code>, na branch <code>gh-pages</code>.</p>
+</div>
+</div>
+</div>
 
 
 </section>
 
 </main> <!-- /main -->
+<script type="ojs-module-contents">
+eyJjb250ZW50cyI6W3sibWV0aG9kTmFtZSI6ImludGVycHJldCIsImNlbGxOYW1lIjoib2pzLWNlbGwtMSIsImlubGluZSI6ZmFsc2UsInNvdXJjZSI6InByb3RvID0gRmlsZUF0dGFjaG1lbnQoXCJkYXRhL3Byb3RvY29sby5jc3ZcIikuY3N2KHt0eXBlZDogZmFsc2V9KVxudiA9IChjaGF2ZSkgPT4ge1xuICBjb25zdCByb3cgPSBwcm90by5maW5kKChkKSA9PiBkLmNoYXZlID09PSBjaGF2ZSk7XG4gIHJldHVybiByb3cgPyBTdHJpbmcocm93LnZhbG9yKSA6IFwiXCI7XG59XG5tZGBFeHRyYcOnw6NvIHVzYWRhIG5lc3RlIHNpdGU6IHByb3RvY29sbyBkZSBsaW1pYXJlcyAqKiR7dihcInByb3RvY29sb192ZXJzYW9cIil9KiosIHBhY290ZSBcXGAke3YoXCJwa2dfdmVyc2lvblwiKX1cXGAuIEhhc2ggU0hBLTI1NiBkbyByZWdpc3RybyBkb3MgbGltaWFyZXM6IFxcYCR7dihcImhhc2hfc2hhMjU2XCIpfVxcYC5gXG4ifSx7Im1ldGhvZE5hbWUiOiJpbnRlcnByZXQiLCJjZWxsTmFtZSI6Im9qcy1jZWxsLTIiLCJpbmxpbmUiOmZhbHNlLCJzb3VyY2UiOiJwY3QgPSAoY2hhdmUpID0+IHtcbiAgY29uc3QgbiA9IE51bWJlcih2KGNoYXZlKSk7XG4gIHJldHVybiBOdW1iZXIuaXNGaW5pdGUobikgPyBuLnRvTG9jYWxlU3RyaW5nKFwicHQtQlJcIiwgeyBzdHlsZTogXCJwZXJjZW50XCIsIG1heGltdW1GcmFjdGlvbkRpZ2l0czogMCB9KSA6IHYoY2hhdmUpO1xufVxuY2F1ZGEgPSAoY2hhdmUpID0+IHtcbiAgY29uc3QgbiA9IE51bWJlcih2KGNoYXZlKSk7XG4gIHJldHVybiBOdW1iZXIuaXNGaW5pdGUobikgPyAoKDEgLSBuKSAqIDEwMCkudG9Mb2NhbGVTdHJpbmcoXCJwdC1CUlwiLCB7IG1heGltdW1GcmFjdGlvbkRpZ2l0czogMCB9KSArIFwiJVwiIDogXCJcIjtcbn1cbmh0bWxgPHRhYmxlIGNsYXNzPVwidGFibGUgdGFibGUtc21cIj5cbiAgPHRoZWFkPjx0cj48dGg+RmxhZzwvdGg+PHRoPk8gcXVlIG1hcmNhPC90aD48dGg+UGVyY2VudGlsPC90aD48dGg+Q2F1ZGEsIHBvciBjb25zdHJ1w6fDo288L3RoPjwvdHI+PC90aGVhZD5cbiAgPHRib2R5PlxuICAgIDx0cj48dGQ+PGNvZGU+ZmxhZ19tYXJnZW08L2NvZGU+PC90ZD48dGQ+fM6UIG1hcmdlbXw8L3RkPjx0ZD4ke3BjdChcInBfZmxhZ19tYXJnZW1cIil9PC90ZD48dGQ+Y2VyY2EgZGUgJHtjYXVkYShcInBfZmxhZ19tYXJnZW1cIil9IGRhcyBzZcOnw7VlcyBkYSBVRjwvdGQ+PC90cj5cbiAgICA8dHI+PHRkPjxjb2RlPmZsYWdfYWJzdGVuY2FvPC9jb2RlPjwvdGQ+PHRkPnzOlCBhYnN0ZW7Dp8Ojb3w8L3RkPjx0ZD4ke3BjdChcInBfZmxhZ19hYnN0XCIpfTwvdGQ+PHRkPmNlcmNhIGRlICR7Y2F1ZGEoXCJwX2ZsYWdfYWJzdFwiKX0gZGFzIHNlw6fDtWVzIGRhIFVGPC90ZD48L3RyPlxuICAgIDx0cj48dGQ+PGNvZGU+ZmxhZ19wb3MxNzwvY29kZT48L3RkPjx0ZD4lIGRlIGhhYmlsaXRhw6fDtWVzIGFww7NzIGFzIDE3aCBubyAywrogdHVybm8sIG91IHzOlHwgZGVzc2EgZmF0aWE8L3RkPjx0ZD4ke3BjdChcInBfZmxhZ19wb3MxN1wiKX08L3RkPjx0ZD5jZXJjYSBkZSAke2NhdWRhKFwicF9mbGFnX3BvczE3XCIpfSBkYXMgc2XDp8O1ZXMgZGEgVUY8L3RkPjwvdHI+XG4gICAgPHRyPjx0ZD48Y29kZT5mbGFnX3NlbV9kaWdpdGFsX3hfbWFyZ2VtPC9jb2RlPjwvdGQ+PHRkPiUgc2VtIGRpZ2l0YWwgZG8gMcK6IHR1cm5vIGUsIGFvIG1lc21vIHRlbXBvLCB8zpQgbWFyZ2VtfCBubyBleHRyZW1vPC90ZD48dGQ+c2VtIGRpZ2l0YWwgJHtwY3QoXCJwX2ZsYWdfc2VtX2RpZ1wiKX07IG1hcmdlbSAke3BjdChcInBfZmxhZ19tYXJnZW1cIil9PC90ZD48dGQ+aW50ZXJzZcOnw6NvLCBtZW5vciBxdWUgY2FkYSBjYXVkYTwvdGQ+PC90cj5cbiAgICA8dHI+PHRkPjxjb2RlPmZsYWdfc29fdHVybm88L2NvZGU+PC90ZD48dGQ+c2XDp8OjbyBzw7Mgbm8gMcK6IG91IHPDsyBubyAywrogdHVybm88L3RkPjx0ZD5uw6NvIMOpIHBlcmNlbnRpbDwvdGQ+PHRkPmVudHJhIGNvbW8gYWNoYWRvIEE8L3RkPjwvdHI+XG4gIDwvdGJvZHk+XG48L3RhYmxlPlxuPHA+Q29uZmx1w6puY2lhIChuw612ZWwgQik6IHBlbG8gbWVub3MgPHN0cm9uZz4ke3YoXCJjb25mbHVlbmNpYV9taW5cIil9PC9zdHJvbmc+IGRlc3RhcyBmbGFncyBuYSBtZXNtYSBzZcOnw6NvOiA8Y29kZT4ke3YoXCJjb25mbHVlbmNpYV9mbGFnc1wiKX08L2NvZGU+LjwvcD5cbjxwPiR7dihcInByb3RvY29sb19ub3RhXCIpfTwvcD5gXG4ifSx7Im1ldGhvZE5hbWUiOiJpbnRlcnByZXQiLCJjZWxsTmFtZSI6Im9qcy1jZWxsLTMiLCJpbmxpbmUiOmZhbHNlLCJzb3VyY2UiOiJodG1sYDxwPk3DrW5pbW8gcGFyYSBhIGNpZGFkZSB0ZXIgbWF0cml6IHByw7NwcmlhOiA8c3Ryb25nPiR7dihcIm1pbl9zZWNvZXNcIil9PC9zdHJvbmc+IHNlw6fDtWVzLiBUZXRvIGRlIGxpbmhhcyBkbyBscGhvbTogPHN0cm9uZz4ke051bWJlcih2KFwibWF4X2xpbmhhc19scGhvbVwiKSkudG9Mb2NhbGVTdHJpbmcoXCJwdC1CUlwiKX08L3N0cm9uZz4uPC9wPmBcbiJ9XX0=
+</script>
+<script type="module">
+if (window.location.protocol === "file:") { alert("The OJS runtime does not work with file:// URLs. Please use a web server to view this document."); }
+window._ojs.paths.runtimeToDoc = "../..";
+window._ojs.paths.runtimeToRoot = "../..";
+window._ojs.paths.docToRoot = "";
+window._ojs.selfContained = false;
+window._ojs.runtime.interpretFromScriptTags();
+</script>
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";

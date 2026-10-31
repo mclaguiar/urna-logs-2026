@@ -1,11 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://mclaguiar.github.io/urna-logs-2026/auditoria.html</loc>
+    <lastmod>2026-10-31T13:05:50.713Z</lastmod>
+  </url>
+  <url>
     <loc>https://mclaguiar.github.io/urna-logs-2026/index.html</loc>
-    <lastmod>2026-10-30T16:16:38.689Z</lastmod>
+    <lastmod>2026-10-31T13:05:51.050Z</lastmod>
+  </url>
+  <url>
+    <loc>https://mclaguiar.github.io/urna-logs-2026/migracao.html</loc>
+    <lastmod>2026-10-31T13:05:51.050Z</lastmod>
+  </url>
+  <url>
+    <loc>https://mclaguiar.github.io/urna-logs-2026/secao.html</loc>
+    <lastmod>2026-10-31T13:05:51.050Z</lastmod>
   </url>
   <url>
     <loc>https://mclaguiar.github.io/urna-logs-2026/metodo.html</loc>
-    <lastmod>2026-10-30T16:16:38.689Z</lastmod>
+    <lastmod>2026-10-31T13:05:51.050Z</lastmod>
+  </url>
+  <url>
+    <loc>https://mclaguiar.github.io/urna-logs-2026/assinaturas.html</loc>
+    <lastmod>2026-10-31T13:05:50.713Z</lastmod>
   </url>
 </urlset>
