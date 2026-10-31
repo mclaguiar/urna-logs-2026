@@ -630,12 +630,15 @@ fluxoCidade = (taxas) => {
     margin: {l: 8, r: 8, t: 8, b: 8},
     height: 460
   }, {displayModeBar: false, responsive: true})
+  const encaixa = () => { if (div.isConnected && div.clientWidth) Plotly.Plots.resize(div) }
+  if (window.ResizeObserver) new ResizeObserver(encaixa).observe(div)
   return div
 }
 ```
 
 ```{ojs}
 //| echo: false
+//| output: false
 esperado = (taxas, o, dk) => VIS_O.reduce((s, ok) => s + (celulaAplicada(taxas, o, ok, dk) || 0), 0)
 obsTotal = VIS_D.reduce((s, dk) => s + votosVis(margemConjunto.d, dk), 0)
 estTotal = (taxas) => VIS_D.reduce((s, dk) => s + esperado(taxas, margemConjunto.o, dk), 0)
@@ -698,6 +701,11 @@ raizMatriz = html`<details>
   <div data-painel="lp" hidden>${fluxoCidade(lpMapa)}${tabelaModelo(lpMapa, "lphom")}</div>
   <div data-painel="dif" hidden>${tabelaDif()}</div>
 </details>`
+```
+
+```{ojs}
+//| echo: false
+//| output: false
 redesenhaFluxo = () => {
   for (const el of raizMatriz.querySelectorAll(".js-plotly-plot")) Plotly.Plots.resize(el)
 }
@@ -712,6 +720,10 @@ raizMatriz.querySelector(".abas-matriz").onclick = (ev) => {
   for (const b of raizMatriz.querySelectorAll(".abas-matriz button")) b.classList.toggle("ativa", b.dataset.aba === aba)
   redesenhaFluxo()
 }
+```
+
+```{ojs}
+//| echo: false
 html`<h2>Migração ${instavel ? html`<span class="selo" title="${motivos.join(". ")}">estimativa instável</span>` : ""}</h2>
 <p>A seção não tem matriz própria. O esperado é a matriz ${bpMapa.propria ? "da cidade" : "do estado"} aplicada aos votos do 1º turno deste conjunto. O observado é o boletim do 2º turno do mesmo conjunto.</p>
 ${notaFora ? html`<p>${notaFora.toLocaleString("pt-BR")} seções sem abstenção nos dois turnos ficam de fora.</p>` : ""}

@@ -387,6 +387,8 @@ sankey = (uf, modelo) => {
     margin: {l: 8, r: 8, t: 12, b: 8},
     height: 520
   }, {displayModeBar: false, responsive: true})
+  const encaixa = () => { if (div.isConnected && div.clientWidth) Plotly.Plots.resize(div) }
+  if (window.ResizeObserver) new ResizeObserver(encaixa).observe(div)
   return div
 }
 heatmapTaxa = (uf, modelo) => {

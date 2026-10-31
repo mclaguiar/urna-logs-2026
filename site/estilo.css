@@ -1,7 +1,12 @@
 .observablehq svg,
 .js-plotly-plot,
-.plotly {
+.plotly,
+.js-plotly-plot .plot-container,
+.js-plotly-plot .svg-container {
   max-width: 100%;
+}
+.js-plotly-plot {
+  width: 100%;
 }
 .observablehq svg {
   height: auto;

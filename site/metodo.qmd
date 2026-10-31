@@ -90,7 +90,7 @@ html`<table class="table table-sm">
 
 ## Transferência 1º→2º
 
-Sem o voto de cada pessoa, a matriz de origem e destino da seção não tem uma solução só. A estimativa usada é a `transferencia`: uma matriz comum às seções da unidade. A página [Migração dos Votos](migracao.qmd) mostra essa matriz em votos, somados até a UF e o Brasil.
+Sem o voto de cada pessoa, a matriz de origem e destino da seção não tem uma solução só. A estimativa usada é a `transferencia`: uma matriz comum às seções da unidade. A página [Migração dos votos](migracao.qmd) mostra essa matriz em votos, somados até a UF e o Brasil.
 
 **Brown e Payne** (1986, *Aggregate data, ecological regression, and voting transitions*, JASA) é inferência ecológica: uma matriz de transição a partir das margens da seção. Nesta auditoria a conta é mínimos quadrados nas contagens, com cada linha somando 1 (softmax) e várias partidas. Não é o IGLS com efeito aleatório do artigo, nem um modelo multinomial-Dirichlet.
 
