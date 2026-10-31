@@ -1,0 +1,46 @@
+.observablehq svg,
+.js-plotly-plot,
+.plotly,
+.js-plotly-plot .plot-container,
+.js-plotly-plot .svg-container {
+  max-width: 100%;
+}
+.js-plotly-plot {
+  width: 100%;
+}
+.observablehq svg {
+  height: auto;
+  font-size: 12px;
+}
+.chave,
+td.chave,
+th.chave {
+  white-space: nowrap;
+}
+.tabela-mig {
+  overflow-x: auto;
+}
+.tabela-mig th:first-child,
+.tabela-mig td:first-child {
+  position: sticky;
+  left: 0;
+  background: #fff;
+  z-index: 1;
+  text-align: left;
+}
+.tabela-mig thead th {
+  white-space: normal;
+  line-height: 1.15;
+  vertical-align: bottom;
+}
+.tabela-hw th,
+.tabela-hw td {
+  text-align: left;
+  vertical-align: top;
+}
+.caminho {
+  word-break: break-all;
+}
+.observablehq table th {
+  text-align: left;
+}
