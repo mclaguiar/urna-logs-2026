@@ -339,13 +339,13 @@ def verificar_vsc_cmd(
         "--nivel",
         min=0,
         max=2,
-        help="Omitir: hashes e Ed521. 0=cobertura · 1=só hashes · 2=só Ed521",
+        help="Omitir: hashes e assinatura HW. 0=cobertura · 1=só hashes · 2=só assinatura HW",
     ),
     limit: Optional[int] = typer.Option(
         None, "--limit", help="Só os N primeiros stems (piloto)"
     ),
 ) -> None:
-    """Valida `-vota.vsc`. Sem `--nivel`, confere hashes e Ed521."""
+    """Valida `-vota.vsc`. Sem `--nivel`, confere hashes e assinatura HW."""
     uf_list = _parse_ufs(ufs)
     pedido = "níveis 1+2" if nivel is None else f"nível {nivel}"
     console.print(

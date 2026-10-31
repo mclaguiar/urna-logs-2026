@@ -1,12 +1,19 @@
-"""Assinatura de hardware do `-vota.vsc` (Ed521, UE2020/UE2022).
+"""Assinatura de hardware do `-vota.vsc`.
 
-O certificado embutido é conferido com a AC publicada (UE2020 ou UE2022).
-Cada hash do `.vsc` e a autoassinatura são conferidos com a chave desse
-certificado. A mensagem assinada é SHA-512 do hash já gravado no arquivo,
-como nos scripts públicos do formato da urna. Não valida a chave de software
-da cerimônia.
+O par declarado em `origemAssinaturaHW` escolhe o verificador. Não há segunda
+tentativa se o certificado for de outro algoritmo.
 
-ECPy com a curva Ed521 é dependência opcional (`pip install -e ".[hw]"`).
+- UE2020/UE2022 e `eddsa`: Ed521, certificado conferido com a AC UE2020 ou UE2022.
+- UE2013/UE2015 e `ecdsa`: ECDSA P-521. A assinatura dos arquivos é conferida
+  com a chave do certificado. A cadeia só fecha quando a AC URNA estiver
+  fixada em `_AC_ECDSA_B64`; até lá o resultado é cadeia pendente.
+
+A mensagem assinada dos arquivos é SHA-512 do hash já gravado no arquivo.
+No ECDSA esse digest entra direto na verificação. A assinatura do certificado
+ECDSA, quando a AC está fixada, é SHA-512 do TBS. Não valida a chave de
+software da cerimônia.
+
+ECPy é dependência opcional (`pip install -e ".[hw]"`).
 """
 
 from __future__ import annotations
@@ -16,7 +23,19 @@ import hashlib
 from functools import lru_cache
 
 _OID_ED521 = "1.3.6.1.4.1.44588.2.1"
+_OID_EC_PUBLIC = "1.2.840.10045.2.1"
+_OID_SECP521R1 = "1.3.132.0.35"
+_OID_ECDSA_SHA512 = "1.2.840.10045.4.3.4"
 _OID_CN = "2.5.4.3"
+_CN_AC_URNA = "AC URNA"
+
+# modeloEquipamento, algoritmoAssinatura → caminho. Fora daqui é inconsistência.
+_CAMINHOS = {
+    (13, 2): "ecdsa",
+    (15, 2): "ecdsa",
+    (20, 4): "eddsa",
+    (22, 4): "eddsa",
+}
 
 # Certificados públicos da AC da urna (dpc.acue2020.tse.jus.br), usados só
 # para conferir o emissor do certificado embutido no `.vsc`.
@@ -64,6 +83,11 @@ _EMISSORES_B64 = {
     "AC UE2020": _AC_UE2020_B64,
     "AC UE2022": _AC_UE2022_B64,
 }
+
+# Certificado público da AC URNA (ECDSA P-521). Vazio até a chave publicada
+# ser fixada no mesmo formato das AC UE2020/UE2022. Sem ela, o ECDSA confere
+# a chave do certificado da urna e a cadeia fica pendente.
+_AC_ECDSA_B64: dict[str, str] = {}
 
 
 def _b(data) -> bytes:
@@ -142,11 +166,16 @@ def _common_name(name_content: bytes) -> str:
     return ""
 
 
-def _chave_spki(spki: bytes):
+def _chave_spki(spki: bytes) -> tuple[str, str, bytes]:
+    """OID do algoritmo, OID da curva (vazio se o campo não traz) e ponto."""
     partes = list(_der_items(spki))
-    oid = _alg_oid(partes[0][1])
+    alg_items = list(_der_items(partes[0][1]))
+    oid = _oid_str(alg_items[0][1])
+    curva = ""
+    if len(alg_items) > 1 and alg_items[1][0] == 0x06:
+        curva = _oid_str(alg_items[1][1])
     ponto = partes[1][1][1:]
-    return oid, ponto
+    return oid, curva, ponto
 
 
 def _eddsa():
@@ -163,6 +192,20 @@ def _chave_ed521(ponto: bytes):
     return ECPublicKey(curva.decode_point(ponto))
 
 
+def _chave_p521(ponto: bytes):
+    from ecpy.curves import Curve
+    from ecpy.keys import ECPublicKey
+
+    curva = Curve.get_curve("secp521r1")
+    return ECPublicKey(curva.decode_point(ponto))
+
+
+def _ecdsa():
+    from ecpy.ecdsa import ECDSA
+
+    return ECDSA(fmt="DER")
+
+
 def conferir_ed521(mensagem: bytes, assinatura: bytes, ponto: bytes) -> bool:
     """Confere uma assinatura Ed521. `mensagem` já é o bloco assinado."""
     try:
@@ -172,36 +215,70 @@ def conferir_ed521(mensagem: bytes, assinatura: bytes, ponto: bytes) -> bool:
         return False
 
 
+def conferir_ecdsa(digest: bytes, assinatura: bytes, ponto: bytes) -> bool:
+    """Confere ECDSA P-521. `digest` já é o SHA-512 que a assinatura cobre."""
+    try:
+        chave = _chave_p521(ponto)
+        return bool(_ecdsa().verify(_b(digest), _b(assinatura), chave))
+    except Exception:
+        return False
+
+
 @lru_cache(maxsize=4)
 def _chave_emissora(nome: str):
     der = base64.b64decode("".join(_EMISSORES_B64[nome].split()))
     _, _, _, _, spki = _cert_partes(der)
-    oid, ponto = _chave_spki(spki)
+    oid, _curva, ponto = _chave_spki(spki)
     if oid != _OID_ED521:
         raise ValueError(f"emissor {nome} não é Ed521 ({oid})")
     return _chave_ed521(ponto)
+
+
+@lru_cache(maxsize=2)
+def _chave_ac_ecdsa(blob: str):
+    der = base64.b64decode("".join(blob.split()))
+    _, _, _, _, spki = _cert_partes(der)
+    oid, curva, ponto = _chave_spki(spki)
+    if oid != _OID_EC_PUBLIC or curva != _OID_SECP521R1:
+        raise ValueError(f"AC URNA não é ECDSA P-521 ({oid}, {curva or 'sem curva'})")
+    return _chave_p521(ponto)
 
 
 def _mensagem(hash_arquivo: bytes) -> bytes:
     return hashlib.sha512(_b(hash_arquivo)).digest()
 
 
-def verificar_hw(ent: dict, arquivos: list[dict]) -> tuple[bool, str]:
-    """Confere certificado, autoassinatura e cada hash assinado no HW."""
-    info = ent["assinaturaHW"]["informacaoChave"]
-    if not (isinstance(info, tuple) and info[0] == "certificadoDigital"):
-        return False, "sem certificadoDigital HW"
+def _par_declarado(ent: dict) -> tuple[str | None, str]:
+    origem = ent.get("origemAssinaturaHW") or {}
+    modelo = origem.get("modeloEquipamento")
+    alg = origem.get("algoritmoAssinatura")
     try:
-        der = _pem_to_der(info[1])
-        tbs, sig_alg, assinatura_cert, emissor, spki = _cert_partes(der)
-        oid, ponto = _chave_spki(spki)
-    except Exception as exc:
-        return False, f"certificado HW ilegível: {exc}"
-    if oid != _OID_ED521 or _alg_oid(sig_alg) != _OID_ED521:
-        return False, f"algoritmo do certificado não é Ed521 ({oid})"
+        par = (int(modelo), int(alg))
+    except (TypeError, ValueError):
+        return None, f"par modelo/algoritmo fora da tabela ({modelo}/{alg})"
+    caminho = _CAMINHOS.get(par)
+    if caminho is None:
+        return None, f"par modelo/algoritmo fora da tabela ({par[0]}/{par[1]})"
+    return caminho, ""
+
+
+def _assinaturas_com(chave, verificar, arquivos: list[dict], auto: dict) -> str:
+    """Devolve mensagem de erro, ou string vazia se arquivo e auto conferem."""
+    for item in arquivos:
+        nome_arq = str(item["nomeArquivo"])
+        bloco = item["assinatura"]
+        if not verificar(_mensagem(bloco["hash"]), bloco["assinatura"], chave):
+            return f"assinatura HW inválida: {nome_arq}"
+    if not verificar(_mensagem(auto["hash"]), auto["assinatura"], chave):
+        return "autoassinatura HW inválida"
+    return ""
+
+
+def _verificar_eddsa(tbs, sig_alg, assinatura_cert, emissor, ponto, arquivos, auto):
+    oid_assinatura = _alg_oid(sig_alg)
     nome = _common_name(emissor)
     if nome not in _EMISSORES_B64:
-        return False, f"emissor HW fora das AC UE2020/UE2022 ({nome or 'sem CN'})"
+        return False, "falha", f"emissor HW fora das AC UE2020/UE2022 ({nome or 'sem CN'})"
     try:
         chave_urna = _chave_ed521(ponto)
         chave_ac = _chave_emissora(nome)
@@ -209,7 +286,7 @@ def verificar_hw(ent: dict, arquivos: list[dict]) -> tuple[bool, str]:
     except ImportError:
         raise
     except Exception as exc:
-        return False, f"chave Ed521: {exc}"
+        return False, "falha", f"chave Ed521: {exc}"
 
     def _ok(mensagem: bytes, assinatura: bytes, chave) -> bool:
         try:
@@ -217,16 +294,114 @@ def verificar_hw(ent: dict, arquivos: list[dict]) -> tuple[bool, str]:
         except Exception:
             return False
 
+    if oid_assinatura != _OID_ED521:
+        return (
+            False,
+            "falha",
+            f"certificado não confere com o algoritmo declarado (eddsa, {oid_assinatura})",
+        )
     if not _ok(tbs, assinatura_cert, chave_ac):
-        return False, f"certificado não confere com {nome}"
+        return False, "falha", f"certificado não confere com {nome}"
+    erro = _assinaturas_com(chave_urna, _ok, arquivos, auto)
+    if erro:
+        return False, "falha", erro
+    return True, "ok", f"Ed521 ok ({len(arquivos)} arquivos + auto + {nome})"
 
-    for item in arquivos:
-        nome_arq = str(item["nomeArquivo"])
-        bloco = item["assinatura"]
-        if not _ok(_mensagem(bloco["hash"]), bloco["assinatura"], chave_urna):
-            return False, f"assinatura HW inválida: {nome_arq}"
 
+def _cadeia_ecdsa(tbs: bytes, assinatura_cert: bytes) -> str:
+    """`ok` com a AC fixada, `pendente` sem ela, `falha` se a conta não fecha."""
+    blob = _AC_ECDSA_B64.get(_CN_AC_URNA, "")
+    if not blob.strip():
+        return "pendente"
+    try:
+        chave_ac = _chave_ac_ecdsa(blob)
+        verificador = _ecdsa()
+    except ImportError:
+        raise
+    except Exception as exc:
+        return f"falha:{exc}"
+    digest = hashlib.sha512(_b(tbs)).digest()
+    try:
+        fecha = bool(verificador.verify(digest, _b(assinatura_cert), chave_ac))
+    except Exception:
+        fecha = False
+    if not fecha:
+        return "falha"
+    return "ok"
+
+
+def _verificar_ecdsa(tbs, assinatura_cert, emissor, ponto, arquivos, auto):
+    nome = _common_name(emissor)
+    if nome != _CN_AC_URNA:
+        return False, "falha", f"emissor HW fora da AC URNA ({nome or 'sem CN'})"
+    try:
+        chave_urna = _chave_p521(ponto)
+        verificador = _ecdsa()
+    except ImportError:
+        raise
+    except Exception as exc:
+        return False, "falha", f"chave ECDSA: {exc}"
+
+    def _ok(digest: bytes, assinatura: bytes, chave) -> bool:
+        try:
+            return bool(verificador.verify(_b(digest), _b(assinatura), chave))
+        except Exception:
+            return False
+
+    erro = _assinaturas_com(chave_urna, _ok, arquivos, auto)
+    if erro:
+        return False, "falha", erro
+    cadeia = _cadeia_ecdsa(tbs, assinatura_cert)
+    if cadeia == "pendente":
+        return (
+            True,
+            "pendente",
+            f"ECDSA cadeia pendente ({len(arquivos)} arquivos + auto + AC URNA)",
+        )
+    if cadeia != "ok":
+        detalhe = cadeia.removeprefix("falha:")
+        msg = "certificado não confere com AC URNA"
+        if detalhe and detalhe != "falha":
+            msg = f"{msg}: {detalhe}"
+        return False, "falha", msg
+    return True, "ok", f"ECDSA ok ({len(arquivos)} arquivos + auto + AC URNA)"
+
+
+def verificar_hw(ent: dict, arquivos: list[dict]) -> tuple[bool, str, str]:
+    """Confere o HW pelo par declarado.
+
+    Devolve `(assinatura_ok, cadeia, mensagem)`. `cadeia` é `ok`, `pendente`
+    ou `falha`. `assinatura_ok` só fica verdadeiro quando os arquivos e a
+    autoassinatura conferem com a chave do certificado.
+    """
+    caminho, erro_par = _par_declarado(ent)
+    if caminho is None:
+        return False, "falha", erro_par
+    info = ent["assinaturaHW"]["informacaoChave"]
+    if not (isinstance(info, tuple) and info[0] == "certificadoDigital"):
+        return False, "falha", "sem certificadoDigital HW"
+    try:
+        der = _pem_to_der(info[1])
+        tbs, sig_alg, assinatura_cert, emissor, spki = _cert_partes(der)
+        oid, curva, ponto = _chave_spki(spki)
+    except Exception as exc:
+        return False, "falha", f"certificado HW ilegível: {exc}"
     auto = ent["assinaturaHW"]["autoAssinado"]["assinatura"]
-    if not _ok(_mensagem(auto["hash"]), auto["assinatura"], chave_urna):
-        return False, "autoassinatura HW inválida"
-    return True, f"Ed521 ok ({len(arquivos)} arquivos + auto + {nome})"
+    if caminho == "eddsa":
+        if oid != _OID_ED521:
+            return (
+                False,
+                "falha",
+                f"certificado não confere com o algoritmo declarado (eddsa, {oid})",
+            )
+        return _verificar_eddsa(
+            tbs, sig_alg, assinatura_cert, emissor, ponto, arquivos, auto
+        )
+    if oid != _OID_EC_PUBLIC or curva != _OID_SECP521R1 or _alg_oid(sig_alg) != _OID_ECDSA_SHA512:
+        visto = curva or oid
+        return (
+            False,
+            "falha",
+            f"certificado não confere com o algoritmo declarado (ecdsa, {visto})",
+        )
+    return _verificar_ecdsa(tbs, assinatura_cert, emissor, ponto, arquivos, auto)

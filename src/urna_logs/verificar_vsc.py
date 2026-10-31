@@ -1,18 +1,22 @@
 """
 Verificação de `-vota.vsc` (assinatura da mídia de resultado).
 
-Sem `--nivel`, confere os dois: hashes do ZIP e Ed521.
-`--nivel 1` fica só nos hashes. `--nivel 2` fica só no Ed521.
-`--nivel 0` é só cobertura (parse do `.vsc`, sem hash nem Ed521).
+Sem `--nivel`, confere os dois: hashes do ZIP e assinatura de hardware.
+`--nivel 1` fica só nos hashes. `--nivel 2` fica só na assinatura de hardware.
+`--nivel 0` é só cobertura (parse do `.vsc`, sem hash nem assinatura).
 
   0 — cobertura: stem com BU/RDV/log tem `.vsc`
   1 — hashes SHA-512 dos arquivos **presentes** no ZIP = hashes do `.vsc`
       (arquivos listados na assinatura mas ausentes no pacote público =
       `ausente_pacote`, esperado: TSE não publica jufa/wsq/mr.ver etc.)
-  2 — Ed521: certificado da AC UE2020/UE2022, autoassinatura e cada hash;
+  2 — hardware, pelo par declarado em `origemAssinaturaHW`:
+      UE2020/UE2022 + eddsa: Ed521 e AC UE2020/UE2022
+      UE2013/UE2015 + ecdsa: ECDSA P-521; sem a AC URNA fixada a cadeia
+      fica pendente e o nível permanece 1
       requer `ecpy` (opcional, `pip install -e ".[hw]"`)
 
-Spec: `spec/assinatura.asn1` (TSE 2026). Não valida chave SW da cerimônia.
+Par fora da tabela, ou certificado de outro algoritmo, é falha. Não há
+segunda tentativa. Não valida chave SW da cerimônia.
 """
 
 from __future__ import annotations
@@ -123,6 +127,7 @@ class VscStemResult:
     criticos_ok: bool | None = None
     criticos_detalhe: str = ""
     hw_sig_ok: bool | None = None  # None = não tentado / sem ecpy
+    hw_cadeia: str = ""  # ok | pendente | falha | "" se não tentou
     hw_sig_msg: str = ""
     erro: str = ""
     nivel_ok: int = 0  # maior nível que passou (0/1/2)
@@ -183,17 +188,18 @@ def _criticos_status(detalhe: dict[str, str], stem: str) -> tuple[bool, str]:
 
 def _try_hw_signatures(
     ent: dict, zf: zipfile.ZipFile, arquivos: list[dict]
-) -> tuple[bool | None, str]:
-    """Nível 2: Ed521 do certificado, da autoassinatura e de cada hash."""
+) -> tuple[bool | None, str, str]:
+    """Assinatura HW pelo par modelo/algoritmo declarado no `.vsc`."""
     del zf
+    ausente = 'ecpy ausente; assinatura HW não executada (pip install -e ".[hw]")'
     try:
         from urna_logs.vsc_hw import verificar_hw
     except ImportError:
-        return None, 'ecpy ausente; nível 2 não executado (pip install -e ".[hw]")'
+        return None, "", ausente
     try:
         return verificar_hw(ent, arquivos)
     except ImportError:
-        return None, 'ecpy ausente; nível 2 não executado (pip install -e ".[hw]")'
+        return None, "", ausente
 
 
 def verificar_stem(
@@ -203,7 +209,7 @@ def verificar_stem(
     *,
     nivel: int | None = None,
 ) -> VscStemResult:
-    """`nivel` None confere hashes e Ed521. 1 ou 2 fazem só aquele nível."""
+    """`nivel` None confere hashes e assinatura HW. 1 ou 2 fazem só aquele nível."""
     jk = join_key_from_stem(stem)
     res = VscStemResult(stem=stem, join_key=jk)
     vsc_member = members.get("vota.vsc")
@@ -262,10 +268,11 @@ def verificar_stem(
                 res.erro = f"criticos:{crit_det}"
 
     if faz_hw and (not faz_hash or res.nivel_ok >= 1):
-        hw_ok, hw_msg = _try_hw_signatures(ent, zf, arquivos)
+        hw_ok, cadeia, hw_msg = _try_hw_signatures(ent, zf, arquivos)
         res.hw_sig_ok = hw_ok
+        res.hw_cadeia = cadeia
         res.hw_sig_msg = hw_msg
-        if hw_ok is True:
+        if hw_ok is True and cadeia == "ok":
             res.nivel_ok = 2
         elif hw_ok is False and not res.erro:
             res.erro = hw_msg
@@ -338,6 +345,7 @@ def run_verificar_vsc(
                         "criticos_ok": r.criticos_ok,
                         "criticos_detalhe": r.criticos_detalhe,
                         "hw_sig_ok": r.hw_sig_ok,
+                        "hw_cadeia": r.hw_cadeia,
                         "hw_sig_msg": r.hw_sig_msg,
                         "nivel_ok": r.nivel_ok,
                         "erro": r.erro,
@@ -375,8 +383,22 @@ def _pede_hw(nivel: int | None) -> bool:
     return nivel is None or nivel >= 2
 
 
+def _hw_contagens(df: pd.DataFrame) -> dict[str, int]:
+    alg = df["alg_hw"].astype(str)
+    nivel2 = df["nivel_ok"] >= 2
+    cadeia = df["hw_cadeia"] if "hw_cadeia" in df.columns else None
+    pendente = int((cadeia == "pendente").sum()) if cadeia is not None else 0
+    return {
+        "ed521": int((nivel2 & alg.eq("4")).sum()),
+        "ecdsa": int((nivel2 & alg.eq("2")).sum()),
+        "pendente": pendente,
+        "falhou": int((df["hw_sig_ok"] == False).sum()),
+    }
+
+
 def _print_summary(uf: str, turno: int, df: pd.DataFrame, nivel: int | None) -> None:
     n = len(df)
+    hw = _hw_contagens(df)
     table = Table(title=f"Verificar .vsc — {uf} {turno}º ({_rotulo_nivel(nivel)})")
     table.add_column("Métrica")
     table.add_column("Valor", justify="right")
@@ -387,10 +409,10 @@ def _print_summary(uf: str, turno: int, df: pd.DataFrame, nivel: int | None) -> 
     if nivel == 2:
         table.add_row("Hashes do ZIP", "não conferidos")
     if _pede_hw(nivel):
-        table.add_row("Nível 2 (Ed521)", f"{int((df['nivel_ok'] >= 2).sum()):,}")
-        table.add_row(
-            "Assinatura HW falhou", f"{int((df['hw_sig_ok'] == False).sum()):,}"
-        )
+        table.add_row("Nível 2 Ed521", f"{hw['ed521']:,}")
+        table.add_row("Nível 2 ECDSA", f"{hw['ecdsa']:,}")
+        table.add_row("ECDSA cadeia pendente", f"{hw['pendente']:,}")
+        table.add_row("Assinatura HW falhou", f"{hw['falhou']:,}")
     table.add_row("Críticos OK", f"{int(df['criticos_ok'].fillna(False).sum()):,}")
     table.add_row("Hash fail (qualquer)", f"{int((df['n_hash_fail'] > 0).sum()):,}")
     table.add_row("Sem .vsc", f"{int((~df['tem_vsc']).sum()):,}")
@@ -401,23 +423,24 @@ def _markdown_uf(uf: str, turno: int, df: pd.DataFrame, nivel: int | None) -> st
     n = len(df)
     n_vsc = int(df["tem_vsc"].sum())
     n1 = int((df["nivel_ok"] >= 1).sum())
-    n2 = int((df["nivel_ok"] >= 2).sum())
-    n_hw_fail = int((df["hw_sig_ok"] == False).sum())
+    hw = _hw_contagens(df)
     n_fail = int((df["n_hash_fail"] > 0).sum())
     n_crit = int(df["criticos_ok"].fillna(False).sum())
     lines = [
         f"# Verificar `.vsc` — {uf} {turno}º turno",
         "",
         f"Nível solicitado: **{_rotulo_nivel(nivel)}** "
-        "(omitir = hashes e Ed521; 1 = só hashes; 2 = só Ed521).",
+        "(omitir = hashes e assinatura HW; 1 = só hashes; 2 = só assinatura HW).",
         "",
         "## Resumo",
         "",
         f"- Stems no ZIP: **{n:,}**",
         f"- Com `-vota.vsc`: **{n_vsc:,}**",
         f"- Nível ≥1 (auto-hash + hashes dos arquivos presentes + críticos): **{n1:,}**",
-        f"- Nível 2 (Ed521: certificado + auto + hashes): **{n2:,}**",
-        f"- Assinatura HW falhou: **{n_hw_fail:,}**",
+        f"- Nível 2 Ed521 (UE2020/UE2022, AC UE2020 ou UE2022): **{hw['ed521']:,}**",
+        f"- Nível 2 ECDSA (UE2013/UE2015, cadeia AC URNA): **{hw['ecdsa']:,}**",
+        f"- ECDSA cadeia pendente (assinatura ok, AC URNA não fixada): **{hw['pendente']:,}**",
+        f"- Assinatura HW falhou: **{hw['falhou']:,}**",
         f"- Críticos (bu/rdv/log) OK: **{n_crit:,}**",
         f"- Algum hash presente falhou: **{n_fail:,}**",
         "",
@@ -428,8 +451,12 @@ def _markdown_uf(uf: str, turno: int, df: pd.DataFrame, nivel: int | None) -> st
         "",
         "- Spec ASN.1: `urna_logs/spec/assinatura.asn1` (TSE 2026)",
         "- Hash: SHA-512 do conteúdo = campo `AssinaturaDigital.hash`",
-        "- Nível 2: Ed521 sobre SHA-512 desse hash, com a chave do certificado "
-        "embutido; o certificado é conferido com a AC UE2020 ou UE2022. "
+        "- Nível 2 segue o par declarado em `origemAssinaturaHW`. "
+        "UE2020/UE2022 com `eddsa`: Ed521 e AC UE2020 ou UE2022. "
+        "UE2013/UE2015 com `ecdsa`: ECDSA P-521; a mensagem dos arquivos é "
+        "SHA-512 do hash gravado. Sem a AC URNA fixada, essa assinatura confere "
+        "com a chave do certificado e a cadeia fica pendente (nível 1). "
+        "Certificado de outro algoritmo é falha, sem segunda tentativa. "
         "Não valida a chave de software da cerimônia.",
         "",
     ]
