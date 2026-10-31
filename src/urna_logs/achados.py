@@ -3,7 +3,7 @@ Achados de auditoria — hierarquia de evidência A / B / C.
 
 Nível A — inconsistência documental (cadeia pública).
 Nível B — anomalia operacional (confluência de sinais).
-Nível C — padrão ecológico / contexto (saldo agregado da seção).
+Nível C — flag isolada do comparativo.
 
 Gera fichas reproduzíveis por seção (`join_key`) + resumo UF.
 """
@@ -35,7 +35,7 @@ NIVEL_C = "C"
 NIVEL_DESC = {
     NIVEL_A: "Inconsistência documental (cadeia pública)",
     NIVEL_B: "Anomalia operacional (confluência de sinais)",
-    NIVEL_C: "Padrão ecológico / contexto (saldo agregado da seção)",
+    NIVEL_C: "Flag isolada do comparativo",
 }
 
 
@@ -62,16 +62,6 @@ def _load_cruzar_divergent(uf: str, turno: int) -> set[str]:
     if "ok" not in df.columns or "join_key" not in df.columns:
         return set()
     return set(df.loc[df["ok"] == False, "join_key"].astype(str).unique())  # noqa: E712
-
-
-def _load_elim_forced(uf: str) -> pd.DataFrame:
-    p = REPORTS_DIR / f"fluxo_bounds_{uf.upper()}_1t_2t.parquet"
-    if not p.exists():
-        return pd.DataFrame(columns=["join_key", "elim_forced_fa", "elim_forced_fb"])
-    cols = [c for c in ("join_key", "elim_forced_fa", "elim_forced_fb") if True]
-    df = pd.read_parquet(p)
-    keep = [c for c in cols if c in df.columns]
-    return df[keep] if keep else pd.DataFrame(columns=["join_key"])
 
 
 def classify_row(
@@ -127,24 +117,19 @@ def classify_row(
             "Dois ou mais sinais desta seção estão no extremo da distribuição da própria UF.",
         )
 
-    # --- Nível C: flags isoladas / ecológico ---
+    # --- Nível C: flag isolada do comparativo ---
     if bool(row.get("flag_margem")):
         codes.append("C_margem_isolada")
     if bool(row.get("flag_abstencao")):
         codes.append("C_abstencao_isolada")
     if bool(row.get("flag_pos17")):
         codes.append("C_pos17_isolada")
-    if bool(row.get("elim_forced_fa")):
-        codes.append("C_elim_forcado_fa")
-    if bool(row.get("elim_forced_fb")):
-        codes.append("C_elim_forcado_fb")
 
     if codes:
         return (
             NIVEL_C,
             codes,
-            "Há um sinal isolado, ou um saldo agregado da seção. "
-            "O número é o total da seção.",
+            "Há um sinal isolado do comparativo nesta seção.",
         )
 
     return "", [], ""
@@ -160,15 +145,7 @@ def build_achados_uf(uf: str) -> pd.DataFrame:
     audit_fail_2t = _load_audit_fails(uf, 2)
     cruzar_1t = _load_cruzar_divergent(uf, 1)
     cruzar_2t = _load_cruzar_divergent(uf, 2)
-    forced = _load_elim_forced(uf)
     df = compare.copy()
-    if not forced.empty and "join_key" in forced.columns:
-        df = df.merge(forced, on="join_key", how="left")
-    for col in ("elim_forced_fa", "elim_forced_fb"):
-        if col not in df.columns:
-            df[col] = False
-        else:
-            df[col] = df[col].fillna(False).astype(bool)
 
     rows = []
     for _, row in df.iterrows():
@@ -286,8 +263,8 @@ def write_fichas(
         "Indício documental — listar e checar cadeia |",
         "| **B** | Confluência de sinais operacionais | "
         "Dois ou mais sinais no extremo da UF |",
-        "| **C** | Flag isolada ou padrão ecológico | "
-        "Saldo agregado da seção |",
+        "| **C** | Flag isolada do comparativo | "
+        "Um sinal no extremo da UF, sem confluência |",
         "",
         "## Fichas (até {} por UF, A→B→C)".format(max_fichas),
         "",

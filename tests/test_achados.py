@@ -13,8 +13,6 @@ def _row(**kwargs):
         "flag_abstencao": False,
         "flag_pos17": False,
         "flag_sem_digital_x_margem": False,
-        "elim_forced_fa": False,
-        "elim_forced_fb": False,
     }
     base.update(kwargs)
     return pd.Series(base)
@@ -66,4 +64,4 @@ def test_nivel_c_isolada():
     )
     assert nivel == NIVEL_C
     assert "C_margem_isolada" in codes
-    assert "não sustenta" in conclusao.lower() or "nao sustenta" in conclusao.lower() or "não sustenta" in conclusao
+    assert "sinal isolado" in conclusao.lower()
