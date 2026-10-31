@@ -1,0 +1,58 @@
+<script>
+window.urnaMarca = {
+  COR: {
+    "13": "#a51c1c",
+    "22": "#1f4e79",
+    eliminados: "#64748b",
+    branco_nulo: "#9ca3af",
+    abstencao: "#c4a35a",
+    turno1: "#9ca3af",
+    turno2: "#374151"
+  },
+  NOME: {
+    "13": "Lula (13)",
+    "22": "Flávio (22)",
+    eliminados: "Eliminados",
+    branco_nulo: "Branco e nulo",
+    abstencao: "Abstenção"
+  },
+  FLAG: {
+    abstencao: "abstenção",
+    margem: "margem",
+    sem_digital: "sem digital",
+    sem_digital_x_margem: "sem digital × margem",
+    pos17: "pós-17h",
+    so_turno: "só um turno"
+  },
+  fmtEixo: function (d) {
+    if (d == null || Number.isNaN(+d)) return "";
+    var n = +d;
+    var s = (Math.abs(n) >= 100 || Number.isInteger(n))
+      ? Math.round(n).toLocaleString("pt-BR")
+      : n.toLocaleString("pt-BR", {maximumFractionDigits: 1});
+    return s.replace(/-/g, "−");
+  },
+  menos: function (texto) {
+    return String(texto == null ? "" : texto).replace(/-/g, "−");
+  },
+  flags: function (texto) {
+    var self = this;
+    var partes = String(texto || "").split("|").filter(Boolean).map(function (f) {
+      return self.FLAG[f] || f;
+    });
+    return partes.length ? partes.join(" · ") : "—";
+  },
+  rotuloNo: function (cod, turno) {
+    var base = String(this.NOME[cod] || cod).replace(/ no 1º$/, "");
+    return base + " · " + turno + "º";
+  },
+  corFluxo: function (hex) {
+    var h = String(hex || "#787878").replace("#", "");
+    if (h.length < 6) return "rgba(120,120,120,0.35)";
+    var r = parseInt(h.slice(0, 2), 16);
+    var g = parseInt(h.slice(2, 4), 16);
+    var b = parseInt(h.slice(4, 6), 16);
+    return "rgba(" + r + "," + g + "," + b + ",0.35)";
+  }
+};
+</script>

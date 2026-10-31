@@ -31,6 +31,9 @@ website:
 format:
   html:
     theme: cosmo
+    css: estilo.css
+    include-in-header:
+      - file: marca.html
     toc: true
     lang: pt-BR
     link-external-newwindow: true

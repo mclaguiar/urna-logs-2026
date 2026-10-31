@@ -16,13 +16,13 @@ anomalias = FileAttachment("data/anomalias_secao.csv").csv({typed: true})
 ```{ojs}
 //| echo: false
 num = v => (v == null || v === "" || Number.isNaN(+v) ? null : +v)
-fmt = n => (n == null || Number.isNaN(+n)) ? "—" : Math.round(+n).toLocaleString("pt-BR")
-fmt1 = n => (n == null || Number.isNaN(+n)) ? "—" : (+n).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})
-fmt2 = n => (n == null || Number.isNaN(+n)) ? "—" : (+n).toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2})
+fmt = n => (n == null || Number.isNaN(+n)) ? "—" : urnaMarca.menos(Math.round(+n).toLocaleString("pt-BR"))
+fmt1 = n => (n == null || Number.isNaN(+n)) ? "—" : urnaMarca.menos((+n).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}))
+fmt2 = n => (n == null || Number.isNaN(+n)) ? "—" : urnaMarca.menos((+n).toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2}))
 pp = n => {
   if (n == null || Number.isNaN(+n)) return "—"
   const v = +n
-  return (v > 0 ? "+" : "") + v.toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " pp"
+  return urnaMarca.menos((v > 0 ? "+" : "") + v.toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " pp")
 }
 nomeUf = uf => uf === "ZZ" ? "Exterior" : uf
 rows = painel.map(d => ({
@@ -41,7 +41,7 @@ rows = painel.map(d => ({
   achados_A: num(d.achados_A) || 0,
   achados_B: num(d.achados_B) || 0,
   achados_C: num(d.achados_C) || 0
-})).sort((a, b) => nomeUf(a.uf).localeCompare(nomeUf(b.uf), "pt"))
+})).sort((a, b) => (a.uf === "ZZ") - (b.uf === "ZZ") || nomeUf(a.uf).localeCompare(nomeUf(b.uf), "pt"))
 sumA = rows.reduce((s, d) => s + d.achados_A, 0)
 sumB = rows.reduce((s, d) => s + d.achados_B, 0)
 sumC = rows.reduce((s, d) => s + d.achados_C, 0)
@@ -163,11 +163,11 @@ nB = nivelB.length
 Plot.plot({
   marginLeft: 64,
   marginBottom: 48,
-  width: 1000,
   height: 480,
-  x: {label: "% sem digital no 1º turno", grid: true},
-  y: {label: "Δ margem (pp dos válidos, Lula − Flávio)", grid: true},
-  color: {scheme: "Blues", legend: true, label: "Seções"},
+  style: "font-size: 12px; max-width: 100%;",
+  x: {label: "% sem digital no 1º turno", grid: true, tickFormat: urnaMarca.fmtEixo},
+  y: {label: "Δ margem (pp dos válidos, Lula − Flávio)", grid: true, tickFormat: urnaMarca.fmtEixo},
+  color: {scheme: "Blues", legend: true, label: "Seções na célula", tickFormat: urnaMarca.fmtEixo},
   marks: [
     Plot.rect(pts, Plot.bin({fill: "count"}, {x: "pct_sem_digital_1t", y: "delta_margem_pp"})),
     Plot.dot(nivelB, {x: "pct_sem_digital_1t", y: "delta_margem_pp", fill: "#a51c1c", r: 3, tip: true}),
@@ -178,7 +178,7 @@ Plot.plot({
 
 ```{ojs}
 //| echo: false
-md`**${ufAnom === "ALL" ? "Todas as UFs" : nomeUf(ufAnom)}:** ${nPts.toLocaleString("pt-BR")} seções no mapa · ${nB.toLocaleString("pt-BR")} de nível B em vermelho. Positivo: a margem Lula (13) − Flávio (22), em pontos percentuais dos válidos, cresceu no 2º turno.`
+md`**${ufAnom === "ALL" ? "Todas as UFs" : nomeUf(ufAnom)}:** ${nPts.toLocaleString("pt-BR")} seções no mapa · ${nB.toLocaleString("pt-BR")} de nível B em vermelho (seções no extremo). A escala azul conta seções em cada célula do fundo. Positivo: a margem Lula (13) − Flávio (22), em pontos percentuais dos válidos, cresceu no 2º turno.`
 ```
 
 ```{ojs}
@@ -187,18 +187,33 @@ lista = outliers
   .filter(d => ufAnom === "ALL" || d.uf === ufAnom)
   .slice()
   .sort((a, b) => (num(b.pct_sem_digital) || 0) - (num(a.pct_sem_digital) || 0))
+visiveis = lista.slice(0, 20)
 html`<div style="overflow-x:auto"><table class="table table-sm">
   <thead><tr><th>Seção</th><th>UF</th><th>Município</th><th>Comparecimento</th><th>% sem digital</th><th>Δ margem (pp, Lula − Flávio)</th><th>Flags</th></tr></thead>
-  <tbody>${lista.map(d => html`<tr>
-    <td><a href="secao.html?uf=${d.uf}&mun=${+d.municipio}&zona=${+d.zona}&secao=${+d.secao}">${d.join_key}</a></td>
+  <tbody>${visiveis.map(d => html`<tr>
+    <td class="chave"><a href="secao.html?uf=${d.uf}&mun=${+d.municipio}&zona=${+d.zona}&secao=${+d.secao}">${d.join_key}</a></td>
     <td>${nomeUf(d.uf)}</td>
     <td>${d.nome}</td>
     <td>${fmt(d.bu_comparecimento)}</td>
     <td>${fmt1(num(d.pct_sem_digital))}%</td>
     <td>${pp(num(d.delta_margem_pp))}</td>
-    <td>${d.flags || "—"}</td>
+    <td>${urnaMarca.flags(d.flags)}</td>
   </tr>`)}</tbody>
-</table></div>`
+</table></div>
+${lista.length > 20 ? html`<details><summary>Ver todas (${lista.length.toLocaleString("pt-BR")})</summary>
+  <div style="overflow-x:auto"><table class="table table-sm">
+    <thead><tr><th>Seção</th><th>UF</th><th>Município</th><th>Comparecimento</th><th>% sem digital</th><th>Δ margem (pp, Lula − Flávio)</th><th>Flags</th></tr></thead>
+    <tbody>${lista.slice(20).map(d => html`<tr>
+      <td class="chave"><a href="secao.html?uf=${d.uf}&mun=${+d.municipio}&zona=${+d.zona}&secao=${+d.secao}">${d.join_key}</a></td>
+      <td>${nomeUf(d.uf)}</td>
+      <td>${d.nome}</td>
+      <td>${fmt(d.bu_comparecimento)}</td>
+      <td>${fmt1(num(d.pct_sem_digital))}%</td>
+      <td>${pp(num(d.delta_margem_pp))}</td>
+      <td>${urnaMarca.flags(d.flags)}</td>
+    </tr>`)}</tbody>
+  </table></div>
+</details>` : ""}`
 ```
 
 ::: {.callout-note}
@@ -259,20 +274,20 @@ eixoLabel = ufHora === "ZZ" ? "Hora local (exterior)" : "Hora de Brasília"
 Plot.plot({
   marginLeft: 56,
   marginBottom: 44,
-  width: 1000,
   height: 420,
+  style: "font-size: 12px; max-width: 100%;",
   x: {label: eixoLabel, domain: d3.range(24), ticks: 24},
-  y: {label: "% das habilitações do dia", grid: true, tickFormat: d => d.toLocaleString("pt-BR")},
+  y: {label: "% das habilitações do dia", grid: true, tickFormat: urnaMarca.fmtEixo},
   marks: [
     Plot.ruleY([0]),
     Plot.ruleX([17], {stroke: "#a51c1c", strokeOpacity: 0.35, strokeDasharray: "4,4"}),
-    Plot.lineY(p1, {x: "hora", y: "pct", stroke: "#1f4e79", strokeWidth: 2, curve: "step"}),
-    Plot.lineY(p2, {x: "hora", y: "pct", stroke: "#c47d1a", strokeWidth: 2, curve: "step", strokeDasharray: "6,3"})
+    Plot.lineY(p1, {x: "hora", y: "pct", stroke: urnaMarca.COR.turno1, strokeWidth: 2, curve: "step", strokeDasharray: "6,3"}),
+    Plot.lineY(p2, {x: "hora", y: "pct", stroke: urnaMarca.COR.turno2, strokeWidth: 2, curve: "step"})
   ]
 })
 ```
 
-Azul contínuo = 1º turno. Âmbar tracejado = 2º turno. A linha vertical é 17h.
+Cinza tracejado = 1º turno. Grafite contínuo = 2º turno. A linha vertical é 17h.
 
 ```{ojs}
 //| echo: false
@@ -307,7 +322,7 @@ html`<details>
 md`**${ufHora === "BR" ? "Brasil, sem o exterior" : nomeUf(ufHora)}.** Habilitações 1º **${fmt(tot1)}** · 2º **${fmt(tot2)}** · após 17h **${fmt2(tot1 ? 100 * apos1 / tot1 : null)}%** no 1º e **${fmt2(tot2 ? 100 * apos2 / tot2 : null)}%** no 2º.`
 ```
 
-No país, cerca de 2,9% das habilitações do 1º turno e 0,02% das do 2º caem às 17h ou depois. Os dois turnos usam a mesma regra: dia oficial mais ou menos 3 dias, e a mesma conversão para o horário de Brasília. O pacote do 2º turno traz o histórico do 1º, e esse histórico fica de fora da curva. O pacote do 1º turno não tem outro dia dentro da tolerância. O que sobra é a fila do encerramento. No 1º turno a hora das 17h ainda carrega uma fatia da tarde, mais forte no Norte e no Nordeste (Alagoas 9,1%, Bahia 7,3%). No 2º turno essa hora praticamente zera. O fuso não produz o salto: nos estados em UTC−3 a hora local e a de Brasília são a mesma, e o 1º turno continua alto.
+A fatia após as 17h está na linha acima. Os dois turnos usam a mesma regra: dia oficial mais ou menos 3 dias, e a mesma conversão para o horário de Brasília. O pacote do 2º turno traz o histórico do 1º, e esse histórico fica de fora da curva. O pacote do 1º turno não tem outro dia dentro da tolerância. O que sobra é a fila do encerramento. No 1º turno a hora das 17h ainda carrega uma fatia da tarde, mais forte no Norte e no Nordeste (Alagoas 9,1%, Bahia 7,3%). No 2º turno essa hora praticamente zera. O fuso não produz o salto: nos estados em UTC−3 a hora local e a de Brasília são a mesma, e o 1º turno continua alto.
 
 ::: {.callout-note collapse="true"}
 ## Como ler

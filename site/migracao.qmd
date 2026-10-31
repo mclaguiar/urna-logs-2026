@@ -13,32 +13,20 @@ turnos = FileAttachment("data/migracao/turnos.csv").csv({typed: true})
 fluxo = FileAttachment("data/migracao/fluxo.csv").csv({typed: true})
 cobertura = FileAttachment("data/migracao/cobertura.csv").csv({typed: true})
 conferencia = FileAttachment("data/migracao/conferencia.csv").csv({typed: true})
-nome = ({
-  "13": "Lula (13)",
-  "22": "Flávio (22)",
-  eliminados: "Eliminados",
-  branco_nulo: "Branco e nulo",
-  abstencao: "Abstenção"
-})
-COR = ({
-  "13": "#a51c1c",
-  "22": "#1f4e79",
-  eliminados: "#6b7280",
-  branco_nulo: "#9ca3af",
-  abstencao: "#c4a35a"
-})
+nome = urnaMarca.NOME
+COR = urnaMarca.COR
 origensVis = ["13", "22", "eliminados", "branco_nulo", "abstencao"]
 destinosVis = ["13", "22", "branco_nulo", "abstencao"]
 partes = grupo => grupo === "branco_nulo" ? ["branco", "nulo"] : [grupo]
-fmt = n => Math.round(+n || 0).toLocaleString("pt-BR")
+fmt = n => urnaMarca.menos(Math.round(+n || 0).toLocaleString("pt-BR"))
 pct = taxa => taxa == null || Number.isNaN(+taxa)
   ? "—"
-  : (100 * +taxa).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + "%"
-pct2 = taxa => (100 * taxa).toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + "%"
+  : urnaMarca.menos((100 * +taxa).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})) + "%"
+pct2 = taxa => urnaMarca.menos((100 * taxa).toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2})) + "%"
 pp = delta => {
   if (delta == null || Number.isNaN(+delta)) return "—"
   const sinal = delta > 0 ? "+" : ""
-  return `${sinal}${(+delta).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})} pp`
+  return urnaMarca.menos(`${sinal}${(+delta).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})} pp`)
 }
 deltaTxt = (depois, antes) => {
   const d = Math.round(depois) - Math.round(antes)
@@ -52,7 +40,7 @@ votosTurno = (uf, turno, grupo) => {
   return achou ? +achou.votos : 0
 }
 votosGrupo = (uf, turno, grupo) => partes(grupo).reduce((s, g) => s + votosTurno(uf, turno, g), 0)
-ufsTurno = turno => [...new Set(turnos.filter(d => +d.turno === turno).map(d => d.uf))].sort()
+ufsTurno = turno => [...new Set(turnos.filter(d => +d.turno === turno).map(d => d.uf))].sort((a, b) => (a === "ZZ") - (b === "ZZ") || a.localeCompare(b, "pt"))
 votosPais = (turno, grupo) => ufsTurno(turno).reduce((s, uf) => s + votosGrupo(uf, turno, grupo), 0)
 validosPais = turno => turno === 1
   ? votosPais(1, "13") + votosPais(1, "22") + votosPais(1, "eliminados")
@@ -226,6 +214,7 @@ Cores: Lula (13) vermelho, Flávio (22) azul, eliminados cinza, branco e nulo ci
 
 ```{ojs}
 //| echo: false
+//| output: false
 {
   const el = document.getElementById("nota-ajuste-abstencao")
   const matriz = abstOrigem("BR", "brown_payne")
@@ -260,7 +249,7 @@ md`## Resumo`
 
 ```{ojs}
 //| echo: false
-md`**${cob.n_presentes} de ${cob.n_ufs} estados** têm matriz de migração.${cob.faltam ? ` Ainda sem matriz: ${cob.faltam}.` : ""}`
+md`**${cob.n_presentes} de ${cob.n_ufs} grupos** têm matriz de migração (27 UFs e o exterior).${cob.faltam ? ` Ainda sem matriz: ${cob.faltam}.` : ""}`
 ```
 
 ```{ojs}
@@ -362,8 +351,8 @@ md`## Como os votos migraram (Brasil)`
 Plotly = require("https://cdn.plot.ly/plotly-2.35.2.min.js")
 sankey = (uf, modelo) => {
   const nos = [
-    ...origensVis.map(o => ({nome: `${nome[o]} · 1º`, cor: COR[o]})),
-    ...destinosVis.map(d => ({nome: `${nome[d]} · 2º`, cor: COR[d]}))
+    ...origensVis.map(o => ({nome: urnaMarca.rotuloNo(o, 1), cor: COR[o]})),
+    ...destinosVis.map(d => ({nome: urnaMarca.rotuloNo(d, 2), cor: COR[d]}))
   ]
   const links = []
   for (const o of origensVis) {
@@ -383,6 +372,7 @@ sankey = (uf, modelo) => {
   Plotly.newPlot(div, [{
     type: "sankey",
     orientation: "h",
+    arrangement: "fixed",
     node: {label: nos.map(n => n.nome), color: nos.map(n => n.cor), pad: 16, thickness: 16, line: {color: "#fff", width: 0}},
     link: {
       source: links.map(l => l.source),
@@ -390,10 +380,10 @@ sankey = (uf, modelo) => {
       value: links.map(l => l.value),
       customdata: links.map(l => l.rotulo),
       hovertemplate: "%{customdata}<extra></extra>",
-      color: "rgba(120,120,120,0.28)"
+      color: links.map(l => urnaMarca.corFluxo(nos[l.source].cor))
     }
   }], {
-    font: {family: "inherit", size: 12},
+    font: {family: "Source Sans Pro, sans-serif", size: 13},
     margin: {l: 8, r: 8, t: 12, b: 8},
     height: 520
   }, {displayModeBar: false, responsive: true})
@@ -414,9 +404,9 @@ heatmapTaxa = (uf, modelo) => {
     marginLeft: 130,
     marginBottom: 70,
     height: 380,
-    width: 760,
+    style: "font-size: 12px; max-width: 100%;",
     x: {label: "2º turno", domain: destinosVis.map(d => nome[d])},
-    y: {label: "1º turno", domain: [...origensVis].reverse().map(o => nome[o])},
+    y: {label: "1º turno", domain: origensVis.map(o => nome[o])},
     color: {legend: true, scheme: "blues", label: "% da origem", tickFormat: v => pct(v)},
     marks: [
       Plot.cell(celulas, {x: "destino", y: "origem", fill: "taxa", tip: true}),
@@ -442,9 +432,9 @@ heatmapDif = uf => {
     marginLeft: 130,
     marginBottom: 70,
     height: 380,
-    width: 760,
+    style: "font-size: 12px; max-width: 100%;",
     x: {label: "2º turno", domain: destinosVis.map(d => nome[d])},
-    y: {label: "1º turno", domain: [...origensVis].reverse().map(o => nome[o])},
+    y: {label: "1º turno", domain: origensVis.map(o => nome[o])},
     color: {legend: true, type: "diverging", scheme: "RdBu", pivot: 0, label: "lphom − Brown e Payne (pp)", tickFormat: v => pp(v)},
     marks: [
       Plot.cell(celulas, {x: "destino", y: "origem", fill: "pp", tip: true}),
@@ -511,7 +501,7 @@ faixas = ["13", "22"].flatMap(destino => ["brown_payne", "lphom"].flatMap(modelo
 Plot.plot({
   marginLeft: 230,
   height: 280,
-  width: 860,
+  style: "font-size: 12px; max-width: 100%;",
   x: {label: "Fração dos válidos estimados", tickFormat: v => pct(v), grid: true},
   y: {label: null},
   color: {legend: true, domain: origensVis.map(o => nome[o]), range: origensVis.map(o => COR[o])},
@@ -535,17 +525,18 @@ pontos = origensVis.flatMap(o => destinosVis.map(d => {
     destaque: gap != null && Math.abs(gap) > 5
   }
 })).filter(d => d.bp != null && d.lp != null)
+rotulosGap = pontos.filter(d => d.destaque).map((d, i) => ({...d, dy: i % 2 ? 18 : -20, dx: i % 2 ? 10 : -10}))
 Plot.plot({
   marginLeft: 50,
-  height: 420,
-  width: 520,
-  x: {label: "Brown e Payne (%)", grid: true},
-  y: {label: "lphom (%)", grid: true},
+  height: 480,
+  style: "font-size: 12px; max-width: 100%;",
+  x: {label: "Brown e Payne (%)", grid: true, tickFormat: urnaMarca.fmtEixo},
+  y: {label: "lphom (%)", grid: true, tickFormat: urnaMarca.fmtEixo},
   marks: [
     Plot.line([[0, 0], [100, 100]], {stroke: "#ccc"}),
     Plot.dot(pontos.filter(d => !d.destaque), {x: "bp", y: "lp", fill: "#1f4e79", r: 4, tip: true}),
     Plot.dot(pontos.filter(d => d.destaque), {x: "bp", y: "lp", fill: "#a51c1c", r: 6, tip: true}),
-    Plot.text(pontos.filter(d => d.destaque), {x: "bp", y: "lp", text: "celula", dy: -10, fontSize: 10})
+    Plot.text(rotulosGap, {x: "bp", y: "lp", text: "celula", dy: "dy", dx: "dx", fontSize: 12})
   ]
 })
 ```
@@ -639,16 +630,16 @@ pontosTurno = ordemLula.flatMap(({uf, rotulo}) => ["13", "22"].map(g => {
 Plot.plot({
   marginLeft: 90,
   height: 720,
-  width: 920,
-  x: {label: "% dos válidos", grid: true, tickFormat: v => `${v.toLocaleString("pt-BR")}%`},
+  style: "font-size: 12px; max-width: 100%;",
+  x: {label: "% dos válidos", grid: true, tickFormat: v => `${urnaMarca.fmtEixo(v)}%`},
   y: {label: null, domain: ordemLula.map(d => d.rotulo)},
   color: {legend: true, domain: ["Lula (13)", "Flávio (22)"], range: [COR["13"], COR["22"]]},
   marks: [
     Plot.link(pontosTurno, {x1: "p1", x2: "p2", y: "uf", stroke: "cor", strokeOpacity: 0.55}),
-    Plot.dot(pontosTurno, {x: "p1", y: "uf", fill: "#b0b0b0", r: 3.5, title: d => `${d.uf} · ${d.quem} · 1º turno ${d.p1.toLocaleString("pt-BR", {maximumFractionDigits: 1})}%`}),
+    Plot.dot(pontosTurno, {x: "p1", y: "uf", fill: COR.turno1, r: 3.5, title: d => `${d.uf} · ${d.quem} · 1º turno ${d.p1.toLocaleString("pt-BR", {maximumFractionDigits: 1})}%`}),
     Plot.dot(pontosTurno, {x: "p2", y: "uf", fill: "cor", r: 4, title: d => `${d.uf} · ${d.quem} · 2º turno ${d.p2.toLocaleString("pt-BR", {maximumFractionDigits: 1})}%`})
   ],
-  fx: {label: null},
+  fx: {label: null, domain: ["Lula (13)", "Flávio (22)"]},
   facet: {data: pontosTurno, x: "quem"}
 })
 ```
@@ -788,7 +779,7 @@ linhasMig = ufsFluxo.map(uf => ({
   leitura: leituraUf(uf)
 })).sort((a, b) => {
   const chave = ordemMig[0]
-  if (chave === "uf") return nomeUf(a.uf).localeCompare(nomeUf(b.uf), "pt")
+  if (chave === "uf") return (a.uf === "ZZ") - (b.uf === "ZZ") || nomeUf(a.uf).localeCompare(nomeUf(b.uf), "pt")
   return (b[chave] || 0) - (a[chave] || 0)
 })
 tdTaxa = taxa => html`<td style="white-space:nowrap;${corTaxa(taxa)}">${pct(taxa)}</td>`
@@ -837,7 +828,7 @@ saldoLongo = saldoPar.flatMap(d => [
 Plot.plot({
   marginLeft: 90,
   height: 720,
-  width: 760,
+  style: "font-size: 12px; max-width: 100%;",
   x: {label: "Eliminados → Lula menos eliminados → Flávio (votos)", grid: true, tickFormat: v => fmt(v)},
   y: {label: null, domain: saldoPar.map(d => d.uf).slice().reverse()},
   color: {legend: true, domain: ["Brown e Payne", "lphom"], range: ["#1f4e79", "#c4a35a"]},

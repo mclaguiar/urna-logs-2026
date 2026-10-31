@@ -49,36 +49,28 @@ vProt = (chave) => {
   const row = protocolo.find(d => d.chave === chave)
   return row ? String(row.valor) : ""
 }
-COR = ({"13": "#a51c1c", "22": "#1f4e79", eliminados: "#6b7280", branco_nulo: "#9ca3af", abstencao: "#c4a35a"})
-NOMES = ({
-  "13": "Lula (13)",
-  "22": "Flávio (22)",
-  eliminados: "Eliminados no 1º",
-  branco: "Branco",
-  nulo: "Nulo",
-  branco_nulo: "Branco e nulo",
-  abstencao: "Abstenção"
-})
+COR = urnaMarca.COR
+NOMES = ({...urnaMarca.NOME, branco: "Branco", nulo: "Nulo"})
 LIMIAR_RESIDUO = 0.05
 percentilMargem = (() => {
   const n = Number(vProt("p_flag_margem"))
   return Number.isFinite(n) ? n.toLocaleString("pt-BR", {style: "percent", maximumFractionDigits: 0}) : vProt("p_flag_margem")
 })()
 num = (v) => (v == null || v === "" || Number.isNaN(+v) ? null : +v)
-fmt = (n) => (n == null || Number.isNaN(+n) ? "—" : Math.round(+n).toLocaleString("pt-BR"))
+fmt = (n) => (n == null || Number.isNaN(+n) ? "—" : urnaMarca.menos(Math.round(+n).toLocaleString("pt-BR")))
 fmtSinal = (n) => {
   if (n == null || Number.isNaN(+n)) return "—"
   const r = Math.round(+n)
-  return (r > 0 ? "+" : "") + r.toLocaleString("pt-BR")
+  return urnaMarca.menos((r > 0 ? "+" : "") + r.toLocaleString("pt-BR"))
 }
 fmtPp = (n) => {
   if (n == null || Number.isNaN(+n)) return "—"
   const t = (+n).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})
-  return (n > 0 ? "+" : "") + t + " pp"
+  return urnaMarca.menos((n > 0 ? "+" : "") + t + " pp")
 }
 pct1 = (taxa) => taxa == null || Number.isNaN(+taxa)
   ? "—"
-  : (100 * taxa).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + "%"
+  : urnaMarca.menos((100 * taxa).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})) + "%"
 nomeCurto = (cod) => cod === "95" ? "Branco" : cod === "96" ? "Nulo" : (NOMES[cod] || `${(nomeVotavel.get(cod) || cod).split(" ")[0]} (${cod})`)
 nomeCheio = (cod) => nomeVotavel.get(cod) || nomeCurto(cod)
 listaSelect = (opcoes, label, valor) => {
@@ -383,32 +375,34 @@ linhasTopo = [
   ...linhasFixas,
   ...(somaElim1 || somaElim2 ? [{cod: "eliminados", n1: somaElim1, n2: somaElim2, tipo: "elim"}] : []),
   ...linhasBranco
-].sort((a, b) => b.n1 - a.n1 || b.n2 - a.n2)
+]
+pctVal = (n, base) => base ? (100 * n / base).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + "%" : "—"
 html`<div style="overflow-x:auto"><table class="table table-sm">
   <thead><tr><th>Votável</th><th>1º</th><th>2º</th><th>Δ</th><th>% válidos 1º</th><th>% válidos 2º</th></tr></thead>
-  <tbody>${linhasTopo.map(d => d.tipo === "elim"
-    ? html`<tr><td colspan="6" style="padding:0">
-        <details>
-          <summary style="display:grid;grid-template-columns:minmax(9rem,1.4fr) repeat(5,minmax(4rem,1fr));padding:0.35rem 0.4rem;cursor:pointer">
-            <span>${NOMES.eliminados}</span><span>${fmt(d.n1)}</span><span>${fmt(d.n2)}</span><span>${fmtSinal(d.n2 - d.n1)}</span>
-            <span>${validos1 ? (100 * d.n1 / validos1).toLocaleString("pt-BR", {maximumFractionDigits: 1}) + "%" : "—"}</span><span>—</span>
-          </summary>
-          <table class="table table-sm" style="margin:0">${elim.map(e => linhaVoto(e.cod, e.n1, e.n2, true))}</table>
-        </details>
-      </td></tr>`
-    : linhaVoto(d.cod, d.n1, d.n2, false))}</tbody>
+  <tbody>${linhasTopo.flatMap(d => {
+    if (d.tipo !== "elim") return [linhaVoto(d.cod, d.n1, d.n2, false)]
+    const botao = html`<button type="button" class="btn btn-sm btn-outline-secondary">abrir</button> `
+    const filhas = elim.map(e => linhaVoto(e.cod, e.n1, e.n2, true))
+    for (const tr of filhas) tr.hidden = true
+    botao.onclick = () => {
+      const aberto = botao.dataset.aberto === "1"
+      botao.dataset.aberto = aberto ? "0" : "1"
+      botao.textContent = aberto ? "abrir" : "ocultar"
+      for (const tr of filhas) tr.hidden = aberto
+    }
+    const cabeca = html`<tr>
+      <td>${botao}${NOMES.eliminados}</td>
+      <td>${fmt(d.n1)}</td><td>${fmt(d.n2)}</td><td>${fmtSinal(d.n2 - d.n1)}</td>
+      <td>${pctVal(d.n1, validos1)}</td><td>—</td>
+    </tr>`
+    return [cabeca, ...filhas]
+  })}</tbody>
 </table></div>`
 ```
 
 ```{ojs}
 //| echo: false
-NOME_FLAG = ({
-  abstencao: "abstenção",
-  margem: "margem",
-  sem_digital_x_margem: "sem digital × margem",
-  pos17: "pós-17h",
-  so_turno: "só um turno"
-})
+NOME_FLAG = urnaMarca.FLAG
 flagsDoConjunto = () => {
   const cont = new Map()
   for (const d of linhasEscopo) {
@@ -450,7 +444,7 @@ ${unica ? html`<p class="selo-hw">${hwDaSecao.length
   <div class="cartao"><span>% sem digital</span><div>1º ${fmtPctCampo(sd1m)}</div><div>2º ${fmtPctCampo(sd2m)}</div><div>Δ ${fmtPp(sd1m == null || sd2m == null ? null : sd2m - sd1m)}</div></div>
   <div class="cartao"><span>% habilitações após as 17h</span><div>1º ${fmtPctCampo(p1m)}</div><div>2º ${fmtPctCampo(p2m)}</div><div>Δ ${fmtPp(p1m == null || p2m == null ? null : p2m - p1m)}</div></div>
   <div class="cartao"><span>Flags</span><div>${unica
-    ? (ficha.flags ? ficha.flags.split("|").filter(Boolean).map(f => NOME_FLAG[f] || f).join(", ") : "nenhuma")
+    ? (ficha.flags ? urnaMarca.flags(ficha.flags) : "nenhuma")
     : (flagsDoConjunto().map(([f, n]) => `${NOME_FLAG[f] || f}: ${n.toLocaleString("pt-BR")}`).join(" · ") || "nenhuma")}</div></div>
   <div class="cartao"><span>Achado</span><div>${unica
     ? (ficha.nivel ? `Nível ${ficha.nivel}` : "sem ficha")
@@ -458,24 +452,24 @@ ${unica ? html`<p class="selo-hw">${hwDaSecao.length
 </div>
 ${ficha && ficha.nivel ? html`<p><strong>Ficha ${ficha.nivel}</strong> · ${ficha.codigos || "sem código"}</p><p>${ficha.conclusao || (ficha.nivel === "C" ? "Sinal isolado do comparativo, na cauda da UF." : "")}</p>` : ""}
 ${Plot.plot({
-  width: 720,
   height: 220,
-  marginLeft: 48,
+  marginLeft: 56,
+  style: "font-size: 12px; max-width: 100%;",
   x: {label: "Hora (Brasília; ZZ no horário local)", tickFormat: d => String(d).padStart(2, "0")},
-  y: {label: "Habilitações da UF", grid: true},
+  y: {label: "Habilitações da UF", grid: true, tickFormat: urnaMarca.fmtEixo},
   marks: [
-    Plot.line(horasUf.filter(d => d.turno === 1), {x: "hora", y: "habilitacoes", stroke: "#6b7280"}),
-    Plot.line(horasUf.filter(d => d.turno === 2), {x: "hora", y: "habilitacoes", stroke: "#1f4e79"})
+    Plot.line(horasUf.filter(d => d.turno === 1), {x: "hora", y: "habilitacoes", stroke: COR.turno1, strokeDasharray: "6,3"}),
+    Plot.line(horasUf.filter(d => d.turno === 2), {x: "hora", y: "habilitacoes", stroke: COR.turno2})
   ]
 })}
-<p>Curva da UF ${uf}, 1º turno em cinza e 2º em azul. A seção entra com a fatia após as 17h, no cartão acima.</p>
+<p>Curva da UF ${uf}. Cinza tracejado: 1º turno. Grafite contínuo: 2º turno. A seção entra com a fatia após as 17h, no cartão acima.</p>
 ${unica ? "" : html`<details><summary>Seções sinalizadas neste conjunto (${sinalizadas.length.toLocaleString("pt-BR")})</summary>
   <div style="overflow-x:auto"><table class="table table-sm">
     <thead><tr><th>Seção</th><th>Nível</th><th>Flags</th><th>% sem digital 1º</th><th>% pós-17h 2º</th></tr></thead>
     <tbody>${sinalizadas.slice(0, 40).map(d => html`<tr>
       <td><a href="${hrefSecao(d)}">zona ${String(d.zona).padStart(4, "0")} · seção ${String(d.secao).padStart(4, "0")}</a></td>
       <td>${d.nivel || "—"}</td>
-      <td>${d.flags || d.status || "—"}</td>
+      <td>${d.flags ? urnaMarca.flags(d.flags) : (d.status || "—")}</td>
       <td>${fmtPctCampo(d.sd1)}</td>
       <td>${fmtPctCampo(d.p172)}</td>
     </tr>`)}</tbody>
@@ -592,12 +586,13 @@ instavel = motivos.length > 0
 
 ```{ojs}
 //| echo: false
+//| output: false
 Plotly = require("https://cdn.plot.ly/plotly-2.35.2.min.js")
 fluxoCidade = (taxas) => {
   if (!taxas.tem) return html``
   const nos = [
-    ...VIS_O.map(o => ({nome: `${NOMES[o]} · 1º`, cor: COR[o]})),
-    ...VIS_D.map(d => ({nome: `${NOMES[d]} · 2º`, cor: COR[d]}))
+    ...VIS_O.map(o => ({nome: urnaMarca.rotuloNo(o, 1), cor: COR[o]})),
+    ...VIS_D.map(d => ({nome: urnaMarca.rotuloNo(d, 2), cor: COR[d]}))
   ]
   const links = []
   VIS_O.forEach((ok, i) => {
@@ -620,6 +615,7 @@ fluxoCidade = (taxas) => {
   Plotly.newPlot(div, [{
     type: "sankey",
     orientation: "h",
+    arrangement: "fixed",
     node: {label: nos.map(n => n.nome), color: nos.map(n => n.cor), pad: 14, thickness: 14, line: {color: "#fff", width: 0}},
     link: {
       source: links.map(l => l.source),
@@ -627,16 +623,15 @@ fluxoCidade = (taxas) => {
       value: links.map(l => l.value),
       customdata: links.map(l => l.rotulo),
       hovertemplate: "%{customdata}<extra></extra>",
-      color: "rgba(120,120,120,0.28)"
+      color: links.map(l => urnaMarca.corFluxo(nos[l.source].cor))
     }
   }], {
-    font: {family: "inherit", size: 12},
+    font: {family: "Source Sans Pro, sans-serif", size: 13},
     margin: {l: 8, r: 8, t: 8, b: 8},
     height: 460
   }, {displayModeBar: false, responsive: true})
   return div
 }
-html``
 ```
 
 ```{ojs}
@@ -730,11 +725,12 @@ ${comAbst.length && bpMapa.tem ? html`<div style="overflow-x:auto"><table class=
     return html`<tr class="${alto ? "residuo-alto" : ""}">
       <td class="${dk === "13" ? "nome-13" : dk === "22" ? "nome-22" : ""}">${NOMES[dk]}</td>
       <td>${fmt(bp)}</td><td>${fmt(lp)}</td><td>${fmt(obs)}</td>
-      <td>${fmtSinal(bp - obs)} · ${fmtPp(ppFatia(bp, obs, estTotal(bpMapa), obsTotal))}</td>
-      <td>${fmtSinal(lp - obs)} · ${fmtPp(ppFatia(lp, obs, estTotal(lpMapa), obsTotal))}</td>
+      <td>${fmtSinal(bp - obs)} (${fmtPp(ppFatia(bp, obs, estTotal(bpMapa), obsTotal)).replace(" pp", "")} pp)</td>
+      <td>${fmtSinal(lp - obs)} (${fmtPp(ppFatia(lp, obs, estTotal(lpMapa), obsTotal)).replace(" pp", "")} pp)</td>
     </tr>`
   })}</tbody>
 </table></div>
 <p>O destaque usa 5% do observado em Lula ou Flávio, no Brown e Payne. O extremo da UF no protocolo é o percentil ${percentilMargem} de |Δ margem| do boletim, outra conta.</p>
+${zona === "todos" && lpMapa.propria ? html`<p>Com zona e seção em Todos, o resíduo do lphom é 0 por construção: a matriz é a da própria cidade, ajustada a esse conjunto.</p>` : ""}
 ${raizMatriz}` : html`<p>Sem margem de abstenção ou sem matriz neste conjunto.</p>`}`
 ```
