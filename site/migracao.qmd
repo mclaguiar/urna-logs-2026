@@ -13,20 +13,20 @@ turnos = FileAttachment("data/migracao/turnos.csv").csv({typed: true})
 fluxo = FileAttachment("data/migracao/fluxo.csv").csv({typed: true})
 cobertura = FileAttachment("data/migracao/cobertura.csv").csv({typed: true})
 conferencia = FileAttachment("data/migracao/conferencia.csv").csv({typed: true})
-nome = urnaMarca.NOME
-COR = urnaMarca.COR
+nome = window.urnaMarca.NOME
+COR = window.urnaMarca.COR
 origensVis = ["13", "22", "eliminados", "branco_nulo", "abstencao"]
 destinosVis = ["13", "22", "branco_nulo", "abstencao"]
 partes = grupo => grupo === "branco_nulo" ? ["branco", "nulo"] : [grupo]
-fmt = n => urnaMarca.menos(Math.round(+n || 0).toLocaleString("pt-BR"))
+fmt = n => window.urnaMarca.menos(Math.round(+n || 0).toLocaleString("pt-BR"))
 pct = taxa => taxa == null || Number.isNaN(+taxa)
   ? "—"
-  : urnaMarca.menos((100 * +taxa).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})) + "%"
-pct2 = taxa => urnaMarca.menos((100 * taxa).toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2})) + "%"
+  : window.urnaMarca.menos((100 * +taxa).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})) + "%"
+pct2 = taxa => window.urnaMarca.menos((100 * taxa).toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2})) + "%"
 pp = delta => {
   if (delta == null || Number.isNaN(+delta)) return "—"
   const sinal = delta > 0 ? "+" : ""
-  return urnaMarca.menos(`${sinal}${(+delta).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})} pp`)
+  return window.urnaMarca.menos(`${sinal}${(+delta).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})} pp`)
 }
 deltaTxt = (depois, antes) => {
   const d = Math.round(depois) - Math.round(antes)
@@ -351,8 +351,8 @@ md`## Como os votos migraram (Brasil)`
 Plotly = require("https://cdn.plot.ly/plotly-2.35.2.min.js")
 sankey = (uf, modelo) => {
   const nos = [
-    ...origensVis.map(o => ({nome: urnaMarca.rotuloNo(o, 1), cor: COR[o]})),
-    ...destinosVis.map(d => ({nome: urnaMarca.rotuloNo(d, 2), cor: COR[d]}))
+    ...origensVis.map(o => ({nome: window.urnaMarca.rotuloNo(o, 1), cor: COR[o]})),
+    ...destinosVis.map(d => ({nome: window.urnaMarca.rotuloNo(d, 2), cor: COR[d]}))
   ]
   const links = []
   for (const o of origensVis) {
@@ -380,7 +380,7 @@ sankey = (uf, modelo) => {
       value: links.map(l => l.value),
       customdata: links.map(l => l.rotulo),
       hovertemplate: "%{customdata}<extra></extra>",
-      color: links.map(l => urnaMarca.corFluxo(nos[l.source].cor))
+      color: links.map(l => window.urnaMarca.corFluxo(nos[l.source].cor))
     }
   }], {
     font: {family: "Source Sans Pro, sans-serif", size: 13},
@@ -530,8 +530,8 @@ Plot.plot({
   marginLeft: 50,
   height: 480,
   style: "font-size: 12px; max-width: 100%;",
-  x: {label: "Brown e Payne (%)", grid: true, tickFormat: urnaMarca.fmtEixo},
-  y: {label: "lphom (%)", grid: true, tickFormat: urnaMarca.fmtEixo},
+  x: {label: "Brown e Payne (%)", grid: true, tickFormat: window.urnaMarca.fmtEixo},
+  y: {label: "lphom (%)", grid: true, tickFormat: window.urnaMarca.fmtEixo},
   marks: [
     Plot.line([[0, 0], [100, 100]], {stroke: "#ccc"}),
     Plot.dot(pontos.filter(d => !d.destaque), {x: "bp", y: "lp", fill: "#1f4e79", r: 4, tip: true}),
@@ -631,7 +631,7 @@ Plot.plot({
   marginLeft: 90,
   height: 720,
   style: "font-size: 12px; max-width: 100%;",
-  x: {label: "% dos válidos", grid: true, tickFormat: v => `${urnaMarca.fmtEixo(v)}%`},
+  x: {label: "% dos válidos", grid: true, tickFormat: v => `${window.urnaMarca.fmtEixo(v)}%`},
   y: {label: null, domain: ordemLula.map(d => d.rotulo)},
   color: {legend: true, domain: ["Lula (13)", "Flávio (22)"], range: [COR["13"], COR["22"]]},
   marks: [
@@ -649,7 +649,6 @@ Plot.plot({
 md`Cinza: 1º turno. Cor: 2º turno. A ordem é a variação de Lula (13), em pontos percentuais dos válidos.`
 ```
 
-::: {.column-screen-inset}
 ::: {.callout-note collapse="true"}
 ## Dados por estado
 
@@ -725,7 +724,6 @@ html`<div style="overflow-x:auto"><table class="table table-sm">
 </table></div>`
 ```
 :::
-:::
 
 ```{ojs}
 //| echo: false
@@ -788,15 +786,16 @@ contagemLeitura = ["Robusta", "Sensível", "Indeterminada"].map(nivel => ({
   n: linhasMig.filter(r => r.leitura === nivel).length
 }))
 html`<p>Leitura: ${contagemLeitura.map(d => `${d.nivel} ${d.n}`).join(" · ")}. Robusta: saldos concordam e |lphom − Brown e Payne| ≤ 10 pp. Sensível: saldos concordam e a divergência passa de 10 pp. Indeterminada: algum saldo muda de lado conforme o modelo.</p>
-<div style="overflow-x:auto"><table class="table table-sm">
+<div class="tabela-mig"><table class="table table-sm">
   <thead><tr>
-    <th>UF</th><th>Lula→Lula</th><th>Flávio→Flávio</th>
-    <th>Elim.→Lula</th><th>Elim.→Flávio</th>
-    <th>BN→Lula</th><th>BN→Flávio</th>
-    <th>Abst.→Lula</th><th>Abst.→Flávio</th>
-    <th>Eliminados favorecem</th><th>Branco e nulo favorecem</th>
-    <th>|lphom − Brown e Payne| (pp)</th>
-    <th>Erro candidatos</th><th>Erro branco e nulo</th><th>Leitura</th>
+    <th>UF</th>
+    <th>Lula<br>→ Lula</th><th>Flávio<br>→ Flávio</th>
+    <th>Elim.<br>→ Lula</th><th>Elim.<br>→ Flávio</th>
+    <th>BN<br>→ Lula</th><th>BN<br>→ Flávio</th>
+    <th>Abst.<br>→ Lula</th><th>Abst.<br>→ Flávio</th>
+    <th>Elim.<br>favorecem</th><th>BN<br>favorecem</th>
+    <th>|lphom − BP|<br>(pp)</th>
+    <th>Erro<br>candidatos</th><th>Erro<br>BN</th><th>Leitura</th>
   </tr></thead>
   <tbody>${linhasMig.map(r => html`<tr class="${classeUf(r.uf, 2)}">
     <td>${nomeUf(r.uf)}</td>

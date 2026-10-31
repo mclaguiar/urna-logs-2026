@@ -49,28 +49,28 @@ vProt = (chave) => {
   const row = protocolo.find(d => d.chave === chave)
   return row ? String(row.valor) : ""
 }
-COR = urnaMarca.COR
-NOMES = ({...urnaMarca.NOME, branco: "Branco", nulo: "Nulo"})
+COR = window.urnaMarca.COR
+NOMES = ({...window.urnaMarca.NOME, branco: "Branco", nulo: "Nulo"})
 LIMIAR_RESIDUO = 0.05
 percentilMargem = (() => {
   const n = Number(vProt("p_flag_margem"))
   return Number.isFinite(n) ? n.toLocaleString("pt-BR", {style: "percent", maximumFractionDigits: 0}) : vProt("p_flag_margem")
 })()
 num = (v) => (v == null || v === "" || Number.isNaN(+v) ? null : +v)
-fmt = (n) => (n == null || Number.isNaN(+n) ? "—" : urnaMarca.menos(Math.round(+n).toLocaleString("pt-BR")))
+fmt = (n) => (n == null || Number.isNaN(+n) ? "—" : window.urnaMarca.menos(Math.round(+n).toLocaleString("pt-BR")))
 fmtSinal = (n) => {
   if (n == null || Number.isNaN(+n)) return "—"
   const r = Math.round(+n)
-  return urnaMarca.menos((r > 0 ? "+" : "") + r.toLocaleString("pt-BR"))
+  return window.urnaMarca.menos((r > 0 ? "+" : "") + r.toLocaleString("pt-BR"))
 }
 fmtPp = (n) => {
   if (n == null || Number.isNaN(+n)) return "—"
   const t = (+n).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})
-  return urnaMarca.menos((n > 0 ? "+" : "") + t + " pp")
+  return window.urnaMarca.menos((n > 0 ? "+" : "") + t + " pp")
 }
 pct1 = (taxa) => taxa == null || Number.isNaN(+taxa)
   ? "—"
-  : urnaMarca.menos((100 * taxa).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})) + "%"
+  : window.urnaMarca.menos((100 * taxa).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})) + "%"
 nomeCurto = (cod) => cod === "95" ? "Branco" : cod === "96" ? "Nulo" : (NOMES[cod] || `${(nomeVotavel.get(cod) || cod).split(" ")[0]} (${cod})`)
 nomeCheio = (cod) => nomeVotavel.get(cod) || nomeCurto(cod)
 listaSelect = (opcoes, label, valor) => {
@@ -402,7 +402,7 @@ html`<div style="overflow-x:auto"><table class="table table-sm">
 
 ```{ojs}
 //| echo: false
-NOME_FLAG = urnaMarca.FLAG
+NOME_FLAG = window.urnaMarca.FLAG
 flagsDoConjunto = () => {
   const cont = new Map()
   for (const d of linhasEscopo) {
@@ -444,7 +444,7 @@ ${unica ? html`<p class="selo-hw">${hwDaSecao.length
   <div class="cartao"><span>% sem digital</span><div>1º ${fmtPctCampo(sd1m)}</div><div>2º ${fmtPctCampo(sd2m)}</div><div>Δ ${fmtPp(sd1m == null || sd2m == null ? null : sd2m - sd1m)}</div></div>
   <div class="cartao"><span>% habilitações após as 17h</span><div>1º ${fmtPctCampo(p1m)}</div><div>2º ${fmtPctCampo(p2m)}</div><div>Δ ${fmtPp(p1m == null || p2m == null ? null : p2m - p1m)}</div></div>
   <div class="cartao"><span>Flags</span><div>${unica
-    ? (ficha.flags ? urnaMarca.flags(ficha.flags) : "nenhuma")
+    ? (ficha.flags ? window.urnaMarca.flags(ficha.flags) : "nenhuma")
     : (flagsDoConjunto().map(([f, n]) => `${NOME_FLAG[f] || f}: ${n.toLocaleString("pt-BR")}`).join(" · ") || "nenhuma")}</div></div>
   <div class="cartao"><span>Achado</span><div>${unica
     ? (ficha.nivel ? `Nível ${ficha.nivel}` : "sem ficha")
@@ -456,7 +456,7 @@ ${Plot.plot({
   marginLeft: 56,
   style: "font-size: 12px; max-width: 100%;",
   x: {label: "Hora (Brasília; ZZ no horário local)", tickFormat: d => String(d).padStart(2, "0")},
-  y: {label: "Habilitações da UF", grid: true, tickFormat: urnaMarca.fmtEixo},
+  y: {label: "Habilitações da UF", grid: true, tickFormat: window.urnaMarca.fmtEixo},
   marks: [
     Plot.line(horasUf.filter(d => d.turno === 1), {x: "hora", y: "habilitacoes", stroke: COR.turno1, strokeDasharray: "6,3"}),
     Plot.line(horasUf.filter(d => d.turno === 2), {x: "hora", y: "habilitacoes", stroke: COR.turno2})
@@ -469,7 +469,7 @@ ${unica ? "" : html`<details><summary>Seções sinalizadas neste conjunto (${sin
     <tbody>${sinalizadas.slice(0, 40).map(d => html`<tr>
       <td><a href="${hrefSecao(d)}">zona ${String(d.zona).padStart(4, "0")} · seção ${String(d.secao).padStart(4, "0")}</a></td>
       <td>${d.nivel || "—"}</td>
-      <td>${d.flags ? urnaMarca.flags(d.flags) : (d.status || "—")}</td>
+      <td>${d.flags ? window.urnaMarca.flags(d.flags) : (d.status || "—")}</td>
       <td>${fmtPctCampo(d.sd1)}</td>
       <td>${fmtPctCampo(d.p172)}</td>
     </tr>`)}</tbody>
@@ -591,8 +591,8 @@ Plotly = require("https://cdn.plot.ly/plotly-2.35.2.min.js")
 fluxoCidade = (taxas) => {
   if (!taxas.tem) return html``
   const nos = [
-    ...VIS_O.map(o => ({nome: urnaMarca.rotuloNo(o, 1), cor: COR[o]})),
-    ...VIS_D.map(d => ({nome: urnaMarca.rotuloNo(d, 2), cor: COR[d]}))
+    ...VIS_O.map(o => ({nome: window.urnaMarca.rotuloNo(o, 1), cor: COR[o]})),
+    ...VIS_D.map(d => ({nome: window.urnaMarca.rotuloNo(d, 2), cor: COR[d]}))
   ]
   const links = []
   VIS_O.forEach((ok, i) => {
@@ -623,7 +623,7 @@ fluxoCidade = (taxas) => {
       value: links.map(l => l.value),
       customdata: links.map(l => l.rotulo),
       hovertemplate: "%{customdata}<extra></extra>",
-      color: links.map(l => urnaMarca.corFluxo(nos[l.source].cor))
+      color: links.map(l => window.urnaMarca.corFluxo(nos[l.source].cor))
     }
   }], {
     font: {family: "Source Sans Pro, sans-serif", size: 13},

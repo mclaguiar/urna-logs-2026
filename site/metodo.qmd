@@ -140,19 +140,7 @@ Nenhuma linha abaixo é uma conclusão. É o que se esperaria ver, e onde olhar.
 
 ## O que o site responde
 
-::: {.cards}
-
-[**Auditoria** O que mudou do 1º para o 2º turno, onde a seção está no extremo da UF e como as habilitações se distribuíram no dia.](auditoria.qmd){.card-link}
-
-[**Integridade dos arquivos** Se o pacote foi assinado pela urna: hash do `.vsc`, assinatura e certificado, por modelo e por UF.](assinaturas.qmd){.card-link}
-
-[**Consulta por seção** Totais da seção, da zona ou da cidade, e a mesma matriz de migração aplicada a esse conjunto.](secao.qmd){.card-link}
-
-[**Migração dos votos** De onde a estimativa manda cada origem, nos dois modelos, por UF e no Brasil, e a diferença para o divulgado.](migracao.qmd){.card-link}
-
-[**Método e glossário** Cadeia, limiares, transferência, limitações e o glossário desta página.](metodo.qmd){.card-link}
-
-:::
+O mapa das páginas está na [Visão geral](index.qmd).
 
 ## Glossário
 
@@ -202,25 +190,28 @@ Nenhuma linha abaixo é uma conclusão. É o que se esperaria ver, e onde olhar.
 
 ## Dados deste site
 
-| Arquivo | Conteúdo | Download |
-|---|---|---|
-| `site/data/painel_uf.csv` | Indicadores por UF, 1º e 2º turno | [painel_uf.csv](data/painel_uf.csv) |
-| `site/data/curva_horaria.csv` | Habilitações por hora, UF e turno | [curva_horaria.csv](data/curva_horaria.csv) |
-| `site/data/outliers_sem_digital.csv` | Seções no topo de % sem digital | [outliers_sem_digital.csv](data/outliers_sem_digital.csv) |
-| `site/data/anomalias_secao.csv` | Seções do comparativo | [anomalias_secao.csv](data/anomalias_secao.csv) |
-| `site/data/achados_ab.csv` | Fichas A e B | [achados_ab.csv](data/achados_ab.csv) |
-| `site/data/protocolo.csv` | Limiares lidos no build | [protocolo.csv](data/protocolo.csv) |
-| `site/data/hw_cadeia.csv` | Seções verificadas por UF e turno: hash, cadeia e modelo | [hw_cadeia.csv](data/hw_cadeia.csv) |
-| `site/data/hw_cobertura.csv` | Seções verificadas em cada UF e turno, inclusive zero | [hw_cobertura.csv](data/hw_cobertura.csv) |
-| `site/data/secao/hw_{UF}.csv` | Selo da seção: modelo, cadeia e hash | [exemplo AC](data/secao/hw_AC.csv) |
-| `site/data/migracao/fluxo.csv` | Votos transferidos por UF e no Brasil | [fluxo.csv](data/migracao/fluxo.csv) |
-| `site/data/migracao/turnos.csv` | Totais publicados por UF, turno e grupo | [turnos.csv](data/migracao/turnos.csv) |
-| `site/data/migracao/matriz.csv` | Taxas por cidade e do estado, nos dois modelos | [matriz.csv](data/migracao/matriz.csv) |
-| `site/data/migracao/conferencia.csv` | BU × CSV oficial, por grupo | [conferencia.csv](data/migracao/conferencia.csv) |
-| `site/data/migracao/cobertura.csv` | Quantas UFs têm matriz | [cobertura.csv](data/migracao/cobertura.csv) |
-| `site/data/secao/votos_{UF}.csv` | Consulta da seção. Um arquivo por UF | [exemplo AC](data/secao/votos_AC.csv) |
-| `site/data/secao/municipios.csv` | Código e nome do município | [municipios.csv](data/secao/municipios.csv) |
-| `site/data/secao/rotulos.csv` | Código votável e nome | [rotulos.csv](data/secao/rotulos.csv) |
+<table class="table table-sm">
+<thead><tr><th>Arquivo</th><th>Conteúdo</th></tr></thead>
+<tbody>
+<tr><td class="caminho"><a href="data/painel_uf.csv">site/data/painel_uf.csv</a></td><td>Indicadores por UF, 1º e 2º turno</td></tr>
+<tr><td class="caminho"><a href="data/curva_horaria.csv">site/data/curva_horaria.csv</a></td><td>Habilitações por hora, UF e turno</td></tr>
+<tr><td class="caminho"><a href="data/outliers_sem_digital.csv">site/data/outliers_sem_digital.csv</a></td><td>Seções no topo de % sem digital</td></tr>
+<tr><td class="caminho"><a href="data/anomalias_secao.csv">site/data/anomalias_secao.csv</a></td><td>Seções do comparativo</td></tr>
+<tr><td class="caminho"><a href="data/achados_ab.csv">site/data/achados_ab.csv</a></td><td>Fichas A e B</td></tr>
+<tr><td class="caminho"><a href="data/protocolo.csv">site/data/protocolo.csv</a></td><td>Limiares lidos no build</td></tr>
+<tr><td class="caminho"><a href="data/hw_cadeia.csv">site/data/hw_cadeia.csv</a></td><td>Seções verificadas por UF e turno: hash, cadeia e modelo</td></tr>
+<tr><td class="caminho"><a href="data/hw_cobertura.csv">site/data/hw_cobertura.csv</a></td><td>Seções verificadas em cada UF e turno, inclusive zero</td></tr>
+<tr><td class="caminho"><a href="data/secao/hw_AC.csv">site/data/secao/hw_{UF}.csv</a></td><td>Selo da seção: modelo, cadeia e hash. O link abre o exemplo do AC</td></tr>
+<tr><td class="caminho"><a href="data/migracao/fluxo.csv">site/data/migracao/fluxo.csv</a></td><td>Votos transferidos por UF e no Brasil</td></tr>
+<tr><td class="caminho"><a href="data/migracao/turnos.csv">site/data/migracao/turnos.csv</a></td><td>Totais publicados por UF, turno e grupo</td></tr>
+<tr><td class="caminho"><a href="data/migracao/matriz.csv">site/data/migracao/matriz.csv</a></td><td>Taxas por cidade e do estado, nos dois modelos</td></tr>
+<tr><td class="caminho"><a href="data/migracao/conferencia.csv">site/data/migracao/conferencia.csv</a></td><td>BU × CSV oficial, por grupo</td></tr>
+<tr><td class="caminho"><a href="data/migracao/cobertura.csv">site/data/migracao/cobertura.csv</a></td><td>Quantas UFs têm matriz</td></tr>
+<tr><td class="caminho"><a href="data/secao/votos_AC.csv">site/data/secao/votos_{UF}.csv</a></td><td>Consulta da seção. Um arquivo por UF. O link abre o exemplo do AC</td></tr>
+<tr><td class="caminho"><a href="data/secao/municipios.csv">site/data/secao/municipios.csv</a></td><td>Código e nome do município</td></tr>
+<tr><td class="caminho"><a href="data/secao/rotulos.csv">site/data/secao/rotulos.csv</a></td><td>Código votável e nome</td></tr>
+</tbody>
+</table>
 
 ::: {.callout-note collapse="true"}
 ## Dicionário de colunas

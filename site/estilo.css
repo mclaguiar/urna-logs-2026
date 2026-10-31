@@ -39,9 +39,3 @@ th.chave {
 .observablehq table th {
   text-align: left;
 }
-@media (max-width: 420px) {
-  #quarto-document-content,
-  main.content {
-    overflow-x: hidden;
-  }
-}

@@ -16,13 +16,13 @@ anomalias = FileAttachment("data/anomalias_secao.csv").csv({typed: true})
 ```{ojs}
 //| echo: false
 num = v => (v == null || v === "" || Number.isNaN(+v) ? null : +v)
-fmt = n => (n == null || Number.isNaN(+n)) ? "—" : urnaMarca.menos(Math.round(+n).toLocaleString("pt-BR"))
-fmt1 = n => (n == null || Number.isNaN(+n)) ? "—" : urnaMarca.menos((+n).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}))
-fmt2 = n => (n == null || Number.isNaN(+n)) ? "—" : urnaMarca.menos((+n).toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2}))
+fmt = n => (n == null || Number.isNaN(+n)) ? "—" : window.urnaMarca.menos(Math.round(+n).toLocaleString("pt-BR"))
+fmt1 = n => (n == null || Number.isNaN(+n)) ? "—" : window.urnaMarca.menos((+n).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}))
+fmt2 = n => (n == null || Number.isNaN(+n)) ? "—" : window.urnaMarca.menos((+n).toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2}))
 pp = n => {
   if (n == null || Number.isNaN(+n)) return "—"
   const v = +n
-  return urnaMarca.menos((v > 0 ? "+" : "") + v.toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " pp")
+  return window.urnaMarca.menos((v > 0 ? "+" : "") + v.toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " pp")
 }
 nomeUf = uf => uf === "ZZ" ? "Exterior" : uf
 rows = painel.map(d => ({
@@ -165,9 +165,9 @@ Plot.plot({
   marginBottom: 48,
   height: 480,
   style: "font-size: 12px; max-width: 100%;",
-  x: {label: "% sem digital no 1º turno", grid: true, tickFormat: urnaMarca.fmtEixo},
-  y: {label: "Δ margem (pp dos válidos, Lula − Flávio)", grid: true, tickFormat: urnaMarca.fmtEixo},
-  color: {scheme: "Blues", legend: true, label: "Seções na célula", tickFormat: urnaMarca.fmtEixo},
+  x: {label: "% sem digital no 1º turno", grid: true, tickFormat: window.urnaMarca.fmtEixo},
+  y: {label: "Δ margem (pp dos válidos, Lula − Flávio)", grid: true, tickFormat: window.urnaMarca.fmtEixo},
+  color: {scheme: "Blues", legend: true, label: "Seções na célula", tickFormat: window.urnaMarca.fmtEixo},
   marks: [
     Plot.rect(pts, Plot.bin({fill: "count"}, {x: "pct_sem_digital_1t", y: "delta_margem_pp"})),
     Plot.dot(nivelB, {x: "pct_sem_digital_1t", y: "delta_margem_pp", fill: "#a51c1c", r: 3, tip: true}),
@@ -197,7 +197,7 @@ html`<div style="overflow-x:auto"><table class="table table-sm">
     <td>${fmt(d.bu_comparecimento)}</td>
     <td>${fmt1(num(d.pct_sem_digital))}%</td>
     <td>${pp(num(d.delta_margem_pp))}</td>
-    <td>${urnaMarca.flags(d.flags)}</td>
+    <td>${window.urnaMarca.flags(d.flags)}</td>
   </tr>`)}</tbody>
 </table></div>
 ${lista.length > 20 ? html`<details><summary>Ver todas (${lista.length.toLocaleString("pt-BR")})</summary>
@@ -210,7 +210,7 @@ ${lista.length > 20 ? html`<details><summary>Ver todas (${lista.length.toLocaleS
       <td>${fmt(d.bu_comparecimento)}</td>
       <td>${fmt1(num(d.pct_sem_digital))}%</td>
       <td>${pp(num(d.delta_margem_pp))}</td>
-      <td>${urnaMarca.flags(d.flags)}</td>
+      <td>${window.urnaMarca.flags(d.flags)}</td>
     </tr>`)}</tbody>
   </table></div>
 </details>` : ""}`
@@ -277,12 +277,12 @@ Plot.plot({
   height: 420,
   style: "font-size: 12px; max-width: 100%;",
   x: {label: eixoLabel, domain: d3.range(24), ticks: 24},
-  y: {label: "% das habilitações do dia", grid: true, tickFormat: urnaMarca.fmtEixo},
+  y: {label: "% das habilitações do dia", grid: true, tickFormat: window.urnaMarca.fmtEixo},
   marks: [
     Plot.ruleY([0]),
     Plot.ruleX([17], {stroke: "#a51c1c", strokeOpacity: 0.35, strokeDasharray: "4,4"}),
-    Plot.lineY(p1, {x: "hora", y: "pct", stroke: urnaMarca.COR.turno1, strokeWidth: 2, curve: "step", strokeDasharray: "6,3"}),
-    Plot.lineY(p2, {x: "hora", y: "pct", stroke: urnaMarca.COR.turno2, strokeWidth: 2, curve: "step"})
+    Plot.lineY(p1, {x: "hora", y: "pct", stroke: window.urnaMarca.COR.turno1, strokeWidth: 2, curve: "step", strokeDasharray: "6,3"}),
+    Plot.lineY(p2, {x: "hora", y: "pct", stroke: window.urnaMarca.COR.turno2, strokeWidth: 2, curve: "step"})
   ]
 })
 ```

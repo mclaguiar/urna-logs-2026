@@ -19,9 +19,7 @@ nFora = hw.reduce((s, d) => s + (+d.fora || 0), 0)
 
 ```{ojs}
 //| echo: false
-md`Esta página verifica autenticidade, se o pacote foi assinado pela urna, e as outras páginas verificam consistência entre arquivos.
-
-Cadeia aberta é a seção UE2013/UE2015 cujo relatório ainda não confrontou o certificado da urna com a chave pública da AC URNA publicada em [acurna.tse.jus.br/crt/acurna.crt](http://acurna.tse.jus.br/crt/acurna.crt), um limite da verificação e não indício de alteração; esse certificado da AC venceu em 18/07/2026, antes da eleição, e onde o relatório já o usa a assinatura confere e a data fica de fora da conta.
+md`Esta página verifica autenticidade: se o pacote foi assinado pela urna. As outras páginas verificam consistência entre arquivos.
 
 O hash de \`bu\`, \`rdv\` e \`log\` confere com o \`.vsc\` em ${fmt(nHash)} de ${fmt(nSec)} seções verificadas.`
 ```
@@ -48,8 +46,9 @@ A chave usada na conferência é a do certificado publicado pela própria AC, no
 .cob-uf { display: grid; grid-template-columns: 4.5rem 1fr; gap: 0.35rem; align-items: center; margin: 0.15rem 0; font-size: 0.9rem; }
 .trilha { display: flex; gap: 0.25rem; }
 .barra { height: 0.72rem; border-radius: 0.2rem; min-width: 0; }
-.barra.t1 { background: #94a3b8; }
-.barra.t2 { background: #1f4e79; }
+.barra.t1 { background: #9ca3af; }
+.barra.t2 { background: #374151; }
+.barra span { font-size: 0.75rem; color: #222; padding-left: 0.2rem; white-space: nowrap; }
 .legenda { font-size: 0.85rem; color: #444; margin: 0.2rem 0 0.6rem; }
 </style>
 
@@ -76,22 +75,30 @@ A chave usada na conferência é a do certificado publicado pela própria AC, no
 
 Seção cujo relatório ainda não foi refeito com esse certificado fica com o último elo pendente. Isso não é leitura de que o arquivo mudou.
 
+Cadeia aberta é a seção UE2013/UE2015 cujo relatório ainda não confrontou o certificado da urna com a chave pública da AC URNA publicada em [acurna.tse.jus.br/crt/acurna.crt](http://acurna.tse.jus.br/crt/acurna.crt). É um limite da verificação, não indício de alteração. Esse certificado da AC venceu em 18/07/2026, antes da eleição; onde o relatório já o usa, a assinatura confere e a data fica de fora da conta.
+
 ## Cobertura
 
 ```{ojs}
 //| echo: false
-ufs = [...new Set(cob.map(d => d.uf))]
-maxSec = Math.max(1, ...cob.map(d => +d.secoes || 0))
-html`<p class="legenda"><span style="color:#94a3b8">■</span> 1º turno · <span style="color:#1f4e79">■</span> 2º turno. Barra vazia: a UF ainda não tem relatório nesse turno.</p>
-<div>${ufs.map(uf => {
-  const a = cob.find(d => d.uf === uf && +d.turno === 1) || {secoes: 0}
-  const b = cob.find(d => d.uf === uf && +d.turno === 2) || {secoes: 0}
-  const w = (n) => Math.max(+n ? 2 : 0, 100 * (+n || 0) / maxSec)
+ufs = [...new Set(cob.map(d => d.uf))].sort((a, b) => (a === "ZZ") - (b === "ZZ") || nomeUf(a).localeCompare(nomeUf(b), "pt"))
+par = uf => ({
+  a: cob.find(d => d.uf === uf && +d.turno === 1) || {secoes: 0},
+  b: cob.find(d => d.uf === uf && +d.turno === 2) || {secoes: 0}
+})
+comDado = ufs.filter(uf => +par(uf).a.secoes || +par(uf).b.secoes)
+semDado = ufs.filter(uf => !comDado.includes(uf))
+maxSec = Math.max(1, ...comDado.flatMap(uf => [+par(uf).a.secoes || 0, +par(uf).b.secoes || 0]))
+html`<p class="legenda"><span style="color:#9ca3af">■</span> 1º turno, cinza · <span style="color:#374151">■</span> 2º turno, grafite. O número na barra é a quantidade de seções verificadas.</p>
+<div>${comDado.map(uf => {
+  const {a, b} = par(uf)
+  const w = (n) => Math.max(+n ? 8 : 0, 100 * (+n || 0) / maxSec)
   return html`<div class="cob-uf"><span>${nomeUf(uf)}</span><div class="trilha">
-    <div class="barra t1" style="width:${w(a.secoes)}%" title="1º turno: ${fmt(a.secoes)} seções"></div>
-    <div class="barra t2" style="width:${w(b.secoes)}%" title="2º turno: ${fmt(b.secoes)} seções"></div>
+    ${+a.secoes ? html`<div class="barra t1" style="width:${w(a.secoes)}%" title="1º turno"></div><span>${fmt(a.secoes)}</span>` : ""}
+    ${+b.secoes ? html`<div class="barra t2" style="width:${w(b.secoes)}%" title="2º turno"></div><span>${fmt(b.secoes)}</span>` : ""}
   </div></div>`
-})}</div>`
+})}</div>
+<p>Ainda sem relatório: ${semDado.length ? semDado.map(nomeUf).join(", ") : "nenhuma"}.</p>`
 ```
 
 ```{ojs}
@@ -111,20 +118,37 @@ linha = (d) => {
     ["UE2015", +d.n_ue2015 || 0],
     ["UE2020", +d.n_ue2020 || 0],
     ["UE2022", +d.n_ue2022 || 0]
-  ].map(([nome, n]) => `${nome} ${pct(n, den)}`).join(" · ")
+  ]
   return {
-    UF: nomeUf(d.uf),
-    "Seções verificadas": fmt(d.secoes),
-    "Hash ok": fmt(d.hash_ok),
-    "Hash falhou": fmt(d.hash_falhou),
-    "Cadeia fechada": pct(+d.cadeia_fechada || 0, den),
-    "Cadeia aberta": pct(+d.cadeia_aberta || 0, den),
-    "Urnas por modelo": modelos,
-    ...(nFora ? {"Fora": fmt(d.fora)} : {}),
-    Verificador: d.verificador,
-    Turno: `${d.turno}º`
+    uf: nomeUf(d.uf),
+    turno: `${d.turno}º`,
+    secoes: fmt(d.secoes),
+    hashOk: fmt(d.hash_ok),
+    hashFalhou: fmt(d.hash_falhou),
+    fechada: pct(+d.cadeia_fechada || 0, den),
+    aberta: pct(+d.cadeia_aberta || 0, den),
+    ue2013: pct(modelos[0][1], den),
+    ue2015: pct(modelos[1][1], den),
+    ue2020: pct(modelos[2][1], den),
+    ue2022: pct(modelos[3][1], den),
+    fora: fmt(d.fora),
+    verificador: d.verificador
   }
 }
+tabelaHw = (linhas) => html`<div style="overflow-x:auto"><table class="table table-sm tabela-hw">
+  <thead><tr>
+    <th>UF</th><th>Turno</th><th>Seções</th><th>Hash ok</th><th>Hash falhou</th>
+    <th>Cadeia fechada</th><th>Cadeia aberta</th>
+    <th>UE2013</th><th>UE2015</th><th>UE2020</th><th>UE2022</th>
+    ${nFora ? html`<th>Fora</th>` : ""}<th>Verificador</th>
+  </tr></thead>
+  <tbody>${linhas.map(d => html`<tr>
+    <td>${d.uf}</td><td>${d.turno}</td><td>${d.secoes}</td><td>${d.hashOk}</td><td>${d.hashFalhou}</td>
+    <td>${d.fechada}</td><td>${d.aberta}</td>
+    <td>${d.ue2013}</td><td>${d.ue2015}</td><td>${d.ue2020}</td><td>${d.ue2022}</td>
+    ${nFora ? html`<td>${d.fora}</td>` : ""}<td>${d.verificador}</td>
+  </tr>`)}</tbody>
+</table></div>`
 novo = hw.filter(d => d.bloco === "novo").map(linha)
 outro = hw.filter(d => d.bloco !== "novo").map(linha)
 ```
@@ -136,25 +160,24 @@ nFora
   : md`Nenhuma seção verificada ficou fora das classes cadeia fechada, cadeia aberta e falha de hash.`
 ```
 
-```{ojs}
-//| echo: false
-outro.length
-  ? md`<div class="aviso-bloco"><strong>Estes relatórios não são comparáveis com os de baixo.</strong> Verificador anterior: o programa parava ao ver ECDSA e não conferia a assinatura. Verificador novo com cadeia ainda pendente: o relatório foi gravado antes de fixar o certificado publicado da AC URNA. A coluna de cadeia aberta, aqui, é a frota UE2013/UE2015 com hash ok, não uma conferência da AC.</div>`
-  : md``
-```
-
-```{ojs}
-//| echo: false
-outro.length ? Inputs.table(outro, {height: Math.min(640, 48 + outro.length * 28)}) : md``
-```
-
 ## Por UF
 
 ```{ojs}
 //| echo: false
 novo.length
-  ? Inputs.table(novo, {height: Math.min(640, 48 + novo.length * 28)})
+  ? tabelaHw(novo)
   : md`Nenhuma UF foi gravada ainda com o certificado publicado da AC URNA.`
+```
+
+```{ojs}
+//| echo: false
+outro.length
+  ? html`<details>
+      <summary>Relatórios não comparáveis (${outro.length.toLocaleString("pt-BR")} linhas)</summary>
+      <div class="aviso-bloco"><strong>Estes relatórios não são comparáveis com a tabela de cima.</strong> Verificador anterior: o programa parava ao ver ECDSA e não conferia a assinatura. Verificador novo com cadeia ainda pendente: o relatório foi gravado antes de fixar o certificado publicado da AC URNA. A coluna de cadeia aberta, aqui, é a frota UE2013/UE2015 com hash ok, não uma conferência da AC.</div>
+      ${tabelaHw(outro)}
+    </details>`
+  : md``
 ```
 
 O mecanismo e os termos estão no [Método](metodo.qmd#assinatura-de-hardware).
