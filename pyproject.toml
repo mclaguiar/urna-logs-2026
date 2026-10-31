@@ -19,6 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+hw = ["ecpy @ git+https://github.com/cslashm/ECPy.git@8143d9ac017de0cb7f980bedaf56cefe6b4d9180"]
 
 [project.scripts]
 urna-logs = "urna_logs.cli:app"
@@ -27,7 +28,7 @@ urna-logs = "urna_logs.cli:app"
 where = ["src"]
 
 [tool.setuptools.package-data]
-urna_logs = ["spec/*.asn1"]
+urna_logs = ["spec/*.asn1", "r/*.R"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

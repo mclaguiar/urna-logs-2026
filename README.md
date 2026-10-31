@@ -34,8 +34,9 @@ Cada comando lê o que o anterior gravou em `data/` / `reports/` e escreve Parqu
 | 5 | `horario` | Dia oficial ± tolerância: janelas 8h–17h / pós / fora; histórico = outras datas no `.jez`. `--por-secao`. |
 | 6 | `comparar-turnos` | 1º×2º na mesma seção: Δ + flags. |
 | 7 | `achados` | Fichas A/B/C. |
-| 8 | `verificar-vsc` | `-vota.vsc`: cobertura + SHA-512 dos arquivos presentes (nível 1). |
+| 8 | `verificar-vsc` | `-vota.vsc`: hashes do ZIP e Ed521. `--nivel 1` só hashes; `--nivel 2` só Ed521. |
 | 9 | `fluxo-ecologico` | Duncan–Davis + taxas IPF com IC (Nível C). |
+| 10 | `transferencia` | Matriz 1º→2º por cidade. Brown e Payne em cada seção, com intervalo de 95%. lphom na seção até 2.500 linhas; acima disso, por zona. No fim, leitura de cada estado e o consolidado do país. |
 
 **Opcionais:** `viability` / `catalog` / `metrics`; `validar-fluxo`; `inspect`.
 
@@ -47,8 +48,9 @@ Repita `download` → `audit` → `cruzar` → `horario` para o **2º turno** (`
 |---|---|
 | RDV ≡ BU e BU ≡ oficial por seção | Microdado de eleitor / migração pessoa a pessoa |
 | Δ 1º×2º; % sem digital; pós-17h; flags B | Outros cargos |
-| Fluxo ecológico (taxas + bounds) | Assinatura HW Ed521 completa (nível 2 `.vsc`) |
+| Fluxo ecológico (taxas + bounds) | Chave SW da cerimônia (`.vsc`) |
 | Hashes `.vsc` nível 1 (arquivos no ZIP) | |
+| Ed521 `.vsc` (padrão do `verificar-vsc`; extra `hw`) | |
 
 ### Prefixos em `reports/`
 
@@ -114,8 +116,8 @@ Se `outliers_sem_digital.csv` estiver bloqueado no Windows, o build grava `outli
 
 - Pipeline 1º/2º e comparativo/achados/fluxo em escala **nacional** (28 UFs), conforme CDN.
 - Consolidados: `reports/evidencia_nacional_1t_2t.md`, `reports/hipoteses_fluxo_1t_2t.md`.
-- `.vsc` nível 1: `verificar-vsc` (piloto AC 100%; demais UFs conforme job).
-- Ainda: outros cargos; crypto HW Ed521 (nível 2).
+- `.vsc`: `verificar-vsc` confere hashes e Ed521. `--nivel 1` fica só nos hashes; `--nivel 2` fica só no Ed521. O Ed521 precisa do extra `hw` (ECPy). Piloto de hashes no AC: 100%; demais UFs conforme job.
+- Ainda: outros cargos.
 
 ## Site (Quarto → GitHub Pages)
 
@@ -125,7 +127,7 @@ quarto render site
 quarto preview site
 ```
 
-- Páginas: `site/index.qmd`, `site/metodo.qmd`
+- Páginas: `site/index.qmd`, `site/metodo.qmd`, `site/secao.qmd` (consulta UF → cidade → zona → seção)
 - CI: `.github/workflows/quarto-publish.yml` → `gh-pages`
 - URL: https://mclaguiar.github.io/urna-logs-2026/
 

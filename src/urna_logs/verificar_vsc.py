@@ -1,12 +1,16 @@
 """
 Verificação de `-vota.vsc` (assinatura da mídia de resultado).
 
-Níveis:
+Sem `--nivel`, confere os dois: hashes do ZIP e Ed521.
+`--nivel 1` fica só nos hashes. `--nivel 2` fica só no Ed521.
+`--nivel 0` é só cobertura (parse do `.vsc`, sem hash nem Ed521).
+
   0 — cobertura: stem com BU/RDV/log tem `.vsc`
   1 — hashes SHA-512 dos arquivos **presentes** no ZIP = hashes do `.vsc`
       (arquivos listados na assinatura mas ausentes no pacote público =
       `ausente_pacote`, esperado: TSE não publica jufa/wsq/mr.ver etc.)
-  2 — assinatura de hardware (cert embutido); requer `ecpy` (opcional)
+  2 — Ed521: certificado da AC UE2020/UE2022, autoassinatura e cada hash;
+      requer `ecpy` (opcional, `pip install -e ".[hw]"`)
 
 Spec: `spec/assinatura.asn1` (TSE 2026). Não valida chave SW da cerimônia.
 """
@@ -180,22 +184,16 @@ def _criticos_status(detalhe: dict[str, str], stem: str) -> tuple[bool, str]:
 def _try_hw_signatures(
     ent: dict, zf: zipfile.ZipFile, arquivos: list[dict]
 ) -> tuple[bool | None, str]:
-    """
-    Nível 2: stub honesto — Ed521/ECPy dos scripts TSE ainda não embutido.
-    Confirma presença de certificadoDigital no HW.
-    """
-    del zf, arquivos  # reservado para verify completo
-    info = ent["assinaturaHW"]["informacaoChave"]
-    origem = ent.get("origemAssinaturaHW") or {}
-    modelo = origem.get("modeloEquipamento")
-    alg = origem.get("algoritmoAssinatura")
-    if isinstance(info, tuple) and info[0] == "certificadoDigital":
-        n = len(info[1]) if info[1] is not None else 0
-        return None, (
-            f"certificadoDigital presente ({n} bytes) modelo={modelo} alg={alg}; "
-            "verify crypto HW = scripts TSE + ECPy (nível 2 completo pendente)"
-        )
-    return False, f"sem certificadoDigital HW (info={info!r})"
+    """Nível 2: Ed521 do certificado, da autoassinatura e de cada hash."""
+    del zf
+    try:
+        from urna_logs.vsc_hw import verificar_hw
+    except ImportError:
+        return None, 'ecpy ausente; nível 2 não executado (pip install -e ".[hw]")'
+    try:
+        return verificar_hw(ent, arquivos)
+    except ImportError:
+        return None, 'ecpy ausente; nível 2 não executado (pip install -e ".[hw]")'
 
 
 def verificar_stem(
@@ -203,8 +201,9 @@ def verificar_stem(
     stem: str,
     members: dict[str, str],
     *,
-    nivel_max: int = 1,
+    nivel: int | None = None,
 ) -> VscStemResult:
+    """`nivel` None confere hashes e Ed521. 1 ou 2 fazem só aquele nível."""
     jk = join_key_from_stem(stem)
     res = VscStemResult(stem=stem, join_key=jk)
     vsc_member = members.get("vota.vsc")
@@ -229,42 +228,47 @@ def verificar_stem(
 
     arquivos = _arquivos_assinados(ent, "assinaturaHW")
     res.n_assinados = len(arquivos)
-    # mapa basename → member
-    by_name = {Path(v).name.lower(): v for v in members.values()}
-    presentes, h_ok, h_fail, ausente, detalhe = _verificar_hashes(
-        zf, arquivos, by_name=by_name
-    )
-    res.n_presentes = presentes
-    res.n_hash_ok = h_ok
-    res.n_hash_fail = h_fail
-    res.n_ausente_pacote = ausente
-    crit_ok, crit_det = _criticos_status(detalhe, stem)
-    res.criticos_ok = crit_ok
-    res.criticos_detalhe = crit_det
+    faz_hash = nivel is None or nivel == 1
+    faz_hw = nivel is None or nivel >= 2
+    if faz_hash:
+        # mapa basename → member
+        by_name = {Path(v).name.lower(): v for v in members.values()}
+        presentes, h_ok, h_fail, ausente, detalhe = _verificar_hashes(
+            zf, arquivos, by_name=by_name
+        )
+        res.n_presentes = presentes
+        res.n_hash_ok = h_ok
+        res.n_hash_fail = h_fail
+        res.n_ausente_pacote = ausente
+        crit_ok, crit_det = _criticos_status(detalhe, stem)
+        res.criticos_ok = crit_ok
+        res.criticos_detalhe = crit_det
 
-    if (
-        res.auto_hash_hw_ok
-        and res.auto_hash_sw_ok
-        and h_fail == 0
-        and crit_ok
-    ):
-        res.nivel_ok = 1
-    elif h_fail == 0 and crit_ok:
-        res.nivel_ok = 1 if res.auto_hash_hw_ok else 0
-        if not res.auto_hash_hw_ok:
-            res.erro = "auto_hash_hw_fail"
-    else:
-        if h_fail:
-            res.erro = f"hash_fail={h_fail}"
-        elif not crit_ok:
-            res.erro = f"criticos:{crit_det}"
+        if (
+            res.auto_hash_hw_ok
+            and res.auto_hash_sw_ok
+            and h_fail == 0
+            and crit_ok
+        ):
+            res.nivel_ok = 1
+        elif h_fail == 0 and crit_ok:
+            res.nivel_ok = 1 if res.auto_hash_hw_ok else 0
+            if not res.auto_hash_hw_ok:
+                res.erro = "auto_hash_hw_fail"
+        else:
+            if h_fail:
+                res.erro = f"hash_fail={h_fail}"
+            elif not crit_ok:
+                res.erro = f"criticos:{crit_det}"
 
-    if nivel_max >= 2 and res.nivel_ok >= 1:
+    if faz_hw and (not faz_hash or res.nivel_ok >= 1):
         hw_ok, hw_msg = _try_hw_signatures(ent, zf, arquivos)
         res.hw_sig_ok = hw_ok
         res.hw_sig_msg = hw_msg
         if hw_ok is True:
             res.nivel_ok = 2
+        elif hw_ok is False and not res.erro:
+            res.erro = hw_msg
 
     return res
 
@@ -273,7 +277,7 @@ def run_verificar_vsc(
     ufs: list[str],
     turno: int = 1,
     *,
-    nivel: int = 1,
+    nivel: int | None = None,
     limit: int | None = None,
 ) -> list[Path]:
     """
@@ -282,6 +286,14 @@ def run_verificar_vsc(
     ensure_dirs()
     outputs: list[Path] = []
     all_rows: list[dict] = []
+    if _pede_hw(nivel):
+        try:
+            import ecpy.eddsa  # noqa: F401
+        except ImportError:
+            console.print(
+                "[yellow]ecpy ausente:[/yellow] nível 2 não será executado. "
+                'Instale com pip install -e ".[hw]".'
+            )
 
     for uf in ufs:
         uf = uf.upper()
@@ -291,7 +303,8 @@ def run_verificar_vsc(
             continue
 
         console.print(
-            f"[cyan]Verificar .vsc[/cyan] {uf} {turno}º · nível≤{nivel} · {zpath.name}"
+            f"[cyan]Verificar .vsc[/cyan] {uf} {turno}º · "
+            f"{_rotulo_nivel(nivel)} · {zpath.name}"
         )
         rows: list[dict] = []
         with zipfile.ZipFile(zpath) as zf:
@@ -304,7 +317,7 @@ def run_verificar_vsc(
                     console.print(
                         f"[dim]  {uf}: {i:,}/{len(stems):,} stems[/dim]"
                     )
-                r = verificar_stem(zf, stem, by_stem[stem], nivel_max=nivel)
+                r = verificar_stem(zf, stem, by_stem[stem], nivel=nivel)
                 rows.append(
                     {
                         "uf": uf,
@@ -352,37 +365,59 @@ def run_verificar_vsc(
     return outputs
 
 
-def _print_summary(uf: str, turno: int, df: pd.DataFrame, nivel: int) -> None:
+def _rotulo_nivel(nivel: int | None) -> str:
+    if nivel is None:
+        return "níveis 1+2"
+    return f"nível {nivel}"
+
+
+def _pede_hw(nivel: int | None) -> bool:
+    return nivel is None or nivel >= 2
+
+
+def _print_summary(uf: str, turno: int, df: pd.DataFrame, nivel: int | None) -> None:
     n = len(df)
-    table = Table(title=f"Verificar .vsc — {uf} {turno}º (nível≤{nivel})")
+    table = Table(title=f"Verificar .vsc — {uf} {turno}º ({_rotulo_nivel(nivel)})")
     table.add_column("Métrica")
     table.add_column("Valor", justify="right")
     table.add_row("Stems", f"{n:,}")
     table.add_row("Com .vsc", f"{int(df['tem_vsc'].sum()):,}")
     table.add_row("Parse OK", f"{int(df['parse_ok'].sum()):,}")
     table.add_row("Nível ≥1 (hashes)", f"{int((df['nivel_ok'] >= 1).sum()):,}")
+    if nivel == 2:
+        table.add_row("Hashes do ZIP", "não conferidos")
+    if _pede_hw(nivel):
+        table.add_row("Nível 2 (Ed521)", f"{int((df['nivel_ok'] >= 2).sum()):,}")
+        table.add_row(
+            "Assinatura HW falhou", f"{int((df['hw_sig_ok'] == False).sum()):,}"
+        )
     table.add_row("Críticos OK", f"{int(df['criticos_ok'].fillna(False).sum()):,}")
     table.add_row("Hash fail (qualquer)", f"{int((df['n_hash_fail'] > 0).sum()):,}")
     table.add_row("Sem .vsc", f"{int((~df['tem_vsc']).sum()):,}")
     console.print(table)
 
 
-def _markdown_uf(uf: str, turno: int, df: pd.DataFrame, nivel: int) -> str:
+def _markdown_uf(uf: str, turno: int, df: pd.DataFrame, nivel: int | None) -> str:
     n = len(df)
     n_vsc = int(df["tem_vsc"].sum())
     n1 = int((df["nivel_ok"] >= 1).sum())
+    n2 = int((df["nivel_ok"] >= 2).sum())
+    n_hw_fail = int((df["hw_sig_ok"] == False).sum())
     n_fail = int((df["n_hash_fail"] > 0).sum())
     n_crit = int(df["criticos_ok"].fillna(False).sum())
     lines = [
         f"# Verificar `.vsc` — {uf} {turno}º turno",
         "",
-        f"Nível solicitado: **≤{nivel}** (0=cobertura, 1=hashes, 2=HW crypto se disponível).",
+        f"Nível solicitado: **{_rotulo_nivel(nivel)}** "
+        "(omitir = hashes e Ed521; 1 = só hashes; 2 = só Ed521).",
         "",
         "## Resumo",
         "",
         f"- Stems no ZIP: **{n:,}**",
         f"- Com `-vota.vsc`: **{n_vsc:,}**",
         f"- Nível ≥1 (auto-hash + hashes dos arquivos presentes + críticos): **{n1:,}**",
+        f"- Nível 2 (Ed521: certificado + auto + hashes): **{n2:,}**",
+        f"- Assinatura HW falhou: **{n_hw_fail:,}**",
         f"- Críticos (bu/rdv/log) OK: **{n_crit:,}**",
         f"- Algum hash presente falhou: **{n_fail:,}**",
         "",
@@ -393,10 +428,17 @@ def _markdown_uf(uf: str, turno: int, df: pd.DataFrame, nivel: int) -> str:
         "",
         "- Spec ASN.1: `urna_logs/spec/assinatura.asn1` (TSE 2026)",
         "- Hash: SHA-512 do conteúdo = campo `AssinaturaDigital.hash`",
-        "- Nível 2 (HW): opcional; requer ECPy/Ed521 como nos scripts oficiais",
+        "- Nível 2: Ed521 sobre SHA-512 desse hash, com a chave do certificado "
+        "embutido; o certificado é conferido com a AC UE2020 ou UE2022. "
+        "Não valida a chave de software da cerimônia.",
         "",
     ]
-    fails = df[(df["n_hash_fail"] > 0) | (df["criticos_ok"] == False) | (~df["tem_vsc"])]
+    fails = df[
+        (df["n_hash_fail"] > 0)
+        | (df["criticos_ok"] == False)
+        | (~df["tem_vsc"])
+        | (df["hw_sig_ok"] == False)
+    ]
     if not fails.empty:
         lines += ["## Falhas / pendências (até 40)", ""]
         for _, r in fails.head(40).iterrows():
@@ -406,7 +448,7 @@ def _markdown_uf(uf: str, turno: int, df: pd.DataFrame, nivel: int) -> str:
             )
         lines.append("")
     else:
-        lines += ["## Falhas", "", "Nenhuma no critério nível 1.", ""]
+        lines += ["## Falhas", "", "Nenhuma.", ""]
     lines += [
         "## Arquivos",
         "",

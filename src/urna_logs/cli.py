@@ -21,6 +21,7 @@ from urna_logs.horario import run_horario
 from urna_logs.oficial import run_cruzar_oficial
 from urna_logs.report_geo import run_by_municipio
 from urna_logs.validar_fluxo import run_validar_fluxo
+from urna_logs.transferencia import MIN_SECOES, run_transferencia
 from urna_logs.verificar_vsc import run_verificar_vsc
 from urna_logs.viability import run_viability
 
@@ -276,6 +277,29 @@ def fluxo_ecologico_cmd(
     run_fluxo_ecologico(uf_list, turno_a, turno_b)
 
 
+@app.command("transferencia")
+def transferencia_cmd(
+    ufs: Optional[str] = typer.Option("AC", "--ufs"),
+    min_secoes: int = typer.Option(
+        MIN_SECOES,
+        "--min-secoes",
+        min=2,
+        help="Cidade com menos seções usa a matriz do estado",
+    ),
+) -> None:
+    """Matriz de transferência 1º→2º por cidade (Brown e Payne e lphom)."""
+    uf_list = _parse_ufs(ufs)
+    console.print(
+        f"[bold]Transferência[/bold] — matriz por cidade · "
+        f"mínimo {min_secoes} seções · {len(uf_list)} UF(s): {', '.join(uf_list)}"
+    )
+    try:
+        run_transferencia(uf_list, min_secoes=min_secoes)
+    except FileNotFoundError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+
 @app.command("validar-fluxo")
 def validar_fluxo_cmd(
     ufs: Optional[str] = typer.Option("AC RR AP ZZ", "--ufs"),
@@ -310,21 +334,22 @@ def achados_cmd(
 def verificar_vsc_cmd(
     ufs: Optional[str] = typer.Option("AC", "--ufs"),
     turno: int = typer.Option(1, "--turno", min=1, max=2),
-    nivel: int = typer.Option(
-        1,
+    nivel: Optional[int] = typer.Option(
+        None,
         "--nivel",
         min=0,
         max=2,
-        help="0=cobertura · 1=hashes (+auto-hash) · 2=HW crypto (parcial)",
+        help="Omitir: hashes e Ed521. 0=cobertura · 1=só hashes · 2=só Ed521",
     ),
     limit: Optional[int] = typer.Option(
         None, "--limit", help="Só os N primeiros stems (piloto)"
     ),
 ) -> None:
-    """Valida `-vota.vsc` (cobertura + SHA-512 dos arquivos presentes no ZIP)."""
+    """Valida `-vota.vsc`. Sem `--nivel`, confere hashes e Ed521."""
     uf_list = _parse_ufs(ufs)
+    pedido = "níveis 1+2" if nivel is None else f"nível {nivel}"
     console.print(
-        f"[bold]Verificar .vsc[/bold] — nível≤{nivel} · {turno}º · "
+        f"[bold]Verificar .vsc[/bold] — {pedido} · {turno}º · "
         f"{len(uf_list)} UF(s): {', '.join(uf_list)}"
     )
     run_verificar_vsc(uf_list, turno, nivel=nivel, limit=limit)
