@@ -13,16 +13,16 @@ website:
     left:
       - href: index.qmd
         text: Visão geral
-      - href: migracao.qmd
-        text: Migração dos votos
+      - href: assinaturas.qmd
+        text: Integridade dos arquivos
       - href: auditoria.qmd
         text: Auditoria
       - href: secao.qmd
         text: Consulta por seção
+      - href: migracao.qmd
+        text: Migração (estimativa)
       - href: metodo.qmd
-        text: Método
-      - href: assinaturas.qmd
-        text: Integridade dos arquivos
+        text: Método e glossário
     right:
       - icon: github
         href: https://github.com/mclaguiar/urna-logs-2026

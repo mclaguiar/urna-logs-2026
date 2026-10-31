@@ -55,7 +55,8 @@ linkSecao = jk => {
 .kpi.lula { border-top: 4px solid #a51c1c; }
 .kpi.flavio { border-top: 4px solid #1f4e79; }
 .nav-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-top: 0.5rem; }
-.nav-cards a { display: block; border: 1px solid #e6e6e6; border-radius: 0.5rem; padding: 0.85rem 1rem; text-decoration: none; color: inherit; height: 100%; }
+.nav-cards > p { display: contents; }
+.nav-cards a { display: block; border: 1px solid #e6e6e6; border-radius: 0.5rem; padding: 0.85rem 1rem; text-decoration: none; color: inherit; height: auto; }
 .nav-cards a:hover { border-color: #1f4e79; }
 .nav-cards strong { display: block; margin-bottom: 0.25rem; }
 .selo { display: inline-block; background: #e5f6ec; border-radius: 0.35rem; padding: 0.35rem 0.6rem; }
@@ -81,12 +82,19 @@ ${fichaA.length
   : ""}`
 ```
 
-<div class="nav-cards">
-<a href="migracao.qmd"><strong>Migração</strong>Como os votos do 1º turno podem ter se repartido no 2º.</a>
-<a href="auditoria.qmd"><strong>Auditoria</strong>O que mudou por UF, onde a seção está no extremo e o fluxo do dia.</a>
-<a href="secao.qmd"><strong>Consulta por seção</strong>Votos, abstenção e a matriz da cidade, seção a seção.</a>
-<a href="metodo.qmd"><strong>Método</strong>Limiares, hierarquia A/B/C e o que cada arquivo mede.</a>
-</div>
+::: {.nav-cards}
+
+[**Integridade dos arquivos** Se o pacote foi assinado pela urna: hash, assinatura e certificado.](assinaturas.qmd)
+
+[**Auditoria** O que mudou por UF, onde a seção está no extremo e o fluxo do dia.](auditoria.qmd)
+
+[**Consulta por seção** Votos, abstenção e a matriz da cidade, seção a seção.](secao.qmd)
+
+[**Migração (estimativa)** Como os votos do 1º turno podem ter se repartido no 2º.](migracao.qmd)
+
+[**Método e glossário** Limiares, hierarquia A/B/C e o que cada arquivo mede.](metodo.qmd)
+
+:::
 
 ```{ojs}
 //| echo: false

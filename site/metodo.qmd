@@ -21,6 +21,7 @@ md`Extração usada neste site: protocolo de limiares **${v("protocolo_versao")}
 .caixa strong { display: block; margin-bottom: 0.2rem; }
 .seta { flex: 1 1 8rem; font-size: 0.88rem; padding: 0.35rem 0.2rem; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin: 0.5rem 0 1rem; }
+.cards > p { display: contents; }
 .card-link { display: block; border: 1px solid #e2e2e2; border-radius: 0.5rem; padding: 0.85rem 1rem; text-decoration: none; color: inherit; }
 .card-link:hover { border-color: #888; }
 .card-link strong { display: block; margin-bottom: 0.25rem; }
@@ -134,18 +135,24 @@ Nenhuma linha abaixo é uma conclusão. É o que se esperaria ver, e onde olhar.
 | Os arquivos públicos fecham entre si | RDV, BU e CSV oficial iguais na `join_key` | Diferença de totais na mesma chave, ou seção só num turno | [Auditoria](auditoria.qmd), fichas A |
 | A margem da seção mudou no extremo da UF | \|Δ margem\| na cauda da UF, sozinha (C) ou com outro sinal (B) | A seção fica fora dessa cauda | [Auditoria](auditoria.qmd) |
 | O fluxo do dia concentra habilitação tarde | % após as 17h na cauda da UF | A seção acompanha o restante da UF | [Auditoria](auditoria.qmd) |
-| A transferência 1º→2º cabe numa matriz homogênea | Os dois modelos próximos entre si e do 2º turno publicado | Modelos distantes, ou estimado longe do publicado | [Migração dos Votos](migracao.qmd) |
+| A transferência 1º→2º cabe numa matriz homogênea | Os dois modelos próximos entre si e do 2º turno publicado | Modelos distantes, ou estimado longe do publicado | [Migração dos votos](migracao.qmd) |
 | A seção mudou de eleitorado entre os turnos | Status `so_1t` ou `so_2t`, ou aptos diferentes nos dois turnos | A seção existe nos dois, com a mesma base | [Seção](secao.qmd) e fichas A |
 
 ## O que o site responde
 
-<div class="cards">
-  <a class="card-link" href="auditoria.qmd"><strong>Auditoria</strong>O que mudou do 1º para o 2º turno, onde a seção está no extremo da UF e como as habilitações se distribuíram no dia.</a>
-  <a class="card-link" href="assinaturas.qmd"><strong>Integridade dos arquivos</strong>Se o pacote foi assinado pela urna: hash do `.vsc`, assinatura e certificado, por modelo e por UF.</a>
-  <a class="card-link" href="secao.qmd"><strong>Seção (Resultado por Seção)</strong>Totais da seção, da zona ou da cidade, e a mesma matriz de migração aplicada a esse conjunto.</a>
-  <a class="card-link" href="migracao.qmd"><strong>Migração dos Votos</strong>De onde a estimativa manda cada origem, nos dois modelos, por UF e no Brasil, e a diferença para o divulgado.</a>
-  <a class="card-link" href="metodo.qmd"><strong>Método</strong>Cadeia, limiares, transferência, limitações e o glossário desta página.</a>
-</div>
+::: {.cards}
+
+[**Auditoria** O que mudou do 1º para o 2º turno, onde a seção está no extremo da UF e como as habilitações se distribuíram no dia.](auditoria.qmd){.card-link}
+
+[**Integridade dos arquivos** Se o pacote foi assinado pela urna: hash do `.vsc`, assinatura e certificado, por modelo e por UF.](assinaturas.qmd){.card-link}
+
+[**Consulta por seção** Totais da seção, da zona ou da cidade, e a mesma matriz de migração aplicada a esse conjunto.](secao.qmd){.card-link}
+
+[**Migração dos votos** De onde a estimativa manda cada origem, nos dois modelos, por UF e no Brasil, e a diferença para o divulgado.](migracao.qmd){.card-link}
+
+[**Método e glossário** Cadeia, limiares, transferência, limitações e o glossário desta página.](metodo.qmd){.card-link}
+
+:::
 
 ## Glossário
 

@@ -1,6 +1,6 @@
 ---
-title: "Migração dos Votos"
-subtitle: "Presidente — totais por estado e a transferência estimada"
+title: "Migração dos votos"
+subtitle: "Estimativa — totais por estado e a transferência"
 ---
 
 Esta página estima como os votos do 1º turno podem ter se repartido no 2º, a partir dos totais divulgados.

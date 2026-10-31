@@ -1,6 +1,6 @@
 ---
-title: "Votos da seção"
-subtitle: "Presidente — totais do boletim"
+title: "Consulta por seção"
+subtitle: "Votos da seção — totais do boletim"
 ---
 
 Escolha o estado, a cidade, a zona e a seção. Em zona e em seção, Todos soma o conjunto.
