@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -185,51 +186,6 @@ def _achados_por_uf() -> pd.DataFrame:
     )
 
 
-def _fluxo_por_uf() -> pd.DataFrame:
-    df = _read_glob(
-        "fluxo_ecologico_summary_*_1t_2t.csv",
-        multi_name="fluxo_ecologico_summary_MULTI_1t_2t.csv",
-    )
-    if df is None or df.empty:
-        return pd.DataFrame()
-    df = df.drop_duplicates(["uf"], keep="last").copy()
-    df["uf"] = df["uf"].astype(str).str.upper()
-    keep = [
-        c
-        for c in (
-            "uf",
-            "secoes",
-            "secoes_narrow_majority",
-            "elim_forced_fa",
-            "elim_forced_fb",
-            "p_elim_to_fa",
-            "p_elim_to_fa_p05",
-            "p_elim_to_fa_p95",
-            "p_elim_to_fb",
-            "p_elim_to_fb_p05",
-            "p_elim_to_fb_p95",
-            "p_elim_to_abst",
-            "p_elim_to_abst_p05",
-            "p_elim_to_abst_p95",
-            "p_branco_to_fa",
-            "p_branco_to_fb",
-            "p_nulo_to_fa",
-            "p_nulo_to_fb",
-            "p_abst_to_fa",
-            "p_abst_to_fb",
-            "corr_pct_elim_delta_abst",
-            "corr_margem1_delta_abst",
-        )
-        if c in df.columns
-    ]
-    return df[keep].rename(
-        columns={
-            "secoes": "fluxo_secoes",
-            "secoes_narrow_majority": "fluxo_secoes_narrow",
-        }
-    )
-
-
 def _comparar_por_uf() -> pd.DataFrame:
     df = _read_glob(
         "comparar_turnos_summary_*_1t_2t.csv",
@@ -272,7 +228,6 @@ def build_painel_uf() -> pd.DataFrame:
         _horario_summary_por_turno(1),
         _horario_summary_por_turno(2),
         _comparar_por_uf(),
-        _fluxo_por_uf(),
         _achados_por_uf(),
     ]
     parts = [p for p in parts if p is not None and not p.empty]
@@ -525,6 +480,132 @@ def build_anomalias_secao() -> pd.DataFrame:
     return out.reset_index(drop=True)
 
 
+def _votavel_code(tipo: str, numero) -> str | None:
+    if tipo == "branco":
+        return "95"
+    if tipo == "nulo":
+        return "96"
+    if tipo != "nominal" or numero is None or pd.isna(numero):
+        return None
+    return str(int(numero))
+
+
+def _pack_turno(df: pd.DataFrame) -> pd.DataFrame:
+    """Uma linha por seção: votos do BU compactados e flag se RDV ≠ BU."""
+    keys = ["municipio", "zona", "secao"]
+    work = df.copy()
+    work["code"] = [
+        _votavel_code(t, n) for t, n in zip(work["tipo"], work["numero"], strict=False)
+    ]
+    work = work[work["code"].notna()]
+    if work.empty:
+        return pd.DataFrame(columns=[*keys, "bit", "bad"])
+    dif = (
+        work.assign(bad=work["votos_bu"].ne(work["votos_rdv"]))
+        .groupby(keys, as_index=False)["bad"]
+        .any()
+    )
+    pos = work[work["votos_bu"] > 0].sort_values(
+        [*keys, "votos_bu"], ascending=[True, True, True, False]
+    )
+    pos = pos.assign(
+        bit=pos["code"].astype(str) + "=" + pos["votos_bu"].astype("int64").astype(str)
+    )
+    packed = pos.groupby(keys, as_index=False)["bit"].agg("|".join)
+    out = dif.merge(packed, on=keys, how="left")
+    out["bit"] = out["bit"].fillna("")
+    return out
+
+
+def build_secao_lookup() -> None:
+    """CSVs por UF para a consulta de seção no site (totais do BU, presidente)."""
+    dest = OUT / "secao"
+    dest.mkdir(parents=True, exist_ok=True)
+
+    mun_path = ROOT / "data" / "ref" / "municipios_tse.csv"
+    if mun_path.exists():
+        mun = pd.read_csv(mun_path, dtype={"uf": str, "nome": str})
+        mun["municipio"] = mun["municipio"].astype(int)
+        mun = mun.drop_duplicates(["uf", "municipio"]).sort_values(["uf", "nome"])
+        mun.to_csv(dest / "municipios.csv", index=False)
+        print(f"escrito {dest / 'municipios.csv'} ({len(mun)} municípios)")
+    else:
+        print(f"aviso: sem {mun_path} — a página mostra o código do município")
+
+    rot_frames = []
+    for turno in (1, 2):
+        path = REPORTS / f"cruzar_oficial_AC_{turno}t.parquet"
+        if not path.exists():
+            continue
+        part = pd.read_parquet(path, columns=["votavel", "nome_votavel"])
+        rot_frames.append(part)
+    if rot_frames:
+        rot = (
+            pd.concat(rot_frames, ignore_index=True)
+            .dropna(subset=["votavel"])
+            .drop_duplicates(["votavel"])
+            .sort_values("votavel")
+        )
+        rot.to_csv(dest / "rotulos.csv", index=False)
+        print(f"escrito {dest / 'rotulos.csv'} ({len(rot)} votáveis)")
+
+    from urna_logs.config import UFS
+
+    total_bytes = 0
+    for uf in UFS:
+        frames = []
+        for turno in (1, 2):
+            path = REPORTS / f"audit_presidente_votos_{uf}_{turno}t.parquet"
+            if not path.exists():
+                continue
+            raw = pd.read_parquet(
+                path,
+                columns=["municipio", "zona", "secao", "tipo", "numero", "votos_bu", "votos_rdv"],
+            )
+            packed = _pack_turno(raw).rename(columns={"bit": f"t{turno}", "bad": f"bad_{turno}"})
+            frames.append(packed)
+        if not frames:
+            print(f"sem votos {uf}")
+            continue
+        merged = frames[0]
+        for extra in frames[1:]:
+            merged = merged.merge(extra, on=["municipio", "zona", "secao"], how="outer")
+        for turno in (1, 2):
+            col = f"t{turno}"
+            if col not in merged.columns:
+                merged[col] = ""
+            merged[col] = merged[col].fillna("")
+            bad = f"bad_{turno}"
+            if bad not in merged.columns:
+                merged[bad] = False
+            merged[bad] = merged[bad].fillna(False).astype(bool)
+        merged["dif"] = (merged["bad_1"] | merged["bad_2"]).astype(int)
+        cmp_path = REPORTS / f"comparar_turnos_{uf}_1t_2t.parquet"
+        if cmp_path.exists():
+            cmp = pd.read_parquet(
+                cmp_path,
+                columns=["municipio", "zona", "secao", "abstencao_1t", "abstencao_2t"],
+            )
+            cmp["a1"] = pd.to_numeric(cmp["abstencao_1t"], errors="coerce")
+            cmp["a2"] = pd.to_numeric(cmp["abstencao_2t"], errors="coerce")
+            merged = merged.merge(
+                cmp[["municipio", "zona", "secao", "a1", "a2"]],
+                on=["municipio", "zona", "secao"],
+                how="left",
+            )
+        else:
+            merged["a1"] = pd.NA
+            merged["a2"] = pd.NA
+        out = merged[["municipio", "zona", "secao", "t1", "t2", "dif", "a1", "a2"]].sort_values(
+            ["municipio", "zona", "secao"]
+        )
+        out_path = dest / f"votos_{uf}.csv"
+        out.to_csv(out_path, index=False)
+        total_bytes += out_path.stat().st_size
+        print(f"escrito {out_path.name} ({len(out)} seções)")
+    print(f"consulta de seção: {total_bytes / 1e6:.1f} MB")
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -571,15 +652,8 @@ def main() -> None:
         ab.to_csv(out_ach, index=False)
         print(f"escrito {out_ach} ({len(ab)} fichas A/B)")
 
-    # Brasil ponderado (fluxo ecológico) — para linha total do painel
-    hip = REPORTS / "hipoteses_fluxo_resumo_1t_2t.csv"
-    if hip.exists():
-        hdf = pd.read_csv(hip)
-        br = hdf[hdf["uf"].astype(str).str.upper() == "BR"]
-        if not br.empty:
-            out_br = OUT / "fluxo_br.csv"
-            br.to_csv(out_br, index=False)
-            print(f"escrito {out_br} (linha BR)")
+    build_secao_lookup()
+    build_migracao_site()
 
     # limpa CSVs antigos do site que o painel não usa mais
     for legacy in (
@@ -589,6 +663,7 @@ def main() -> None:
         "horario_por_hora_1t.csv",
         "horario_uf_1t.csv",
         "comparar_turnos_uf_1t_2t.csv",
+        "fluxo_br.csv",
     ):
         p = OUT / legacy
         if p.exists():
@@ -596,5 +671,204 @@ def main() -> None:
             print(f"removido {p.name}")
 
 
+_TURNOS = (
+    (1, "13", "votos_fa_1t"),
+    (1, "22", "votos_fb_1t"),
+    (1, "eliminados", "votos_eliminados_1t"),
+    (1, "branco", "branco_1t"),
+    (1, "nulo", "nulo_1t"),
+    (1, "abstencao", "abstencao_1t"),
+    (2, "13", "votos_fa_2t"),
+    (2, "22", "votos_fb_2t"),
+    (2, "branco", "branco_2t"),
+    (2, "nulo", "nulo_2t"),
+    (2, "abstencao", "abstencao_2t"),
+)
+
+
+def build_migracao_site() -> None:
+    """Totais por turno e matriz de transferência para o site."""
+    dest = OUT / "migracao"
+    dest.mkdir(parents=True, exist_ok=True)
+    _escrever_turnos(dest)
+    _escrever_conferencia(dest)
+    matrizes, fluxos, presentes = _ler_transferencias()
+    if matrizes:
+        pd.concat(matrizes, ignore_index=True).to_csv(dest / "matriz.csv", index=False)
+    else:
+        pd.DataFrame(
+            columns=["uf", "municipio", "origem", "destino", "taxa", "taxa_lo", "taxa_hi"]
+        ).to_csv(dest / "matriz.csv", index=False)
+    fluxo = _fluxo_com_brasil(fluxos)
+    fluxo.to_csv(dest / "fluxo.csv", index=False)
+    faltam = [uf for uf in _ufs() if uf not in presentes]
+    pd.DataFrame(
+        {
+            "presentes": [",".join(presentes)],
+            "faltam": [",".join(faltam)],
+            "n_presentes": [len(presentes)],
+            "n_ufs": [len(_ufs())],
+        }
+    ).to_csv(dest / "cobertura.csv", index=False)
+    print(
+        f"migração no site: {len(presentes)} estados com matriz, "
+        f"{len(faltam)} sem matriz"
+    )
+
+
+def _ufs() -> list[str]:
+    from urna_logs.config import UFS
+
+    return list(UFS)
+
+
+def _escrever_turnos(dest: Path) -> None:
+    linhas = []
+    for uf in _ufs():
+        path = REPORTS / f"comparar_turnos_{uf}_1t_2t.parquet"
+        if not path.exists():
+            continue
+        df = pd.read_parquet(path)
+        for turno, grupo, col in _TURNOS:
+            if col not in df.columns:
+                continue
+            linhas.append(
+                {
+                    "uf": uf,
+                    "turno": turno,
+                    "grupo": grupo,
+                    "votos": int(pd.to_numeric(df[col], errors="coerce").fillna(0).sum()),
+                }
+            )
+    pd.DataFrame(linhas).to_csv(dest / "turnos.csv", index=False)
+
+
+def _grupo_oficial(votavel: object) -> str:
+    codigo = str(votavel).strip().lstrip("0") or "0"
+    if codigo == "13":
+        return "13"
+    if codigo == "22":
+        return "22"
+    if codigo == "95":
+        return "branco"
+    if codigo == "96":
+        return "nulo"
+    return "eliminados"
+
+
+def _escrever_conferencia(dest: Path) -> None:
+    """BU do cruzamento e CSV oficial, por estado e no total."""
+    linhas = []
+    for turno in (1, 2):
+        for uf in _ufs():
+            path = REPORTS / f"cruzar_oficial_{uf}_{turno}t.parquet"
+            if not path.exists():
+                continue
+            df = pd.read_parquet(path, columns=["votavel", "votos_bu", "votos_oficial"])
+            df["grupo"] = df["votavel"].map(_grupo_oficial)
+            soma = df.groupby("grupo", as_index=False)[["votos_bu", "votos_oficial"]].sum()
+            for _, row in soma.iterrows():
+                linhas.append(
+                    {
+                        "uf": uf,
+                        "turno": turno,
+                        "grupo": row["grupo"],
+                        "votos_bu": int(row["votos_bu"]),
+                        "votos_oficial": int(row["votos_oficial"]),
+                    }
+                )
+    frame = pd.DataFrame(linhas)
+    if frame.empty:
+        frame.to_csv(dest / "conferencia.csv", index=False)
+        return
+    pais = (
+        frame.groupby(["turno", "grupo"], as_index=False)[["votos_bu", "votos_oficial"]]
+        .sum()
+    )
+    pais.insert(0, "uf", "BR")
+    pd.concat([frame, pais], ignore_index=True).to_csv(dest / "conferencia.csv", index=False)
+
+
+def _ler_transferencias() -> tuple[list[pd.DataFrame], list[pd.DataFrame], list[str]]:
+    matrizes = []
+    fluxos = []
+    presentes = []
+    for uf in _ufs():
+        path = REPORTS / f"transferencia_{uf}.parquet"
+        if not path.exists():
+            continue
+        df = pd.read_parquet(path)
+        if "nivel" not in df.columns:
+            continue
+        presentes.append(uf)
+        bp = df.loc[(df["modelo"] == "brown_payne") & (df["nivel"].isin(["estado", "municipio"]))]
+        if not bp.empty:
+            out = bp.copy()
+            mun = out["municipio"].fillna("").astype(str).str.replace(r"\.0$", "", regex=True)
+            out["municipio"] = mun.where(out["nivel"] == "municipio", "0")
+            out["uf"] = uf
+            for col in ("taxa_lo", "taxa_hi"):
+                if col not in out.columns:
+                    out[col] = pd.NA
+            matrizes.append(
+                out[["uf", "municipio", "origem", "destino", "taxa", "taxa_lo", "taxa_hi"]]
+            )
+        soma = df.loc[df["nivel"] == "estado_soma"].copy()
+        if not soma.empty:
+            soma["uf"] = uf
+            fluxos.append(soma)
+    return matrizes, fluxos, presentes
+
+
+def _fluxo_com_brasil(partes: list[pd.DataFrame]) -> pd.DataFrame:
+    colunas = ["uf", "modelo", "origem", "destino", "votos", "taxa", "taxa_lo", "taxa_hi"]
+    if not partes:
+        return pd.DataFrame(columns=colunas)
+    frames = []
+    for parte in partes:
+        bloco = parte.copy()
+        for col in ("votos", "taxa", "taxa_lo", "taxa_hi", "se"):
+            if col not in bloco.columns:
+                bloco[col] = pd.NA
+        frames.append(bloco[["uf", "modelo", "origem", "destino", "votos", "taxa", "taxa_lo", "taxa_hi", "se"]])
+    base = pd.concat(frames, ignore_index=True)
+    pais = []
+    z = 1.959963984540054
+    for (modelo, origem, destino), g in base.groupby(["modelo", "origem", "destino"]):
+        votos = float(pd.to_numeric(g["votos"], errors="coerce").fillna(0).sum())
+        total_origem = float(
+            pd.to_numeric(
+                base.loc[(base["modelo"] == modelo) & (base["origem"] == origem), "votos"],
+                errors="coerce",
+            ).fillna(0).sum()
+        )
+        taxa = (votos / total_origem) if total_origem else pd.NA
+        ses = pd.to_numeric(g["se"], errors="coerce")
+        se = pd.NA
+        if votos > 0 and ses.notna().all():
+            var = float(((pd.to_numeric(g["votos"], errors="coerce").fillna(0) ** 2) * (ses ** 2)).sum())
+            se = var**0.5 / votos
+        lo = hi = pd.NA
+        if pd.notna(se) and pd.notna(taxa):
+            lo = max(0.0, float(taxa) - z * float(se))
+            hi = min(1.0, float(taxa) + z * float(se))
+        pais.append(
+            {
+                "uf": "BR",
+                "modelo": modelo,
+                "origem": origem,
+                "destino": destino,
+                "votos": votos,
+                "taxa": taxa,
+                "taxa_lo": lo,
+                "taxa_hi": hi,
+            }
+        )
+    return pd.concat([base[colunas], pd.DataFrame(pais)], ignore_index=True)
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "migracao":
+        build_migracao_site()
+    else:
+        main()

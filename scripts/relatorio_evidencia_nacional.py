@@ -13,7 +13,6 @@ Saídas:
 
 Uso:
   python scripts/relatorio_evidencia_nacional.py
-  python scripts/relatorio_evidencia_nacional.py --hipoteses   # chama relatorio_hipoteses_fluxo
   python scripts/relatorio_evidencia_nacional.py --site        # chama build_site_data
   python scripts/relatorio_evidencia_nacional.py --all
 """
@@ -44,8 +43,6 @@ ARTIFACTS = (
     ("comparar", "comparar_turnos_{uf}_1t_2t.parquet"),  # turno ignored
     ("achados_md", "achados_{uf}_1t_2t.md"),
     ("achados_pq", "achados_{uf}_1t_2t.parquet"),
-    ("fluxo_md", "fluxo_ecologico_{uf}_1t_2t.md"),
-    ("fluxo_taxas", "fluxo_taxas_{uf}_1t_2t.csv"),
     ("verificar_vsc", "verificar_vsc_{uf}_{t}t.parquet"),
 )
 
@@ -279,7 +276,6 @@ def gaps_from_cobertura(cov: pd.DataFrame) -> list[str]:
         "achados_md",
         "horario_secao_1t",
         "horario_secao_2t",
-        "fluxo_taxas",
         "verificar_vsc_1t",
         "verificar_vsc_2t",
     ):
@@ -289,8 +285,8 @@ def gaps_from_cobertura(cov: pd.DataFrame) -> list[str]:
         if miss:
             gaps.append(f"{key}: faltam {len(miss)} UF(s) — {', '.join(miss)}")
     gaps.append(
-        "`.vsc` nível 2 (assinatura HW Ed521/ECPy): ainda parcial — "
-        "nível 1 (hashes) cobre integridade dos arquivos presentes no ZIP"
+        "`.vsc` padrão confere hashes e Ed521; `--nivel 1` fica só nos hashes "
+        "e `--nivel 2` fica só no Ed521"
     )
     return gaps
 
@@ -307,7 +303,7 @@ def build_markdown(
         "# Evidência nacional (arquivos públicos) — 1º×2º",
         "",
         "Gerado por `scripts/relatorio_evidencia_nacional.py` a partir de `reports/`.",
-        "Hierarquia: **A** documental · **B** operacional · **C** ecológico/contexto.",
+        "Hierarquia: **A** documental · **B** operacional · **C** flag isolada.",
         "",
         "## Síntese (o que os números mostram)",
         "",
@@ -361,13 +357,11 @@ def build_markdown(
     lines += [
         f"- **Achados classificados:** A={a_sum:,} · B={b_sum:,} · C={c_sum:,} "
         "(seções com ficha; B prioriza revisão operacional).",
-        "- **Nível C / fluxo:** ver `hipoteses_fluxo_1t_2t.md` (taxas IPF agregadas, se gerado).",
         "",
         "## Cobertura do pipeline",
         "",
         f"UFs no config: **{len(UFS)}**. "
-        f"Comparar presente: **{int(cov['comparar'].sum()) if 'comparar' in cov else 0}**. "
-        f"Fluxo taxas: **{int(cov['fluxo_taxas'].sum()) if 'fluxo_taxas' in cov else 0}**.",
+        f"Comparar presente: **{int(cov['comparar'].sum()) if 'comparar' in cov else 0}**.",
         "",
         "Detalhe: `cobertura_pipeline_nacional.csv`.",
         "",
@@ -483,18 +477,14 @@ def build_markdown(
         "# urna-logs audit / cruzar-oficial / horario --por-secao / comparar-turnos / achados",
         "",
         "python scripts/relatorio_evidencia_nacional.py",
-        "python scripts/relatorio_evidencia_nacional.py --hipoteses   # C: fluxo IPF BR",
         "python scripts/relatorio_evidencia_nacional.py --site        # painel Quarto",
         "python scripts/relatorio_evidencia_nacional.py --all",
-        "",
-        "# IC bootstrap por UF (lento):",
-        "# urna-logs fluxo-ecologico --ufs ALL",
         "```",
         "",
         "## Escopo dos números",
         "",
         "A = consistência entre arquivos públicos; B = seções no extremo da UF "
-        "(priorização); C = saldos/taxas agregadas. "
+        "(priorização); C = flag isolada do comparativo. "
         "Interpretação causal ou jurídica fica com o leitor.",
         "",
     ]
@@ -510,11 +500,6 @@ def _run_helper(script: str) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--hipoteses",
-        action="store_true",
-        help="Também roda scripts/relatorio_hipoteses_fluxo.py",
-    )
-    parser.add_argument(
         "--site",
         action="store_true",
         help="Também roda scripts/build_site_data.py",
@@ -522,7 +507,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Atalho: --hipoteses --site",
+        help="Atalho de --site",
     )
     parser.add_argument(
         "--abs-delta-min",
@@ -532,7 +517,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     if args.all:
-        args.hipoteses = True
         args.site = True
 
     ensure_dirs()
@@ -564,10 +548,6 @@ def main(argv: list[str] | None = None) -> int:
     out_md.write_text(md, encoding="utf-8")
     print(f"OK: {out_md}", flush=True)
 
-    if args.hipoteses:
-        rc = _run_helper("relatorio_hipoteses_fluxo.py")
-        if rc != 0:
-            return rc
     if args.site:
         rc = _run_helper("build_site_data.py")
         if rc != 0:
