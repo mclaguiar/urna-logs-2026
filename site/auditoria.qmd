@@ -19,15 +19,39 @@ num = v => (v == null || v === "" || Number.isNaN(+v) ? null : +v)
 fmt = n => (n == null || Number.isNaN(+n)) ? "—" : window.urnaMarca.menos(Math.round(+n).toLocaleString("pt-BR"))
 fmt1 = n => (n == null || Number.isNaN(+n)) ? "—" : window.urnaMarca.menos((+n).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}))
 fmt2 = n => (n == null || Number.isNaN(+n)) ? "—" : window.urnaMarca.menos((+n).toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2}))
+fmt4 = n => (n == null || Number.isNaN(+n)) ? "—" : window.urnaMarca.menos((+n).toLocaleString("pt-BR", {minimumFractionDigits: 4, maximumFractionDigits: 4}))
 pp = n => {
   if (n == null || Number.isNaN(+n)) return "—"
   const v = +n
   return window.urnaMarca.menos((v > 0 ? "+" : "") + v.toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " pp")
 }
+pp2 = n => {
+  if (n == null || Number.isNaN(+n)) return "—"
+  const v = +n
+  return window.urnaMarca.menos((v > 0 ? "+" : "") + v.toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " pp")
+}
 nomeUf = uf => uf === "ZZ" ? "Exterior" : uf
 rows = painel.map(d => ({
   uf: d.uf,
   secoes: num(d.secoes_1t),
+  aptos1: num(d.aptos_ambos_1t),
+  aptos2: num(d.aptos_ambos_2t),
+  abst1: num(d.abstencao_ambos_1t),
+  abst2: num(d.abstencao_ambos_2t),
+  cmp1: num(d.comparecimento_ambos_1t),
+  cmp2: num(d.comparecimento_ambos_2t),
+  cmpBio1: num(d.comparecimento_1t),
+  cmpBio2: num(d.comparecimento_2t),
+  semBio1: num(d.sem_biometria_1t),
+  semBio2: num(d.sem_biometria_2t),
+  biog1: num(d.biografia_1t),
+  biog2: num(d.biografia_2t),
+  sd1: num(d.sem_digital_1t),
+  sd2: num(d.sem_digital_2t),
+  pct_sem_biometria_1t: num(d.pct_sem_biometria_1t),
+  pct_sem_biometria_2t: num(d.pct_sem_biometria_2t),
+  pct_biografia_1t: num(d.pct_biografia_1t),
+  pct_biografia_2t: num(d.pct_biografia_2t),
   pct_sem_digital_1t: num(d.pct_sem_digital_1t),
   pct_sem_digital_2t: num(d.pct_sem_digital_2t),
   delta_pct_sem_digital: num(d.delta_pct_sem_digital),
@@ -42,6 +66,86 @@ rows = painel.map(d => ({
   achados_B: num(d.achados_B) || 0,
   achados_C: num(d.achados_C) || 0
 })).sort((a, b) => (a.uf === "ZZ") - (b.uf === "ZZ") || nomeUf(a.uf).localeCompare(nomeUf(b.uf), "pt"))
+soma = (lista, chave) => lista.reduce((s, d) => s + (d[chave] || 0), 0)
+semExterior = rows.filter(d => d.uf !== "ZZ")
+ppNacional = (lista) => {
+  const apt1 = soma(lista, "aptos1")
+  const apt2 = soma(lista, "aptos2")
+  const ab1 = soma(lista, "abst1")
+  const ab2 = soma(lista, "abst2")
+  return apt1 && apt2 ? 100 * (ab2 / apt2 - ab1 / apt1) : null
+}
+fatia17 = (lista, turno) => {
+  const ufs = new Set(lista.map(d => d.uf))
+  const s = horas.filter(d => ufs.has(d.uf) && +d.turno === turno)
+  const den = s.reduce((a, d) => a + (+d.habilitacoes || 0), 0)
+  const num = s.reduce((a, d) => a + (+d.hora_brasilia >= 17 ? (+d.habilitacoes || 0) : 0), 0)
+  return den ? 100 * num / den : null
+}
+totCmp = (rotulo, lista) => ({
+  uf: rotulo,
+  secoes: soma(lista, "secoes"),
+  aptos1: soma(lista, "aptos1"),
+  aptos2: soma(lista, "aptos2"),
+  cmp1: soma(lista, "cmp1"),
+  cmp2: soma(lista, "cmp2"),
+  delta_abstencao_pp: ppNacional(lista),
+  delta_comparecimento: soma(lista, "delta_comparecimento")
+})
+parte = (lista, chave) => {
+  const vals = lista.map(d => d[chave]).filter(v => v != null)
+  return vals.length ? vals.reduce((s, v) => s + v, 0) : null
+}
+denBio = (lista, cmpKey, parteKey) => {
+  const com = lista.filter(d => d[parteKey] != null && d[cmpKey] != null)
+  if (!com.length) return null
+  const den = com.reduce((s, d) => s + d[cmpKey], 0)
+  return den || null
+}
+pctConta = (lista, chave, den) => {
+  const n = parte(lista, chave)
+  return den && n != null ? 100 * n / den : null
+}
+totSd = (rotulo, lista) => {
+  const den1 = denBio(lista, "cmpBio1", "semBio1")
+  const den2 = denBio(lista, "cmpBio2", "semBio2")
+  const a = pctConta(lista, "sd1", den1)
+  const b = pctConta(lista, "sd2", den2)
+  return {
+    uf: rotulo,
+    pct_sem_biometria_1t: pctConta(lista, "semBio1", den1),
+    pct_biografia_1t: pctConta(lista, "biog1", den1),
+    pct_sem_digital_1t: a,
+    pct_sem_biometria_2t: pctConta(lista, "semBio2", den2),
+    pct_biografia_2t: pctConta(lista, "biog2", den2),
+    pct_sem_digital_2t: b,
+    delta_pct_sem_digital: a == null || b == null ? null : b - a
+  }
+}
+linhaNacional = turno => {
+  const semKey = turno === 1 ? "semBio1" : "semBio2"
+  const bioKey = turno === 1 ? "biog1" : "biog2"
+  const totKey = turno === 1 ? "sd1" : "sd2"
+  const cmpKey = turno === 1 ? "cmpBio1" : "cmpBio2"
+  const den = denBio(rows, cmpKey, semKey)
+  const sem = parte(rows, semKey)
+  const bio = parte(rows, bioKey)
+  const tot = parte(rows, totKey)
+  const pct = n => den && n != null ? 100 * n / den : null
+  return {turno, sem, bio, tot, den, pctSem: pct(sem), pctBio: pct(bio), pctTot: pct(tot)}
+}
+celulaPct = v => v == null ? "—" : fmt1(v) + "%"
+totHora = (rotulo, lista) => {
+  const a = fatia17(lista, 1)
+  const b = fatia17(lista, 2)
+  return {uf: rotulo, pct_apos_17h_1t: a, pct_apos_17h_2t: b, delta_pct_apos_17h: a == null || b == null ? null : b - a}
+}
+totAchados = (rotulo, lista) => ({
+  uf: rotulo,
+  achados_A: soma(lista, "achados_A"),
+  achados_B: soma(lista, "achados_B"),
+  achados_C: soma(lista, "achados_C")
+})
 sumA = rows.reduce((s, d) => s + d.achados_A, 0)
 sumB = rows.reduce((s, d) => s + d.achados_B, 0)
 sumC = rows.reduce((s, d) => s + d.achados_C, 0)
@@ -53,9 +157,10 @@ tinta = (v, teto) => {
   const rgb = v >= 0 ? "165, 28, 28" : "31, 78, 121"
   return `background: rgba(${rgb}, ${(0.12 + 0.5 * a).toFixed(3)})`
 }
-tabela = (cols) => html`<div style="overflow-x:auto"><table class="table table-sm">
+tabela = (cols, rodape = []) => html`<div style="overflow-x:auto"><table class="table table-sm">
   <thead><tr>${cols.map(c => html`<th>${c.rotulo}</th>`)}</tr></thead>
   <tbody>${rows.map(d => html`<tr>${cols.map(c => html`<td style="${c.delta ? tinta(d[c.chave], tetoDe(c.chave)) : ""}">${c.texto(d[c.chave])}</td>`)}</tr>`)}</tbody>
+  ${rodape.length ? html`<tfoot>${rodape.map(d => html`<tr class="linha-total">${cols.map(c => html`<td>${c.texto(d[c.chave])}</td>`)}</tr>`)}</tfoot>` : ""}
 </table></div>`
 ```
 
@@ -72,36 +177,73 @@ md`BU ≡ CSV oficial nas seções conferidas dos dois turnos (${divOficial.toLo
 
 ```{ojs}
 //| echo: false
-tabela([
+html`${tabela([
   {rotulo: "UF", chave: "uf", texto: nomeUf, delta: false},
   {rotulo: "Seções", chave: "secoes", texto: fmt, delta: false},
+  {rotulo: "Aptos 1º", chave: "aptos1", texto: fmt, delta: false},
+  {rotulo: "Aptos 2º", chave: "aptos2", texto: fmt, delta: false},
+  {rotulo: "Comparecimento 1º", chave: "cmp1", texto: fmt, delta: false},
+  {rotulo: "Comparecimento 2º", chave: "cmp2", texto: fmt, delta: false},
   {rotulo: "Δ abstenção (pp)", chave: "delta_abstencao_pp", texto: pp, delta: true},
   {rotulo: "Δ comparecimento", chave: "delta_comparecimento", texto: n => n == null ? "—" : (n > 0 ? "+" : "") + fmt(n), delta: true}
-])
+], [totCmp("Brasil", rows), totCmp("Brasil sem exterior", semExterior)])}
+<p>Aptos, abstenção e comparecimento desta tabela são das seções presentes nos dois turnos. Δ comparecimento do total é a soma da coluna. Δ abstenção do total é a taxa nacional (abstenção ÷ aptos) do 2º turno menos a do 1º, não a média dos pp das UFs.</p>`
 ```
 
 ## Sem digital
 
 ```{ojs}
 //| echo: false
-tabela([
+html`<p>No boletim, quem não autenticou a digital são duas situações. Sem digital cadastrada é quem compareceu sem biometria no cadastro. Tinha digital, habilitado sem é a liberação pelo ano de nascimento. As duas somam o total sem digital. É o dia inteiro, não o voto de um candidato. No log da urna as duas caem em manual.</p>
+<div style="overflow-x:auto"><table class="table table-sm">
+  <thead><tr>
+    <th>Turno</th>
+    <th>Sem digital cadastrada</th>
+    <th>%</th>
+    <th>Tinha digital, habilitado sem</th>
+    <th>%</th>
+    <th>Total sem digital</th>
+    <th>%</th>
+    <th>Comparecimento</th>
+  </tr></thead>
+  <tbody>${[1, 2].map(turno => {
+    const d = linhaNacional(turno)
+    return html`<tr>
+      <td>${turno}º</td>
+      <td>${fmt(d.sem)}</td>
+      <td>${d.pctSem == null ? "—" : fmt4(d.pctSem) + "%"}</td>
+      <td>${fmt(d.bio)}</td>
+      <td>${d.pctBio == null ? "—" : fmt4(d.pctBio) + "%"}</td>
+      <td>${fmt(d.tot)}</td>
+      <td>${d.pctTot == null ? "—" : fmt4(d.pctTot) + "%"}</td>
+      <td>${fmt(d.den)}</td>
+    </tr>`
+  })}</tbody>
+</table></div>
+${tabela([
   {rotulo: "UF", chave: "uf", texto: nomeUf, delta: false},
-  {rotulo: "% sem digital 1º", chave: "pct_sem_digital_1t", texto: v => v == null ? "—" : fmt1(v) + "%", delta: false},
-  {rotulo: "% sem digital 2º", chave: "pct_sem_digital_2t", texto: v => v == null ? "—" : fmt1(v) + "%", delta: false},
+  {rotulo: "% sem cadastro 1º", chave: "pct_sem_biometria_1t", texto: celulaPct, delta: false},
+  {rotulo: "% com digital, sem uso 1º", chave: "pct_biografia_1t", texto: celulaPct, delta: false},
+  {rotulo: "% sem digital 1º", chave: "pct_sem_digital_1t", texto: celulaPct, delta: false},
+  {rotulo: "% sem cadastro 2º", chave: "pct_sem_biometria_2t", texto: celulaPct, delta: false},
+  {rotulo: "% com digital, sem uso 2º", chave: "pct_biografia_2t", texto: celulaPct, delta: false},
+  {rotulo: "% sem digital 2º", chave: "pct_sem_digital_2t", texto: celulaPct, delta: false},
   {rotulo: "Δ (pp)", chave: "delta_pct_sem_digital", texto: pp, delta: true}
-])
+], [totSd("Brasil", rows)])}
+<p>O exterior fica em branco: o boletim de lá não separa as duas situações, e o total Brasil não o inclui. O percentual é a soma das parcelas dividida por esse comparecimento. % com digital, sem uso é quem tinha a digital cadastrada e foi habilitado sem usá-la.</p>`
 ```
 
 ## Horário
 
 ```{ojs}
 //| echo: false
-tabela([
+html`${tabela([
   {rotulo: "UF", chave: "uf", texto: nomeUf, delta: false},
-  {rotulo: "% após 17h 1º", chave: "pct_apos_17h_1t", texto: v => v == null ? "—" : fmt1(v) + "%", delta: false},
-  {rotulo: "% após 17h 2º", chave: "pct_apos_17h_2t", texto: v => v == null ? "—" : fmt1(v) + "%", delta: false},
-  {rotulo: "Δ (pp)", chave: "delta_pct_apos_17h", texto: pp, delta: true}
-])
+  {rotulo: "% após 17h 1º", chave: "pct_apos_17h_1t", texto: v => v == null ? "—" : fmt2(v) + "%", delta: false},
+  {rotulo: "% após 17h 2º", chave: "pct_apos_17h_2t", texto: v => v == null ? "—" : fmt2(v) + "%", delta: false},
+  {rotulo: "Δ (pp)", chave: "delta_pct_apos_17h", texto: pp2, delta: true}
+], [totHora("Brasil", rows), totHora("Brasil sem exterior", semExterior)])}
+<p>O total conta as habilitações do dia, hora a hora. Brasil sem exterior é a mesma conta da curva mais abaixo.</p>`
 ```
 
 ## Achados
@@ -113,22 +255,17 @@ tabela([
   {rotulo: "A", chave: "achados_A", texto: fmt, delta: false},
   {rotulo: "B", chave: "achados_B", texto: fmt, delta: false},
   {rotulo: "C", chave: "achados_C", texto: fmt, delta: false}
-])
+], [totAchados("Brasil", rows), totAchados("Brasil sem exterior", semExterior)])
 ```
 
 :::
-
-```{ojs}
-//| echo: false
-md`**Total:** seções **${fmt(rows.reduce((s, d) => s + (d.secoes || 0), 0))}** · Achados A/B/C = **${fmt(sumA)}** / **${fmt(sumB)}** / **${fmt(sumC)}**.`
-```
 
 ::: {.callout-note collapse="true"}
 ## Como ler
 
 Cada linha é uma UF. O fundo das colunas Δ fica mais forte quanto maior o módulo: vermelho quando o 2º turno sobe em relação ao 1º, azul quando desce. Na margem, mais adiante, o mesmo par de cores segue o sinal Lula (13) − Flávio (22).
 
-Sem digital no boletim é habilitado por biografia (ano de nascimento) mais quem compareceu sem biometria cadastrada. Não é voto em candidato. O percentual do log (`sem_biometria` + `manual_falha`) é outro indicador e não entra nesta tabela.
+Sem digital no boletim é o dia inteiro: quem não tinha digital cadastrada mais quem tinha e foi habilitado pelo ano de nascimento, sem usar a digital. Não é voto em candidato. No log da urna as duas situações caem em manual; o percentual do log (`sem_biometria` + `manual_falha`) é outro indicador e não entra nesta tabela. O exterior (ZZ) fica de fora porque o boletim de lá não separa as duas situações.
 
 % após 17h é a fatia das habilitações do dia oficial, no horário de Brasília (no exterior, no horário local do posto).
 :::
@@ -188,7 +325,8 @@ lista = outliers
   .slice()
   .sort((a, b) => (num(b.pct_sem_digital) || 0) - (num(a.pct_sem_digital) || 0))
 visiveis = lista.slice(0, 20)
-html`<div style="overflow-x:auto"><table class="table table-sm">
+html`<p>${visiveis.length.toLocaleString("pt-BR")} de ${lista.length.toLocaleString("pt-BR")} seções listadas.</p>
+<div style="overflow-x:auto"><table class="table table-sm">
   <thead><tr><th>Seção</th><th>UF</th><th>Município</th><th>Comparecimento</th><th>% sem digital</th><th>Δ margem (pp, Lula − Flávio)</th><th>Flags</th></tr></thead>
   <tbody>${visiveis.map(d => html`<tr>
     <td class="chave"><a href="secao.html?uf=${d.uf}&mun=${+d.municipio}&zona=${+d.zona}&secao=${+d.secao}">${d.join_key}</a></td>

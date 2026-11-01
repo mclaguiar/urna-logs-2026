@@ -216,7 +216,7 @@ O mapa das páginas está na [Visão geral](index.qmd).
 ::: {.callout-note collapse="true"}
 ## Dicionário de colunas
 
-**painel_uf.csv.** `uf`. `secoes_1t`, `secoes_2t`. `pct_sem_digital_1t`, `pct_sem_digital_2t`, `delta_pct_sem_digital`. `delta_abstencao_pp`, `delta_comparecimento`. `pct_apos_17h_1t`, `pct_apos_17h_2t`, `hora_pico_1t`. `pct_secoes_ok_oficial_1t`, `secoes_divergentes_1t`. `n_flag_margem`. `achados_A`, `achados_B`, `achados_C`. `protocolo_versao`. Colunas `p_elim_*` e `fluxo_*` são de uma estimativa antiga de independência. A migração do site não usa essas colunas.
+**painel_uf.csv.** `uf`. `secoes_1t`, `secoes_2t`. `sem_biometria_1t`, `sem_biometria_2t` (sem digital cadastrada). `biografia_1t`, `biografia_2t` (tinha digital e foi habilitado sem, pelo ano de nascimento). `sem_digital_1t`, `sem_digital_2t` (as duas somadas). `pct_sem_biometria_1t`, `pct_sem_biometria_2t`, `pct_biografia_1t`, `pct_biografia_2t`, `pct_sem_digital_1t`, `pct_sem_digital_2t`, `delta_pct_sem_digital`. O percentual usa o `comparecimento_*t` dos municípios em que o boletim separa as duas situações. Onde não separa, a parcela fica vazia (`com_detalhe_bio_1t`, `com_detalhe_bio_2t` falsos). `delta_abstencao_pp`, `delta_comparecimento`. `pct_apos_17h_1t`, `pct_apos_17h_2t`, `hora_pico_1t`. `pct_secoes_ok_oficial_1t`, `secoes_divergentes_1t`. `n_flag_margem`. `achados_A`, `achados_B`, `achados_C`. `protocolo_versao`. Colunas `p_elim_*` e `fluxo_*` são de uma estimativa antiga de independência. A migração do site não usa essas colunas.
 
 **curva_horaria.csv.** `uf`, `turno`, `hora`, `habilitacoes`, `pct`, `hora_brasilia`, `after_17h`. Por tipo: `hab_biometrica`, `hab_manual`, `hab_sem_biometria`, `hab_desconhecido`, e o percentual de cada uma.
 

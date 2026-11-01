@@ -135,22 +135,35 @@ linha = (d) => {
     verificador: d.verificador
   }
 }
-tabelaHw = (linhas) => html`<div style="overflow-x:auto"><table class="table table-sm tabela-hw">
+somaHw = (brutos, chave) => brutos.reduce((s, d) => s + (+d[chave] || 0), 0)
+tabelaHw = (brutos, rotulo = "Total", soTotal = false) => {
+  const linhas = soTotal ? [] : brutos.map(linha)
+  const den = somaHw(brutos, "secoes")
+  const modelos = ["n_ue2013", "n_ue2015", "n_ue2020", "n_ue2022"].map(k => pct(somaHw(brutos, k), den))
+  return html`<div style="overflow-x:auto"><table class="table table-sm tabela-hw">
   <thead><tr>
     <th>UF</th><th>Turno</th><th>Seções</th><th>Hash ok</th><th>Hash falhou</th>
     <th>Cadeia fechada</th><th>Cadeia aberta</th>
     <th>UE2013</th><th>UE2015</th><th>UE2020</th><th>UE2022</th>
     ${nFora ? html`<th>Fora</th>` : ""}<th>Verificador</th>
   </tr></thead>
-  <tbody>${linhas.map(d => html`<tr>
+  ${linhas.length ? html`<tbody>${linhas.map(d => html`<tr>
     <td>${d.uf}</td><td>${d.turno}</td><td>${d.secoes}</td><td>${d.hashOk}</td><td>${d.hashFalhou}</td>
     <td>${d.fechada}</td><td>${d.aberta}</td>
     <td>${d.ue2013}</td><td>${d.ue2015}</td><td>${d.ue2020}</td><td>${d.ue2022}</td>
     ${nFora ? html`<td>${d.fora}</td>` : ""}<td>${d.verificador}</td>
-  </tr>`)}</tbody>
+  </tr>`)}</tbody>` : ""}
+  <tfoot><tr class="linha-total">
+    <td>${rotulo}</td><td></td>
+    <td>${fmt(den)}</td><td>${fmt(somaHw(brutos, "hash_ok"))}</td><td>${fmt(somaHw(brutos, "hash_falhou"))}</td>
+    <td>${pct(somaHw(brutos, "cadeia_fechada"), den)}</td><td>${pct(somaHw(brutos, "cadeia_aberta"), den)}</td>
+    <td>${modelos[0]}</td><td>${modelos[1]}</td><td>${modelos[2]}</td><td>${modelos[3]}</td>
+    ${nFora ? html`<td>${fmt(somaHw(brutos, "fora"))}</td>` : ""}<td></td>
+  </tr></tfoot>
 </table></div>`
-novo = hw.filter(d => d.bloco === "novo").map(linha)
-outro = hw.filter(d => d.bloco !== "novo").map(linha)
+}
+novo = hw.filter(d => d.bloco === "novo")
+outro = hw.filter(d => d.bloco !== "novo")
 ```
 
 ```{ojs}
@@ -165,7 +178,10 @@ nFora
 ```{ojs}
 //| echo: false
 novo.length
-  ? tabelaHw(novo)
+  ? html`${tabelaHw(novo)}
+<p>O total desta tabela é o verificador comparável: as seções e o percentual de cadeia fechada citados na visão geral.</p>
+${tabelaHw(hw, "Todas as verificadas", true)}
+<p>Todas as verificadas soma os dois blocos. Seções e hash ok são o total conferido. A cadeia fechada desta segunda linha mistura os verificadores; não é o percentual da visão geral.</p>`
   : md`Nenhuma UF foi gravada ainda com o certificado publicado da AC URNA.`
 ```
 

@@ -46,6 +46,63 @@ def _read_glob(pattern: str, *, multi_name: str | None = None) -> pd.DataFrame |
     return per_uf if n_uf else None
 
 
+def _pct_parte(parte: int, comparecimento: int) -> float | None:
+    if not comparecimento:
+        return None
+    return round(100 * parte / comparecimento, 4)
+
+
+def _inteiro(serie: pd.Series) -> int:
+    return int(pd.to_numeric(serie, errors="coerce").fillna(0).sum())
+
+
+def _agregar_sem_digital(df: pd.DataFrame, turno: int) -> dict | None:
+    """Uma UF de by_municipio → colunas do painel para o turno.
+
+    Município sem pct_sem_digital fica fora da soma. UF inteira sem detalhe
+    (o exterior) guarda o comparecimento e deixa as parcelas vazias.
+    """
+    if df.empty or "uf" not in df.columns or "pct_sem_digital" not in df.columns:
+        return None
+    suffix = f"_{turno}t"
+    uf = str(df["uf"].iloc[0]).upper()
+    vazio = {
+        f"sem_biometria{suffix}": None,
+        f"biografia{suffix}": None,
+        f"sem_digital{suffix}": None,
+        f"pct_sem_biometria{suffix}": None,
+        f"pct_biografia{suffix}": None,
+        f"pct_sem_digital{suffix}": None,
+        f"com_detalhe_bio{suffix}": False,
+    }
+    com = df[pd.to_numeric(df["pct_sem_digital"], errors="coerce").notna()].copy()
+    if com.empty:
+        return {
+            "uf": uf,
+            f"municipios{suffix}": int(df["municipio"].nunique()),
+            f"urnas{suffix}": _inteiro(df["urnas"]),
+            f"comparecimento{suffix}": _inteiro(df["comparecimento"]),
+            **vazio,
+        }
+    comparecimento = _inteiro(com["comparecimento"])
+    sem_biometria = _inteiro(com["sem_biometria"]) if "sem_biometria" in com.columns else 0
+    biografia = _inteiro(com["biografia"]) if "biografia" in com.columns else 0
+    sem_digital = _inteiro(com["sem_digital"]) if "sem_digital" in com.columns else 0
+    return {
+        "uf": uf,
+        f"municipios{suffix}": int(com["municipio"].nunique()),
+        f"urnas{suffix}": _inteiro(com["urnas"]),
+        f"comparecimento{suffix}": comparecimento,
+        f"sem_biometria{suffix}": sem_biometria,
+        f"biografia{suffix}": biografia,
+        f"sem_digital{suffix}": sem_digital,
+        f"pct_sem_biometria{suffix}": _pct_parte(sem_biometria, comparecimento),
+        f"pct_biografia{suffix}": _pct_parte(biografia, comparecimento),
+        f"pct_sem_digital{suffix}": _pct_parte(sem_digital, comparecimento),
+        f"com_detalhe_bio{suffix}": True,
+    }
+
+
 def _sem_digital_turno(turno: int) -> pd.DataFrame:
     suffix = f"_{turno}t"
     rows: list[dict] = []
@@ -53,37 +110,17 @@ def _sem_digital_turno(turno: int) -> pd.DataFrame:
         if "MULTI" in path.name:
             continue
         df = pd.read_csv(path)
-        if df.empty:
-            continue
-        uf = str(df["uf"].iloc[0]).upper()
-        com = df[df["pct_sem_digital"].notna()].copy()
-        if com.empty:
-            rows.append(
-                {
-                    "uf": uf,
-                    f"municipios{suffix}": int(df["municipio"].nunique()),
-                    f"urnas{suffix}": int(df["urnas"].sum()),
-                    f"comparecimento{suffix}": int(df["comparecimento"].sum()),
-                    f"pct_sem_digital{suffix}": None,
-                    f"com_detalhe_bio{suffix}": False,
-                }
-            )
-            continue
-        comparecimento = int(com["comparecimento"].sum())
-        sem_digital = int(com["sem_digital"].sum())
-        rows.append(
-            {
-                "uf": uf,
-                f"municipios{suffix}": int(com["municipio"].nunique()),
-                f"urnas{suffix}": int(com["urnas"].sum()),
-                f"comparecimento{suffix}": comparecimento,
-                f"pct_sem_digital{suffix}": round(
-                    100 * sem_digital / comparecimento, 4
-                ),
-                f"com_detalhe_bio{suffix}": True,
-            }
-        )
-    return pd.DataFrame(rows) if rows else pd.DataFrame()
+        row = _agregar_sem_digital(df, turno)
+        if row is not None:
+            rows.append(row)
+    if not rows:
+        return pd.DataFrame()
+    out = pd.DataFrame(rows)
+    for nome in ("sem_biometria", "biografia", "sem_digital"):
+        col = f"{nome}{suffix}"
+        if col in out.columns:
+            out[col] = out[col].astype("Int64")
+    return out
 
 
 def _sem_digital_por_uf() -> pd.DataFrame:
@@ -843,10 +880,47 @@ def escrever_protocolo() -> None:
     print(f"escrito {out}")
 
 
+def anexar_bases_ambos(painel: pd.DataFrame) -> pd.DataFrame:
+    """Aptos, abstenção e comparecimento das seções presentes nos dois turnos.
+
+    É a mesma base de delta_comparecimento e delta_abstencao_pp. Os percentuais
+    nacionais da auditoria dividem essas somas; não usam a média dos pp das UFs.
+    """
+    dest = OUT / "secao"
+    frames: list[dict] = []
+    for path in sorted(dest.glob("votos_*.csv")):
+        uf = path.stem.split("_", 1)[1]
+        df = pd.read_csv(
+            path,
+            usecols=["status", "aptos_1t", "aptos_2t", "comparecimento_1t", "comparecimento_2t", "a1", "a2"],
+        )
+        ambos = df[df["status"] == "ambos"]
+        def soma(col: str) -> int:
+            return int(pd.to_numeric(ambos[col], errors="coerce").fillna(0).sum())
+        frames.append(
+            {
+                "uf": uf,
+                "aptos_ambos_1t": soma("aptos_1t"),
+                "aptos_ambos_2t": soma("aptos_2t"),
+                "abstencao_ambos_1t": soma("a1"),
+                "abstencao_ambos_2t": soma("a2"),
+                "comparecimento_ambos_1t": soma("comparecimento_1t"),
+                "comparecimento_ambos_2t": soma("comparecimento_2t"),
+            }
+        )
+    if not frames:
+        return painel
+    extra = pd.DataFrame(frames)
+    drop = [c for c in extra.columns if c != "uf" and c in painel.columns]
+    if drop:
+        painel = painel.drop(columns=drop)
+    return painel.merge(extra, on="uf", how="left")
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
 
-    painel = build_painel_uf()
+    painel = anexar_bases_ambos(build_painel_uf())
     out_p = OUT / "painel_uf.csv"
     painel.to_csv(out_p, index=False)
     print(f"escrito {out_p} ({len(painel)} UFs)")

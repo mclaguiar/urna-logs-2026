@@ -377,6 +377,9 @@ linhasTopo = [
   ...linhasBranco
 ]
 pctVal = (n, base) => base ? (100 * n / base).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + "%" : "—"
+totalVotos1 = linhasTopo.reduce((s, d) => s + d.n1, 0)
+totalVotos2 = linhasTopo.reduce((s, d) => s + d.n2, 0)
+fechaComparecimento = totalVotos1 === cmp1 && totalVotos2 === cmp2
 html`<div style="overflow-x:auto"><table class="table table-sm">
   <thead><tr><th>Votável</th><th>1º</th><th>2º</th><th>Δ</th><th>% válidos 1º</th><th>% válidos 2º</th></tr></thead>
   <tbody>${linhasTopo.flatMap(d => {
@@ -397,7 +400,13 @@ html`<div style="overflow-x:auto"><table class="table table-sm">
     </tr>`
     return [cabeca, ...filhas]
   })}</tbody>
-</table></div>`
+  <tfoot><tr class="linha-total">
+    <td>Total (comparecimento)</td>
+    <td>${fmt(totalVotos1)}</td><td>${fmt(totalVotos2)}</td><td>${fmtSinal(totalVotos2 - totalVotos1)}</td>
+    <td>—</td><td>—</td>
+  </tr></tfoot>
+</table></div>
+${fechaComparecimento ? "" : html`<p class="selo-alerta">A soma dos votáveis (${fmt(totalVotos1)} no 1º, ${fmt(totalVotos2)} no 2º) não fecha com o comparecimento do boletim (${fmt(cmp1)} e ${fmt(cmp2)}).</p>`}`
 ```
 
 ```{ojs}
@@ -741,7 +750,14 @@ ${comAbst.length && bpMapa.tem ? html`<div style="overflow-x:auto"><table class=
       <td>${fmtSinal(lp - obs)} (${fmtPp(ppFatia(lp, obs, estTotal(lpMapa), obsTotal)).replace(" pp", "")} pp)</td>
     </tr>`
   })}</tbody>
+  <tfoot><tr class="linha-total">
+    <td>Total</td>
+    <td>${fmt(estTotal(bpMapa))}</td><td>${fmt(estTotal(lpMapa))}</td><td>${fmt(obsTotal)}</td>
+    <td>${fmtSinal(estTotal(bpMapa) - obsTotal)}</td>
+    <td>${fmtSinal(estTotal(lpMapa) - obsTotal)}</td>
+  </tr></tfoot>
 </table></div>
+<p>O total esperado soma os aptos do 1º turno deste conjunto e o observado soma os aptos do 2º. A diferença é a variação de aptos, não resíduo do modelo.</p>
 <p>O destaque usa 5% do observado em Lula ou Flávio, no Brown e Payne. O extremo da UF no protocolo é o percentil ${percentilMargem} de |Δ margem| do boletim, outra conta.</p>
 ${zona === "todos" && lpMapa.propria ? html`<p>Com zona e seção em Todos, o resíduo do lphom é 0 por construção: a matriz é a da própria cidade, ajustada a esse conjunto.</p>` : ""}
 ${raizMatriz}` : html`<p>Sem margem de abstenção ou sem matriz neste conjunto.</p>`}`

@@ -33,9 +33,14 @@ deltaTxt = (depois, antes) => {
   const sinal = d > 0 ? "+" : ""
   return `${sinal}${fmt(d)}`
 }
-nomeUf = uf => uf === "ZZ" ? "Exterior" : uf
+nomeUf = uf => uf === "ZZ" ? "Exterior" : uf === "BR" ? "Brasil" : uf
 cob = cobertura[0] || {n_presentes: 0, n_ufs: 28, faltam: "", presentes: ""}
 votosTurno = (uf, turno, grupo) => {
+  if (uf === "BR") {
+    return turnos
+      .filter(d => +d.turno === turno && String(d.grupo) === grupo)
+      .reduce((s, d) => s + (+d.votos || 0), 0)
+  }
   const achou = turnos.find(d => d.uf === uf && +d.turno === turno && String(d.grupo) === grupo)
   return achou ? +achou.votos : 0
 }
@@ -761,7 +766,7 @@ corTaxa = taxa => {
   const b = Math.round(255 + (121 - 255) * t)
   return `background:rgb(${r},${g},${b});color:${t > 0.62 ? "#fff" : "#111"}`
 }
-linhasMig = ufsFluxo.map(uf => ({
+linhaEstado = (uf) => ({
   uf,
   f13: celulaFluxo(uf, modeloEstado, "13", "13")?.taxa,
   f22: celulaFluxo(uf, modeloEstado, "22", "22")?.taxa,
@@ -777,11 +782,15 @@ linhasMig = ufsFluxo.map(uf => ({
   erroCand: erroGrupo(uf, ["13", "22"]),
   erroBn: erroGrupo(uf, ["branco_nulo"]),
   leitura: leituraUf(uf)
-})).sort((a, b) => {
+})
+linhaBrasil = linhaEstado("BR")
+classeLinha = (r) => r.uf === "BR" ? "linha-total" : classeUf(r.uf, 2)
+linhasMig = ufsFluxo.map(linhaEstado).sort((a, b) => {
   const chave = ordemMig[0]
   if (chave === "uf") return (a.uf === "ZZ") - (b.uf === "ZZ") || nomeUf(a.uf).localeCompare(nomeUf(b.uf), "pt")
   return (b[chave] || 0) - (a[chave] || 0)
 })
+linhasTabela = [linhaBrasil].concat(linhasMig)
 tdTaxa = taxa => html`<td style="white-space:nowrap;${corTaxa(taxa)}">${pct(taxa)}</td>`
 contagemLeitura = ["Robusta", "Sensível", "Indeterminada"].map(nivel => ({
   nivel,
@@ -799,7 +808,7 @@ html`<p>Leitura: ${contagemLeitura.map(d => `${d.nivel} ${d.n}`).join(" · ")}. 
     <th>|lphom − BP|<br>(pp)</th>
     <th>Erro<br>candidatos</th><th>Erro<br>BN</th><th>Leitura</th>
   </tr></thead>
-  <tbody>${linhasMig.map(r => html`<tr class="${classeUf(r.uf, 2)}">
+  <tbody>${linhasTabela.map(r => html`<tr class="${classeLinha(r)}">
     <td>${nomeUf(r.uf)}</td>
     ${tdTaxa(r.f13)}${tdTaxa(r.f22)}${tdTaxa(r.e13)}${tdTaxa(r.e22)}
     ${tdTaxa(r.b13)}${tdTaxa(r.b22)}${tdTaxa(r.a13)}${tdTaxa(r.a22)}
