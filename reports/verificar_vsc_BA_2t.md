@@ -1,14 +1,16 @@
 # Verificar `.vsc` — BA 2º turno
 
-Nível solicitado: **níveis 1+2** (omitir = hashes e Ed521; 1 = só hashes; 2 = só Ed521).
+Nível solicitado: **níveis 1+2** (omitir = hashes e assinatura HW; 1 = só hashes; 2 = só assinatura HW).
 
 ## Resumo
 
 - Stems no ZIP: **35,476**
 - Com `-vota.vsc`: **35,476**
 - Nível ≥1 (auto-hash + hashes dos arquivos presentes + críticos): **35,476**
-- Nível 2 (Ed521: certificado + auto + hashes): **27,487**
-- Assinatura HW falhou: **7,989**
+- Nível 2 Ed521 (UE2020/UE2022, AC UE2020 ou UE2022): **27,487**
+- Nível 2 ECDSA (UE2013/UE2015, cadeia AC URNA): **7,885**
+- ECDSA cadeia pendente (assinatura ok, AC URNA não fixada): **0**
+- Assinatura HW falhou: **104**
 - Críticos (bu/rdv/log) OK: **35,476**
 - Algum hash presente falhou: **0**
 
@@ -18,50 +20,50 @@ Arquivos listados na assinatura mas **ausentes** no ZIP público (jufa, wsq*, mr
 
 - Spec ASN.1: `urna_logs/spec/assinatura.asn1` (TSE 2026)
 - Hash: SHA-512 do conteúdo = campo `AssinaturaDigital.hash`
-- Nível 2: Ed521 sobre SHA-512 desse hash, com a chave do certificado embutido; o certificado é conferido com a AC UE2020 ou UE2022. Não valida a chave de software da cerimônia.
+- Nível 2 segue o par declarado em `origemAssinaturaHW`. UE2020/UE2022 com `eddsa`: Ed521 e AC UE2020 ou UE2022. UE2013/UE2015 com `ecdsa`: ECDSA P-521; a mensagem dos arquivos é SHA-512 do hash gravado. O certificado da urna é conferido com a AC URNA publicada em http://acurna.tse.jus.br/crt/acurna.crt (válido até 2026-07-18; a conta confere a assinatura, não a data). Certificado de outro algoritmo é falha, sem segunda tentativa. Não valida a chave de software da cerimônia.
 
 ## Falhas / pendências (até 40)
 
-- `o03221ba3067800610040` jk=`BA:30678:0061:0040` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610041` jk=`BA:30678:0061:0041` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610042` jk=`BA:30678:0061:0042` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610043` jk=`BA:30678:0061:0043` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610044` jk=`BA:30678:0061:0044` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610045` jk=`BA:30678:0061:0045` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610046` jk=`BA:30678:0061:0046` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610047` jk=`BA:30678:0061:0047` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610048` jk=`BA:30678:0061:0048` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610049` jk=`BA:30678:0061:0049` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610050` jk=`BA:30678:0061:0050` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610051` jk=`BA:30678:0061:0051` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610052` jk=`BA:30678:0061:0052` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610053` jk=`BA:30678:0061:0053` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610054` jk=`BA:30678:0061:0054` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610055` jk=`BA:30678:0061:0055` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610056` jk=`BA:30678:0061:0056` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610057` jk=`BA:30678:0061:0057` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610058` jk=`BA:30678:0061:0058` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610059` jk=`BA:30678:0061:0059` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610060` jk=`BA:30678:0061:0060` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610061` jk=`BA:30678:0061:0061` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610062` jk=`BA:30678:0061:0062` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610064` jk=`BA:30678:0061:0064` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610065` jk=`BA:30678:0061:0065` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610066` jk=`BA:30678:0061:0066` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610105` jk=`BA:30678:0061:0105` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610108` jk=`BA:30678:0061:0108` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610119` jk=`BA:30678:0061:0119` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610123` jk=`BA:30678:0061:0123` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610139` jk=`BA:30678:0061:0139` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610140` jk=`BA:30678:0061:0140` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610141` jk=`BA:30678:0061:0141` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3067800610142` jk=`BA:30678:0061:0142` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3077501500136` jk=`BA:30775:0150:0136` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3077501500137` jk=`BA:30775:0150:0137` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3077501500138` jk=`BA:30775:0150:0138` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3077501500139` jk=`BA:30775:0150:0139` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3077501500140` jk=`BA:30775:0150:0140` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
-- `o03221ba3077501500141` jk=`BA:30775:0150:0141` nivel_ok=1 erro=`algoritmo do certificado não é Ed521 (1.2.840.10045.2.1)` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3077501500180` jk=`BA:30775:0150:0180` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3307300740009` jk=`BA:33073:0074:0009` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3307300740271` jk=`BA:33073:0074:0271` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3321901920174` jk=`BA:33219:0192:0174` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3341301230108` jk=`BA:33413:0123:0108` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3341301230154` jk=`BA:33413:0123:0154` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3341301230173` jk=`BA:33413:0123:0173` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3341301230191` jk=`BA:33413:0123:0191` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3377400710245` jk=`BA:33774:0071:0245` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3377400710310` jk=`BA:33774:0071:0310` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3407000310015` jk=`BA:34070:0031:0015` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3413401700066` jk=`BA:34134:0170:0066` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3413401700067` jk=`BA:34134:0170:0067` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3413401700223` jk=`BA:34134:0170:0223` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3413401700259` jk=`BA:34134:0170:0259` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3413401710043` jk=`BA:34134:0171:0043` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3413401710070` jk=`BA:34134:0171:0070` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3413401710098` jk=`BA:34134:0171:0098` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3415000780005` jk=`BA:34150:0078:0005` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3415000780042` jk=`BA:34150:0078:0042` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3415000780077` jk=`BA:34150:0078:0077` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3429001270046` jk=`BA:34290:0127:0046` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3429001270328` jk=`BA:34290:0127:0328` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3453301580029` jk=`BA:34533:0158:0029` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3461400610100` jk=`BA:34614:0061:0100` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3469001920041` jk=`BA:34690:0192:0041` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3469001920042` jk=`BA:34690:0192:0042` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3469001920212` jk=`BA:34690:0192:0212` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3477001300042` jk=`BA:34770:0130:0042` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3477001300089` jk=`BA:34770:0130:0089` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3481900610115` jk=`BA:34819:0061:0115` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3485101240039` jk=`BA:34851:0124:0039` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3485101240058` jk=`BA:34851:0124:0058` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3515701540307` jk=`BA:35157:0154:0307` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3515701550055` jk=`BA:35157:0155:0055` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3515701550235` jk=`BA:35157:0155:0235` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3515701550276` jk=`BA:35157:0155:0276` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3515701550884` jk=`BA:35157:0155:0884` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3515701560046` jk=`BA:35157:0156:0046` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
+- `o03221ba3515701560367` jk=`BA:35157:0156:0367` nivel_ok=1 erro=`certificado não confere com AC URNA` criticos=`bu.dat=ok;rdv.dat=ok;log.jez=ok`
 
 ## Arquivos
 
