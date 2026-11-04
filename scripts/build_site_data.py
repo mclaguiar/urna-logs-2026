@@ -1339,9 +1339,27 @@ def build_hw_cadeia() -> None:
     print(f"escrito {out_c} ({len(cobertura)} UF×turno)")
 
 
+def build_anomalias_site() -> None:
+    origem = ROOT / "data" / "anomalias"
+    destino = OUT / "anomalias"
+    destino.mkdir(parents=True, exist_ok=True)
+    for nome in ("resumo.csv", "alertas.csv", "fingerprint.csv"):
+        fonte = origem / nome
+        if not fonte.exists():
+            raise SystemExit(f"ausente: {fonte}. Rode urna-logs anomalias antes.")
+        (destino / nome).write_bytes(fonte.read_bytes())
+        print(f"escrito {destino / nome}")
+    for fonte in sorted(origem.glob("linha_*.csv")):
+        alvo = destino / fonte.name
+        alvo.write_bytes(fonte.read_bytes())
+        print(f"escrito {alvo}")
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "migracao":
         build_migracao_site()
+    elif len(sys.argv) > 1 and sys.argv[1] == "anomalias":
+        build_anomalias_site()
     elif len(sys.argv) > 1 and sys.argv[1] == "protocolo":
         escrever_protocolo()
     elif len(sys.argv) > 1 and sys.argv[1] == "secao":
