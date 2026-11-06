@@ -1,0 +1,3 @@
+uf,municipio,nome,zona,secao,turno,motivo
+MA,7846,LAGOA GRANDE DO MARANHÃO,74,228,1,"Falta rdv.dat no pacote. O hash dos arquivos presentes fechou. A assinatura de hardware não foi conferida. O boletim declara urna de seção, arquivo de votação da urna e bloco de seção, fase oficial. O log não contém as frases de procedimento de contingência nem de carga de urna de contingência. O log registra a geração de rdv.dat até o término. Esse arquivo não está no pacote publicado."
+SP,64777,GUARULHOS,395,298,2,"Falta log.jez no pacote. O hash dos arquivos presentes fechou. A assinatura de hardware não foi conferida. O boletim declara urna de seção, arquivo de votação da urna e bloco de seção, fase oficial."

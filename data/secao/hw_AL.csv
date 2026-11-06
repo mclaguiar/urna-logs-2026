@@ -49,7 +49,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 27014,39,16,1,UE2013,fechada,ok
 27014,39,17,1,UE2013,fechada,ok
 27014,39,27,1,UE2015,fechada,ok
-27014,39,28,1,UE2015,falha,ok
+27014,39,28,1,UE2015,fechada,ok
 27014,39,30,1,UE2015,fechada,ok
 27014,39,31,1,UE2015,fechada,ok
 27014,39,32,1,UE2015,fechada,ok
@@ -75,7 +75,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 27014,39,120,1,UE2015,fechada,ok
 27014,39,122,1,UE2015,fechada,ok
 27014,39,123,1,UE2015,fechada,ok
-27014,39,126,1,UE2013,falha,ok
+27014,39,126,1,UE2013,fechada,ok
 27014,39,127,1,UE2013,fechada,ok
 27014,39,131,1,UE2013,fechada,ok
 27022,39,13,1,UE2015,fechada,ok
@@ -160,7 +160,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 27049,46,79,1,UE2015,fechada,ok
 27049,46,80,1,UE2015,fechada,ok
 27049,46,81,1,UE2015,fechada,ok
-27049,46,82,1,UE2015,falha,ok
+27049,46,82,1,UE2015,fechada,ok
 27049,46,83,1,UE2015,fechada,ok
 27049,46,84,1,UE2015,fechada,ok
 27049,46,85,1,UE2015,fechada,ok
@@ -1200,7 +1200,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 27316,27,9,1,UE2015,fechada,ok
 27316,27,10,1,UE2015,fechada,ok
 27316,27,11,1,UE2015,fechada,ok
-27316,27,12,1,UE2015,falha,ok
+27316,27,12,1,UE2015,fechada,ok
 27316,27,13,1,UE2013,fechada,ok
 27316,27,14,1,UE2013,fechada,ok
 27316,27,15,1,UE2013,fechada,ok
@@ -1589,7 +1589,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 27472,40,29,1,UE2015,fechada,ok
 27472,40,30,1,UE2015,fechada,ok
 27472,40,31,1,UE2015,fechada,ok
-27472,40,32,1,UE2015,falha,ok
+27472,40,32,1,UE2015,fechada,ok
 27472,40,33,1,UE2015,fechada,ok
 27472,40,34,1,UE2015,fechada,ok
 27472,40,35,1,UE2015,fechada,ok
@@ -1951,7 +1951,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 27618,45,14,1,UE2013,fechada,ok
 27618,45,15,1,UE2013,fechada,ok
 27618,45,16,1,UE2013,fechada,ok
-27618,45,17,1,UE2013,falha,ok
+27618,45,17,1,UE2013,fechada,ok
 27618,45,18,1,UE2015,fechada,ok
 27618,45,19,1,UE2015,fechada,ok
 27618,45,20,1,UE2015,fechada,ok
@@ -4133,8 +4133,8 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 27871,31,96,1,UE2015,fechada,ok
 27871,31,97,1,UE2015,fechada,ok
 27871,31,98,1,UE2015,fechada,ok
-27871,31,160,1,UE2015,falha,ok
-27871,31,162,1,UE2015,falha,ok
+27871,31,160,1,UE2015,fechada,ok
+27871,31,162,1,UE2015,fechada,ok
 27871,31,163,1,UE2015,fechada,ok
 27898,14,124,1,UE2020,fechada,ok
 27898,14,125,1,UE2022,fechada,ok
@@ -4716,7 +4716,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28134,11,96,1,UE2015,fechada,ok
 28134,11,97,1,UE2013,fechada,ok
 28134,11,98,1,UE2015,fechada,ok
-28134,11,99,1,UE2015,falha,ok
+28134,11,99,1,UE2015,fechada,ok
 28134,11,100,1,UE2015,fechada,ok
 28134,11,101,1,UE2015,fechada,ok
 28134,11,102,1,UE2015,fechada,ok
@@ -4742,7 +4742,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28134,11,123,1,UE2015,fechada,ok
 28134,11,124,1,UE2015,fechada,ok
 28134,11,125,1,UE2015,fechada,ok
-28134,11,126,1,UE2015,falha,ok
+28134,11,126,1,UE2015,fechada,ok
 28134,11,127,1,UE2015,fechada,ok
 28134,11,128,1,UE2015,fechada,ok
 28134,11,129,1,UE2015,fechada,ok
@@ -4878,8 +4878,8 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28258,10,67,1,UE2015,fechada,ok
 28258,10,68,1,UE2015,fechada,ok
 28258,10,69,1,UE2015,fechada,ok
-28258,10,70,1,UE2015,falha,ok
-28258,10,71,1,UE2015,falha,ok
+28258,10,70,1,UE2015,fechada,ok
+28258,10,71,1,UE2015,fechada,ok
 28258,10,72,1,UE2013,fechada,ok
 28258,10,73,1,UE2015,fechada,ok
 28258,10,74,1,UE2015,fechada,ok
@@ -4901,7 +4901,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28258,10,90,1,UE2015,fechada,ok
 28258,10,91,1,UE2015,fechada,ok
 28258,10,92,1,UE2015,fechada,ok
-28258,10,93,1,UE2015,falha,ok
+28258,10,93,1,UE2015,fechada,ok
 28258,10,94,1,UE2013,fechada,ok
 28258,10,95,1,UE2013,fechada,ok
 28258,10,96,1,UE2013,fechada,ok
@@ -4945,7 +4945,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28258,10,134,1,UE2013,fechada,ok
 28258,10,135,1,UE2013,fechada,ok
 28258,10,136,1,UE2015,fechada,ok
-28258,10,137,1,UE2015,falha,ok
+28258,10,137,1,UE2015,fechada,ok
 28258,10,138,1,UE2015,fechada,ok
 28258,10,139,1,UE2015,fechada,ok
 28258,10,140,1,UE2015,fechada,ok
@@ -5022,7 +5022,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28258,10,294,1,UE2013,fechada,ok
 28258,10,297,1,UE2015,fechada,ok
 28258,10,298,1,UE2015,fechada,ok
-28258,10,302,1,UE2015,falha,ok
+28258,10,302,1,UE2015,fechada,ok
 28258,10,303,1,UE2015,fechada,ok
 28258,10,304,1,UE2015,fechada,ok
 28258,10,305,1,UE2015,fechada,ok
@@ -5522,7 +5522,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28436,50,38,1,UE2015,fechada,ok
 28436,50,40,1,UE2015,fechada,ok
 28436,50,41,1,UE2015,fechada,ok
-28436,50,42,1,UE2015,falha,ok
+28436,50,42,1,UE2015,fechada,ok
 28436,50,74,1,UE2015,fechada,ok
 28436,50,78,1,UE2015,fechada,ok
 28436,50,84,1,UE2015,fechada,ok
@@ -6011,7 +6011,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28592,19,168,1,UE2013,fechada,ok
 28592,19,169,1,UE2013,fechada,ok
 28592,19,179,1,UE2013,fechada,ok
-28592,19,180,1,UE2013,falha,ok
+28592,19,180,1,UE2013,fechada,ok
 28592,19,181,1,UE2015,fechada,ok
 28592,19,182,1,UE2015,fechada,ok
 28592,19,186,1,UE2015,fechada,ok
@@ -6041,7 +6041,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28592,19,230,1,UE2015,fechada,ok
 28592,19,231,1,UE2015,fechada,ok
 28592,19,232,1,UE2015,fechada,ok
-28592,19,233,1,UE2015,falha,ok
+28592,19,233,1,UE2015,fechada,ok
 28592,19,234,1,UE2015,fechada,ok
 28592,19,235,1,UE2015,fechada,ok
 28592,19,236,1,UE2015,fechada,ok
@@ -7150,7 +7150,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 27014,39,16,2,UE2013,fechada,ok
 27014,39,17,2,UE2013,fechada,ok
 27014,39,27,2,UE2015,fechada,ok
-27014,39,28,2,UE2015,falha,ok
+27014,39,28,2,UE2015,fechada,ok
 27014,39,30,2,UE2015,fechada,ok
 27014,39,31,2,UE2015,fechada,ok
 27014,39,32,2,UE2015,fechada,ok
@@ -7176,7 +7176,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 27014,39,120,2,UE2015,fechada,ok
 27014,39,122,2,UE2015,fechada,ok
 27014,39,123,2,UE2015,fechada,ok
-27014,39,126,2,UE2013,falha,ok
+27014,39,126,2,UE2013,fechada,ok
 27014,39,127,2,UE2013,fechada,ok
 27014,39,131,2,UE2013,fechada,ok
 27022,39,13,2,UE2015,fechada,ok
@@ -7261,7 +7261,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 27049,46,79,2,UE2015,fechada,ok
 27049,46,80,2,UE2015,fechada,ok
 27049,46,81,2,UE2015,fechada,ok
-27049,46,82,2,UE2015,falha,ok
+27049,46,82,2,UE2015,fechada,ok
 27049,46,83,2,UE2015,fechada,ok
 27049,46,84,2,UE2015,fechada,ok
 27049,46,85,2,UE2015,fechada,ok
@@ -8301,7 +8301,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 27316,27,9,2,UE2015,fechada,ok
 27316,27,10,2,UE2015,fechada,ok
 27316,27,11,2,UE2015,fechada,ok
-27316,27,12,2,UE2015,falha,ok
+27316,27,12,2,UE2015,fechada,ok
 27316,27,13,2,UE2013,fechada,ok
 27316,27,14,2,UE2013,fechada,ok
 27316,27,15,2,UE2013,fechada,ok
@@ -8690,7 +8690,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 27472,40,29,2,UE2015,fechada,ok
 27472,40,30,2,UE2015,fechada,ok
 27472,40,31,2,UE2015,fechada,ok
-27472,40,32,2,UE2015,falha,ok
+27472,40,32,2,UE2015,fechada,ok
 27472,40,33,2,UE2015,fechada,ok
 27472,40,34,2,UE2015,fechada,ok
 27472,40,35,2,UE2015,fechada,ok
@@ -11234,8 +11234,8 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 27871,31,96,2,UE2015,fechada,ok
 27871,31,97,2,UE2015,fechada,ok
 27871,31,98,2,UE2015,fechada,ok
-27871,31,160,2,UE2015,falha,ok
-27871,31,162,2,UE2015,falha,ok
+27871,31,160,2,UE2015,fechada,ok
+27871,31,162,2,UE2015,fechada,ok
 27871,31,163,2,UE2013,fechada,ok
 27898,14,124,2,UE2020,fechada,ok
 27898,14,125,2,UE2022,fechada,ok
@@ -11817,7 +11817,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28134,11,96,2,UE2015,fechada,ok
 28134,11,97,2,UE2013,fechada,ok
 28134,11,98,2,UE2015,fechada,ok
-28134,11,99,2,UE2015,falha,ok
+28134,11,99,2,UE2015,fechada,ok
 28134,11,100,2,UE2015,fechada,ok
 28134,11,101,2,UE2015,fechada,ok
 28134,11,102,2,UE2015,fechada,ok
@@ -11843,7 +11843,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28134,11,123,2,UE2015,fechada,ok
 28134,11,124,2,UE2015,fechada,ok
 28134,11,125,2,UE2015,fechada,ok
-28134,11,126,2,UE2015,falha,ok
+28134,11,126,2,UE2015,fechada,ok
 28134,11,127,2,UE2015,fechada,ok
 28134,11,128,2,UE2015,fechada,ok
 28134,11,129,2,UE2015,fechada,ok
@@ -11979,8 +11979,8 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28258,10,67,2,UE2015,fechada,ok
 28258,10,68,2,UE2015,fechada,ok
 28258,10,69,2,UE2015,fechada,ok
-28258,10,70,2,UE2015,falha,ok
-28258,10,71,2,UE2015,falha,ok
+28258,10,70,2,UE2015,fechada,ok
+28258,10,71,2,UE2015,fechada,ok
 28258,10,72,2,UE2013,fechada,ok
 28258,10,73,2,UE2015,fechada,ok
 28258,10,74,2,UE2015,fechada,ok
@@ -12002,7 +12002,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28258,10,90,2,UE2015,fechada,ok
 28258,10,91,2,UE2015,fechada,ok
 28258,10,92,2,UE2015,fechada,ok
-28258,10,93,2,UE2015,falha,ok
+28258,10,93,2,UE2015,fechada,ok
 28258,10,94,2,UE2013,fechada,ok
 28258,10,95,2,UE2013,fechada,ok
 28258,10,96,2,UE2013,fechada,ok
@@ -12046,7 +12046,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28258,10,134,2,UE2013,fechada,ok
 28258,10,135,2,UE2013,fechada,ok
 28258,10,136,2,UE2015,fechada,ok
-28258,10,137,2,UE2015,falha,ok
+28258,10,137,2,UE2015,fechada,ok
 28258,10,138,2,UE2015,fechada,ok
 28258,10,139,2,UE2015,fechada,ok
 28258,10,140,2,UE2015,fechada,ok
@@ -12123,7 +12123,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28258,10,294,2,UE2013,fechada,ok
 28258,10,297,2,UE2015,fechada,ok
 28258,10,298,2,UE2015,fechada,ok
-28258,10,302,2,UE2015,falha,ok
+28258,10,302,2,UE2015,fechada,ok
 28258,10,303,2,UE2015,fechada,ok
 28258,10,304,2,UE2015,fechada,ok
 28258,10,305,2,UE2015,fechada,ok
@@ -12623,7 +12623,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28436,50,38,2,UE2015,fechada,ok
 28436,50,40,2,UE2015,fechada,ok
 28436,50,41,2,UE2015,fechada,ok
-28436,50,42,2,UE2015,falha,ok
+28436,50,42,2,UE2015,fechada,ok
 28436,50,74,2,UE2015,fechada,ok
 28436,50,78,2,UE2015,fechada,ok
 28436,50,84,2,UE2015,fechada,ok
@@ -13112,7 +13112,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28592,19,168,2,UE2013,fechada,ok
 28592,19,169,2,UE2013,fechada,ok
 28592,19,179,2,UE2013,fechada,ok
-28592,19,180,2,UE2013,falha,ok
+28592,19,180,2,UE2013,fechada,ok
 28592,19,181,2,UE2015,fechada,ok
 28592,19,182,2,UE2015,fechada,ok
 28592,19,186,2,UE2015,fechada,ok
@@ -13142,7 +13142,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 28592,19,230,2,UE2015,fechada,ok
 28592,19,231,2,UE2015,fechada,ok
 28592,19,232,2,UE2015,fechada,ok
-28592,19,233,2,UE2015,falha,ok
+28592,19,233,2,UE2015,fechada,ok
 28592,19,234,2,UE2013,fechada,ok
 28592,19,235,2,UE2015,fechada,ok
 28592,19,236,2,UE2015,fechada,ok
