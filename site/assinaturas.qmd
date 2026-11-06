@@ -28,7 +28,7 @@ O hash de \`bu\`, \`rdv\` e \`log\` confere com o \`.vsc\` em ${fmt(nHash)} de $
 ```{ojs}
 //| echo: false
 nHashFail
-  ? md`<div class="aviso-falha"><strong>${fmt(nHashFail)} seções não fecharam o hash de bu, rdv e log.</strong> Quais são, e o que isso significa, está abaixo da tabela.</div>`
+  ? md`<div class="aviso-falha"><strong>${fmt(nHashFail)} seções não têm o trio bu, rdv e log no pacote.</strong> O hash dos arquivos presentes fechou. O detalhe está abaixo da tabela.</div>`
   : md``
 ```
 
@@ -124,7 +124,7 @@ tabelaHw = (brutos, rotulo = "Total", soTotal = false) => {
   const modelos = ["n_ue2013", "n_ue2015", "n_ue2020", "n_ue2022"].map(k => pct(somaHw(brutos, k), den))
   return html`<div style="overflow-x:auto"><table class="table table-sm tabela-hw">
   <thead><tr>
-    <th>UF</th><th>Turno</th><th>Seções</th><th>Hash ok</th><th>Hash falhou</th>
+    <th>UF</th><th>Turno</th><th>Seções</th><th>Hash ok</th><th>Arquivo ausente</th>
     <th>Cadeia fechada</th><th>Cadeia aberta</th>
     <th>UE2013</th><th>UE2015</th><th>UE2020</th><th>UE2022</th>
     ${nFora ? html`<th>Fora</th>` : ""}<th>Verificador</th>
@@ -152,7 +152,7 @@ outro = hw.filter(d => d.bloco !== "novo")
 //| echo: false
 nFora
   ? md`${fmt(nFora)} seções têm o hash ok e o relatório não gravou o resultado da assinatura de hardware. Elas aparecem na coluna Fora.`
-  : md`Nenhuma seção verificada ficou fora das classes cadeia fechada, cadeia aberta e falha de hash.`
+  : md`Nenhuma seção verificada ficou fora das classes cadeia fechada, cadeia aberta e arquivo ausente.`
 ```
 
 ```{ojs}
@@ -166,7 +166,7 @@ ${outro.length ? html`<p>O total acima é o verificador comparável. A linha seg
 ```{ojs}
 //| echo: false
 falhas.length
-  ? html`<p><strong>Hash falhou</strong> é a seção em que bu, rdv e log não fecharam juntos contra o <code>.vsc</code>. Há dois casos. O arquivo está no pacote e o SHA-512 não é o gravado na assinatura. Ou um dos três não está no pacote: o hash dos que estão pode ter fechado, e o trio não. A assinatura de hardware não é conferida nesse caso.</p>
+  ? html`<p>Estas seções não têm o trio <code>bu</code>, <code>rdv</code> e <code>log</code> no pacote. O SHA-512 dos arquivos que estão confere com o <code>.vsc</code>. A assinatura de hardware não foi conferida, porque o trio não está completo. Nenhuma seção tem arquivo presente com SHA-512 diferente do gravado.</p>
 <div style="overflow-x:auto"><table class="table table-sm">
 <thead><tr><th>UF</th><th>Município</th><th>Zona</th><th>Seção</th><th>Turno</th><th>O que a conta viu</th></tr></thead>
 <tbody>${falhas.map(d => html`<tr>
