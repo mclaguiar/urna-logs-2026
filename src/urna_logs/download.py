@@ -65,8 +65,18 @@ def save_states(states: dict[str, DownloadState]) -> None:
     )
 
 
-def _key(uf: str, turno: int) -> str:
-    return f"{uf.upper()}_{turno}"
+def state_key(uf: str, turno: int, ano: int = 2026) -> str:
+    """Chave de retomada. 2026 mantém `UF_turno` já gravada; outro ano leva o prefixo."""
+    from urna_logs.config import ANO
+
+    uf = uf.upper()
+    if int(ano) == ANO:
+        return f"{uf}_{turno}"
+    return f"{int(ano)}_{uf}_{turno}"
+
+
+def _key(uf: str, turno: int, ano: int = 2026) -> str:
+    return state_key(uf, turno, ano)
 
 
 def head_size(url: str, client: httpx.Client) -> int | None:
@@ -103,18 +113,20 @@ def download_zip(
     uf: str,
     turno: int,
     *,
+    ano: int = 2026,
     force: bool = False,
     timeout: float = 120.0,
     label: str = "",
 ) -> Path:
-    """Baixa (ou retoma) o ZIP de uma UF/turno. Idempotente."""
+    """Baixa (ou retoma) o ZIP de uma UF/turno/ano. Idempotente."""
     ensure_dirs()
     uf = uf.upper()
-    url = zip_url(uf, turno)
-    dest = zip_path(uf, turno)
+    ano = int(ano)
+    url = zip_url(uf, turno, ano)
+    dest = zip_path(uf, turno, ano)
     part = dest.with_suffix(dest.suffix + ".part")
     states = load_states()
-    key = _key(uf, turno)
+    key = state_key(uf, turno, ano)
     state = states.get(key) or DownloadState(uf=uf, turno=turno, url=url, path=str(dest))
     prefix = f"{label} " if label else ""
 
@@ -243,16 +255,24 @@ def download_zip(
             raise
 
 
-def download_many(ufs: Iterable[str], turno: int, *, force: bool = False) -> list[Path]:
+def download_many(
+    ufs: Iterable[str],
+    turno: int,
+    *,
+    ano: int = 2026,
+    force: bool = False,
+) -> list[Path]:
     uf_list = [u.upper() for u in ufs]
     n = len(uf_list)
     console.print(
-        f"[bold]Download[/bold] — {turno}º turno · {n} UF(s): {', '.join(uf_list)}"
+        f"[bold]Download[/bold] — {ano} · {turno}º turno · {n} UF(s): {', '.join(uf_list)}"
     )
     paths: list[Path] = []
     for i, uf in enumerate(uf_list, start=1):
         console.print(f"\n[bold][{i}/{n}] {uf}[/bold]")
-        paths.append(download_zip(uf, turno, force=force, label=f"[{i}/{n} {uf}]"))
+        paths.append(
+            download_zip(uf, turno, ano=ano, force=force, label=f"[{i}/{n} {uf}]")
+        )
     console.print(f"\n[green]Concluído:[/green] {len(paths)}/{n} arquivo(s)")
     return paths
 

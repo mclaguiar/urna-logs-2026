@@ -11,17 +11,18 @@ from rich.console import Console
 from rich.table import Table
 
 from urna_logs.audit import join_key
-from urna_logs.config import ANO, DATA_DIR, REPORTS_DIR, ensure_dirs
+from urna_logs.config import ANO, ANOMALIAS_REF_DIR, DATA_DIR, REPORTS_DIR, ensure_dirs
 
 console = Console()
 
 REF_DIR = DATA_DIR / "ref"
 
-# Presidente — votação por seção (todas as UFs, cargo 1)
-VOTACAO_PRESIDENTE_URL = (
-    f"https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_secao/"
-    f"votacao_secao_{ANO}_BR.zip"
+# Presidente — votação por seção (todas as UFs, cargo 1). 2026 permanece em data/ref.
+VOTACAO_URL = (
+    "https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_secao/"
+    "votacao_secao_{ano}_BR.zip"
 )
+VOTACAO_PRESIDENTE_URL = VOTACAO_URL.format(ano=ANO)
 VOTACAO_PRESIDENTE_ZIP = REF_DIR / f"votacao_secao_{ANO}_BR.zip"
 
 # Códigos TSE de votável especial (votação por seção)
@@ -46,37 +47,48 @@ def _ensure_ref() -> None:
     REF_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def cache_path(uf: str, turno: int) -> Path:
-    return REF_DIR / f"oficial_presidente_votos_{uf.upper()}_{turno}t.parquet"
+def votacao_zip_path(ano: int = ANO) -> Path:
+    """2026 fica em data/ref. Outro ano vai para data/anomalias/ref."""
+    nome = f"votacao_secao_{int(ano)}_BR.zip"
+    if int(ano) == ANO:
+        return REF_DIR / nome
+    return ANOMALIAS_REF_DIR / nome
 
 
-def ensure_votacao_presidente_zip(*, force: bool = False) -> Path:
+def cache_path(uf: str, turno: int, ano: int = ANO) -> Path:
+    uf = uf.upper()
+    if int(ano) == ANO:
+        return REF_DIR / f"oficial_presidente_votos_{uf}_{turno}t.parquet"
+    return ANOMALIAS_REF_DIR / f"oficial_presidente_votos_{int(ano)}_{uf}_{turno}t.parquet"
+
+
+def ensure_votacao_presidente_zip(*, force: bool = False, ano: int = ANO) -> Path:
     """Baixa (com cache) o ZIP nacional de votação por seção — presidente."""
     _ensure_ref()
-    if VOTACAO_PRESIDENTE_ZIP.exists() and not force:
-        size = VOTACAO_PRESIDENTE_ZIP.stat().st_size
+    ano = int(ano)
+    dest = votacao_zip_path(ano)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists() and not force:
+        size = dest.stat().st_size
         if size > 1_000_000:
             console.print(
-                f"[dim]Oficial já em cache:[/dim] {VOTACAO_PRESIDENTE_ZIP.name} "
-                f"({size / 1e6:.0f} MB)"
+                f"[dim]Oficial já em cache:[/dim] {dest.name} ({size / 1e6:.0f} MB)"
             )
-            return VOTACAO_PRESIDENTE_ZIP
+            return dest
 
+    url = VOTACAO_URL.format(ano=ano)
     console.print(f"[cyan]Baixando resultado oficial (presidente × seção)…[/cyan]")
-    console.print(f"[dim]{VOTACAO_PRESIDENTE_URL}[/dim]")
-    tmp = VOTACAO_PRESIDENTE_ZIP.with_suffix(".zip.part")
+    console.print(f"[dim]{url}[/dim]")
+    tmp = dest.with_suffix(".zip.part")
     with httpx.Client(timeout=600.0, follow_redirects=True) as client:
-        with client.stream("GET", VOTACAO_PRESIDENTE_URL) as resp:
+        with client.stream("GET", url) as resp:
             resp.raise_for_status()
             with open(tmp, "wb") as fh:
                 for chunk in resp.iter_bytes():
                     fh.write(chunk)
-    tmp.replace(VOTACAO_PRESIDENTE_ZIP)
-    console.print(
-        f"[green]Salvo:[/green] {VOTACAO_PRESIDENTE_ZIP} "
-        f"({VOTACAO_PRESIDENTE_ZIP.stat().st_size / 1e6:.0f} MB)"
-    )
-    return VOTACAO_PRESIDENTE_ZIP
+    tmp.replace(dest)
+    console.print(f"[green]Salvo:[/green] {dest} ({dest.stat().st_size / 1e6:.0f} MB)")
+    return dest
 
 
 def _mun_int(series: pd.Series) -> pd.Series:
@@ -133,19 +145,20 @@ def _normalize_oficial_chunk(raw: pd.DataFrame, turno: int) -> pd.DataFrame:
 
 
 def warm_oficial_cache(
-    ufs: list[str], turno: int, *, force_rebuild: bool = False
+    ufs: list[str], turno: int, *, force_rebuild: bool = False, ano: int = ANO
 ) -> None:
     """Uma passagem no ZIP nacional → Parquets por UF (só as que faltam)."""
+    ano = int(ano)
     wanted = [u.upper() for u in ufs]
     missing = [
         u
         for u in wanted
-        if force_rebuild or not cache_path(u, turno).exists()
+        if force_rebuild or not cache_path(u, turno, ano).exists()
     ]
     if not missing:
         return
 
-    zpath = ensure_votacao_presidente_zip()
+    zpath = ensure_votacao_presidente_zip(ano=ano)
     missing_set = set(missing)
     console.print(
         f"[cyan]Extraindo oficial[/cyan] {turno}º turno · "
@@ -179,18 +192,19 @@ def warm_oficial_cache(
             out = _EMPTY_OFICIAL.copy()
         else:
             out = _normalize_oficial_chunk(pd.concat(parts, ignore_index=True), turno)
-        path = cache_path(uf, turno)
+        path = cache_path(uf, turno, ano)
         out.to_parquet(path, index=False)
         console.print(f"[green]Cache oficial:[/green] {path.name} ({len(out):,} linhas)")
 
 
 def load_oficial_votos(
-    uf: str, turno: int, *, force_rebuild: bool = False
+    uf: str, turno: int, *, force_rebuild: bool = False, ano: int = ANO
 ) -> pd.DataFrame:
     """Votos oficiais de presidente por seção (uma linha por join_key × votável)."""
     uf = uf.upper()
-    warm_oficial_cache([uf], turno, force_rebuild=force_rebuild)
-    cached = cache_path(uf, turno)
+    ano = int(ano)
+    warm_oficial_cache([uf], turno, force_rebuild=force_rebuild, ano=ano)
+    cached = cache_path(uf, turno, ano)
     if cached.exists():
         return pd.read_parquet(cached)
     return _EMPTY_OFICIAL.copy()

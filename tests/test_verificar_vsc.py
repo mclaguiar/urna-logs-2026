@@ -23,6 +23,54 @@ from urna_logs.verificar_vsc import (
 _STEM = "o03220ac0101500020088"
 
 
+def test_codec_da_assinatura_e_compilado_uma_vez():
+    from urna_logs.verificar_vsc import _assinatura_codec
+
+    assert _assinatura_codec() is _assinatura_codec()
+
+
+def test_secao_agregada_entra_como_boletim_e_log():
+    from urna_logs.verificar_vsc import _index_zip
+
+    stem = "o03221zz2917300010494"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for sufixo in ("sa.vsc", "busa.dat", "rdv.dat", "logsa.jez", "imgbusa.dat"):
+            zf.writestr(f"{stem}-{sufixo}", b"x")
+    buf.seek(0)
+    with zipfile.ZipFile(buf) as zf:
+        membros = _index_zip(zf)[stem]
+    assert membros["vota.vsc"].endswith("-sa.vsc")
+    assert membros["bu.dat"].endswith("-busa.dat")
+    assert membros["log.jez"].endswith("-logsa.jez")
+    assert "rdv.dat" in membros
+
+
+def test_criticos_aceitam_secao_agregada():
+    from urna_logs.verificar_vsc import _criticos_status
+
+    stem = "o03221zz2917300010494"
+    ok, texto = _criticos_status(
+        {
+            f"{stem}-busa.dat": "ok",
+            f"{stem}-rdv.dat": "ok",
+            f"{stem}-logsa.jez": "ok",
+        },
+        stem,
+    )
+    assert ok is True
+    assert texto == "bu.dat=ok;rdv.dat=ok;log.jez=ok"
+
+
+def test_pem_to_der_preserva_o_fim_do_der():
+    from urna_logs.vsc_hw import _pem_to_der
+
+    der = b"\x30\x82\x00\x20\x0a\x0d\x09\x0b\x0c"
+    assert _pem_to_der(der) == der
+    pem = b"-----BEGIN CERTIFICATE-----\n" + base64.b64encode(b"abc") + b"\n-----END CERTIFICATE-----\n"
+    assert _pem_to_der(pem) == b"abc"
+
+
 def test_join_key_from_stem():
     assert join_key_from_stem("o03220ac0101500020088") == "AC:01015:0002:0088"
     assert join_key_from_stem("x") is None

@@ -1186,6 +1186,28 @@ def _fluxo_com_brasil(partes: list[pd.DataFrame]) -> pd.DataFrame:
 _MODELOS = {"13": "UE2013", "15": "UE2015", "20": "UE2020", "22": "UE2022"}
 
 
+def _motivo_hash(detalhe: str, n_fail: float, complemento: str = "") -> str:
+    """O trio não fechou. O complemento é lido do boletim e do log, não do município."""
+    from urna_logs.identidade_bu import motivo_trio
+
+    base = motivo_trio(detalhe, n_fail) or "O trio bu, rdv e log não fechou contra o .vsc."
+    extra = (complemento or "").strip()
+    return f"{base} {extra}".strip() if extra else base
+
+
+def _nomes_municipio() -> dict[tuple[str, int], str]:
+    caminho = ROOT / "data" / "ref" / "municipios_tse.csv"
+    if not caminho.exists():
+        return {}
+    tabela = pd.read_csv(caminho, dtype=str)
+    nomes: dict[tuple[str, int], str] = {}
+    for _, row in tabela.iterrows():
+        codigo = str(row["municipio"]).strip()
+        if codigo.isdigit():
+            nomes[(str(row["uf"]).upper(), int(codigo))] = str(row["nome"])
+    return nomes
+
+
 def _parte_join(join_key: str) -> tuple[int, int, int] | None:
     partes = str(join_key).split(":")
     if len(partes) != 4:
@@ -1205,11 +1227,15 @@ def build_hw_cadeia() -> None:
     de fixar o certificado publicado.
     """
     from urna_logs.config import UFS
+    from urna_logs.identidade_bu import arquivos_em_falta
+    from urna_logs.verificar_vsc import pacote_das_falhas
 
     OUT.mkdir(parents=True, exist_ok=True)
     secao_dir = OUT / "secao"
     secao_dir.mkdir(parents=True, exist_ok=True)
     resumo = []
+    falhas: list[dict] = []
+    nomes = _nomes_municipio()
     por_uf: dict[str, list[dict]] = {uf: [] for uf in UFS}
 
     for path in sorted(REPORTS.glob("verificar_vsc_*_*t.csv")):
@@ -1294,6 +1320,33 @@ def build_hw_cadeia() -> None:
                 }
             )
         por_uf.setdefault(uf, []).extend(linhas)
+        detalhe = df["criticos_detalhe"].fillna("") if "criticos_detalhe" in df.columns else pd.Series([""] * len(df))
+        pendentes = []
+        for i in df.loc[hash_falhou].index:
+            chave = _parte_join(df.at[i, "join_key"])
+            if chave is None or "stem" not in df.columns:
+                continue
+            pendentes.append((i, chave))
+        faltam_por = {
+            str(df.at[i, "stem"]).lower(): arquivos_em_falta(str(detalhe.loc[i]))
+            for i, _chave in pendentes
+        }
+        pacote = pacote_das_falhas(uf, turno, faltam_por) if faltam_por else {}
+        for i, chave in pendentes:
+            mun, zona, secao = chave
+            stem = str(df.at[i, "stem"]).lower()
+            _sufixos, complemento = pacote.get(stem, ("", ""))
+            falhas.append(
+                {
+                    "uf": uf,
+                    "municipio": mun,
+                    "nome": nomes.get((uf, mun), ""),
+                    "zona": zona,
+                    "secao": secao,
+                    "turno": turno,
+                    "motivo": _motivo_hash(str(detalhe.loc[i]), float(hash_fail.loc[i]), complemento),
+                }
+            )
         n = int(verificadas.sum())
         resumo.append(
             {
@@ -1329,6 +1382,11 @@ def build_hw_cadeia() -> None:
             cobertura.append({"uf": uf, "turno": turno, "secoes": secoes, "bloco": bloco})
     out_c = OUT / "hw_cobertura.csv"
     pd.DataFrame(cobertura).to_csv(out_c, index=False)
+    out_f = OUT / "hw_hash_falhou.csv"
+    pd.DataFrame(
+        falhas,
+        columns=["uf", "municipio", "nome", "zona", "secao", "turno", "motivo"],
+    ).to_csv(out_f, index=False)
 
     cabecalho = ["municipio", "zona", "secao", "turno", "modelo", "cadeia", "hash"]
     for uf in UFS:
@@ -1343,9 +1401,11 @@ def build_anomalias_site() -> None:
     origem = ROOT / "data" / "anomalias"
     destino = OUT / "anomalias"
     destino.mkdir(parents=True, exist_ok=True)
-    for nome in ("resumo.csv", "alertas.csv", "fingerprint.csv"):
+    for nome in ("resumo.csv", "alertas.csv", "fingerprint.csv", "fora_horario.csv", "sem_digital.csv", "votos_teste.csv"):
         fonte = origem / nome
         if not fonte.exists():
+            if nome in ("fora_horario.csv", "sem_digital.csv", "votos_teste.csv"):
+                continue
             raise SystemExit(f"ausente: {fonte}. Rode urna-logs anomalias antes.")
         (destino / nome).write_bytes(fonte.read_bytes())
         print(f"escrito {destino / nome}")

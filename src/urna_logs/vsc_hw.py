@@ -154,15 +154,16 @@ def _oid_str(content: bytes) -> str:
 
 
 def _pem_to_der(data: bytes) -> bytes:
-    raw = _b(data).strip()
-    if raw.startswith(b"-----BEGIN"):
-        body = b"".join(
-            line.strip()
-            for line in raw.splitlines()
-            if line and not line.startswith(b"-----")
-        )
-        return base64.b64decode(body)
-    return raw
+    """DER cru volta inteiro. PEM só perde espaço nas linhas do texto."""
+    raw = _b(data)
+    if not raw.lstrip().startswith(b"-----BEGIN"):
+        return raw
+    body = b"".join(
+        line.strip()
+        for line in raw.splitlines()
+        if line.strip() and not line.strip().startswith(b"-----")
+    )
+    return base64.b64decode(body)
 
 
 def _cert_partes(der: bytes):
@@ -205,6 +206,14 @@ def _chave_spki(spki: bytes) -> tuple[str, str, bytes]:
     return oid, curva, ponto
 
 
+@lru_cache(maxsize=1)
+def _curva(nome: str):
+    from ecpy.curves import Curve
+
+    return Curve.get_curve(nome)
+
+
+@lru_cache(maxsize=1)
 def _eddsa():
     from ecpy.eddsa import EDDSA
 
@@ -212,21 +221,18 @@ def _eddsa():
 
 
 def _chave_ed521(ponto: bytes):
-    from ecpy.curves import Curve
     from ecpy.keys import ECPublicKey
 
-    curva = Curve.get_curve("Ed521")
-    return ECPublicKey(curva.decode_point(ponto))
+    return ECPublicKey(_curva("Ed521").decode_point(ponto))
 
 
 def _chave_p521(ponto: bytes):
-    from ecpy.curves import Curve
     from ecpy.keys import ECPublicKey
 
-    curva = Curve.get_curve("secp521r1")
-    return ECPublicKey(curva.decode_point(ponto))
+    return ECPublicKey(_curva("secp521r1").decode_point(ponto))
 
 
+@lru_cache(maxsize=1)
 def _ecdsa():
     from ecpy.ecdsa import ECDSA
 

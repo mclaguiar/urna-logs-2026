@@ -22,9 +22,11 @@ Arquivos listados na assinatura mas **ausentes** no ZIP público (jufa, wsq*, mr
 - Hash: SHA-512 do conteúdo = campo `AssinaturaDigital.hash`
 - Nível 2 segue o par declarado em `origemAssinaturaHW`. UE2020/UE2022 com `eddsa`: Ed521 e AC UE2020 ou UE2022. UE2013/UE2015 com `ecdsa`: ECDSA P-521; a mensagem dos arquivos é SHA-512 do hash gravado. O certificado da urna é conferido com a AC URNA publicada em http://acurna.tse.jus.br/crt/acurna.crt (válido até 2026-07-18; a conta confere a assinatura, não a data). Certificado de outro algoritmo é falha, sem segunda tentativa. Não valida a chave de software da cerimônia.
 
-## Falhas / pendências (até 40)
+## Urnas que a verificação não fechou
 
-- `o03220ma0784600740228` jk=`MA:07846:0074:0228` nivel_ok=0 erro=`criticos:bu.dat=ok;rdv.dat=ausente_pacote;log.jez=ok` criticos=`bu.dat=ok;rdv.dat=ausente_pacote;log.jez=ok`
+Arquivo ausente no pacote não é assinatura inválida: a conta não chegou a conferir a assinatura.
+
+- LAGOA GRANDE DO MARANHÃO (7846), zona 74, seção 228. Urna `o03220ma0784600740228`. Falta rdv.dat no pacote. O hash dos arquivos presentes fechou. A assinatura de hardware não foi conferida. O boletim declara urna de seção, arquivo de votação da urna e bloco de seção, fase oficial. O log não contém as frases de procedimento de contingência nem de carga de urna de contingência. O log registra a geração de rdv.dat até o término. Esse arquivo não está no pacote publicado. No ZIP: bu.dat, imgbu.dat, log.jez, vota.vsc. Comparecimento 219 de 295 aptos. Nominal 13: 158. Nominal 22: 52. Branco: 2. Nulo: 4. O RDV não está no pacote, então os totais não foram comparados.
 
 ## Arquivos
 

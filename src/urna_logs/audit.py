@@ -38,6 +38,8 @@ class UrnaAudit:
     sem_biometria: int | None = None
     bio: int | None = None
     biografia: int | None = None
+    abertura: str | None = None
+    encerramento: str | None = None
 
 
 def _votos_key(tipo: str, numero: str | None) -> str:
@@ -91,6 +93,8 @@ def compare_presidente(
     audit.sem_biometria = bu.sem_biometria
     audit.bio = bu.bio
     audit.biografia = bu.biografia
+    audit.abertura = bu.abertura
+    audit.encerramento = bu.encerramento
     audit.bu_votos = _flat_votos(bu)
 
     if rdv is None:
@@ -246,6 +250,8 @@ def results_to_frame(results: list[UrnaAudit], uf: str, turno: int) -> pd.DataFr
                 "sem_biometria": r.sem_biometria,
                 "bio": r.bio,
                 "biografia": r.biografia,
+                "abertura": r.abertura,
+                "encerramento": r.encerramento,
                 "n_mismatches": len(r.mismatches),
                 "mismatches": "; ".join(r.mismatches) if r.mismatches else "",
                 "error": r.error or "",

@@ -26,9 +26,11 @@ Arquivos listados na assinatura mas **ausentes** no ZIP público (jufa, wsq*, mr
 
 Nenhuma.
 
-## Seção agregada
+## Sistema de apuração
 
-29 urnas publicam `-sa.vsc`, `-busa.dat` e `-logsa.jez` em vez de `-vota.vsc`, `-bu.dat` e `-log.jez`. Assinatura de hardware fechou em 29.
+O sufixo `sa` é o boletim do sistema de apuração, não um arquivo de seção com o nome trocado. No boletim, a urna é de contingência e o bloco é o de SA: junta, turma e, quando existe, o número interno da urna de origem que não pôde ser usada.
+
+29 urnas publicam `-sa.vsc`, `-busa.dat` e `-logsa.jez` no lugar de `-vota.vsc`, `-bu.dat` e `-log.jez`. Assinatura de hardware fechou em 29.
 
 - KATMANDU (29173), zona 1, seção 494. Urna `o03221zz2917300010494`. Assinatura fechou. Comparecimento 13 de 32 aptos. Nominal 13: 1. Nominal 22: 12. Branco: 0. Nulo: 0. BU e RDV com os mesmos totais.
 - ABIDJÃ (29254), zona 1, seção 1. Urna `o03221zz2925400010001`. Assinatura fechou. Comparecimento 53 de 91 aptos. Nominal 13: 31. Nominal 22: 22. Branco: 0. Nulo: 0. BU e RDV com os mesmos totais.

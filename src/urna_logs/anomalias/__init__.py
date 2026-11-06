@@ -1,0 +1,1 @@
+"""Anomalias por seção."""

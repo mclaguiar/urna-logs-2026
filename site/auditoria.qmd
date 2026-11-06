@@ -31,6 +31,8 @@ pp2 = n => {
   return window.urnaMarca.menos((v > 0 ? "+" : "") + v.toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " pp")
 }
 nomeUf = uf => uf === "ZZ" ? "Exterior" : uf
+taxaAptos = (abst, apt) => abst == null || apt == null || !apt ? null : 100 * abst / apt
+pct1 = v => v == null ? "—" : fmt1(v) + "%"
 rows = painel.map(d => ({
   uf: d.uf,
   secoes: num(d.secoes_1t),
@@ -57,6 +59,8 @@ rows = painel.map(d => ({
   delta_pct_sem_digital: num(d.delta_pct_sem_digital),
   delta_abstencao_pp: num(d.delta_abstencao_pp),
   delta_comparecimento: num(d.delta_comparecimento),
+  pctAbst1: taxaAptos(num(d.abstencao_ambos_1t), num(d.aptos_ambos_1t)),
+  pctAbst2: taxaAptos(num(d.abstencao_ambos_2t), num(d.aptos_ambos_2t)),
   pct_apos_17h_1t: num(d.pct_apos_17h_1t),
   pct_apos_17h_2t: num(d.pct_apos_17h_2t),
   delta_pct_apos_17h: num(d.delta_pct_apos_17h),
@@ -89,6 +93,10 @@ totCmp = (rotulo, lista) => ({
   aptos2: soma(lista, "aptos2"),
   cmp1: soma(lista, "cmp1"),
   cmp2: soma(lista, "cmp2"),
+  abst1: soma(lista, "abst1"),
+  abst2: soma(lista, "abst2"),
+  pctAbst1: taxaAptos(soma(lista, "abst1"), soma(lista, "aptos1")),
+  pctAbst2: taxaAptos(soma(lista, "abst2"), soma(lista, "aptos2")),
   delta_abstencao_pp: ppNacional(lista),
   delta_comparecimento: soma(lista, "delta_comparecimento")
 })
@@ -184,6 +192,10 @@ html`${tabela([
   {rotulo: "Aptos 2º", chave: "aptos2", texto: fmt, delta: false},
   {rotulo: "Comparecimento 1º", chave: "cmp1", texto: fmt, delta: false},
   {rotulo: "Comparecimento 2º", chave: "cmp2", texto: fmt, delta: false},
+  {rotulo: "Abstenção 1º", chave: "abst1", texto: fmt, delta: false},
+  {rotulo: "% dos aptos 1º", chave: "pctAbst1", texto: pct1, delta: false},
+  {rotulo: "Abstenção 2º", chave: "abst2", texto: fmt, delta: false},
+  {rotulo: "% dos aptos 2º", chave: "pctAbst2", texto: pct1, delta: false},
   {rotulo: "Δ abstenção (pp)", chave: "delta_abstencao_pp", texto: pp, delta: true},
   {rotulo: "Δ comparecimento", chave: "delta_comparecimento", texto: n => n == null ? "—" : (n > 0 ? "+" : "") + fmt(n), delta: true}
 ], [totCmp("Brasil", rows), totCmp("Brasil sem exterior", semExterior)])}
@@ -370,7 +382,7 @@ O mapa de fundo é a densidade de todas as seções. Os pontos vermelhos são s�
 
 ## Fluxo do dia
 
-Habilitação no log, não voto em candidato. O eixo é a fatia do dia, para os dois turnos caberem na mesma escala. Horário de Brasília; no exterior, horário local do posto.
+Habilitação no log, não voto em candidato. À esquerda, a fatia do dia, para os dois turnos caberem na mesma escala. À direita, essa altura em milhares de habilitações: o primeiro número é o 1º turno e o segundo é o 2º, e some quando os dois arredondam igual. Horário de Brasília; no exterior, horário local do posto.
 
 ```{ojs}
 //| echo: false
@@ -409,23 +421,70 @@ eixoLabel = ufHora === "ZZ" ? "Hora local (exterior)" : "Hora de Brasília"
 
 ```{ojs}
 //| echo: false
-Plot.plot({
+foraDe = (serie) => serie.filter(d => d.hora < 8 || d.hora >= 17)
+horasFora = [...d3.range(0, 8), ...d3.range(17, 24)]
+fmtMil = n => {
+  const v = +n
+  if (!Number.isFinite(v)) return ""
+  const s = Math.abs(v) >= 100
+    ? Math.round(v).toLocaleString("pt-BR")
+    : v.toLocaleString("pt-BR", {maximumFractionDigits: 1})
+  return window.urnaMarca.menos(s)
+}
+eixoMil = pct => {
+  const a = fmtMil(pct / 100 * tot1 / 1000)
+  const b = fmtMil(pct / 100 * tot2 / 1000)
+  if (!tot1 && !tot2) return ""
+  return a === b ? a : `${a} · ${b}`
+}
+marcaFluxo = ({
   marginLeft: 56,
+  marginRight: 112,
   marginBottom: 44,
   height: 420,
   style: "font-size: 12px; max-width: 100%;",
+  y: {axis: null, grid: true}
+})
+eixoPct = () => Plot.axisY({
+  anchor: "left",
+  label: "% do dia",
+  tickFormat: d => window.urnaMarca.fmtEixo(d) + "%"
+})
+eixoMilhar = () => Plot.axisY({
+  anchor: "right",
+  label: "mil (1º · 2º)",
+  tickFormat: eixoMil
+})
+plotDia = Plot.plot({
+  ...marcaFluxo,
   x: {label: eixoLabel, domain: d3.range(24), ticks: 24},
-  y: {label: "% das habilitações do dia", grid: true, tickFormat: window.urnaMarca.fmtEixo},
   marks: [
     Plot.ruleY([0]),
+    Plot.ruleX([8], {stroke: "#888", strokeOpacity: 0.45, strokeDasharray: "4,4"}),
     Plot.ruleX([17], {stroke: "#a51c1c", strokeOpacity: 0.35, strokeDasharray: "4,4"}),
     Plot.lineY(p1, {x: "hora", y: "pct", stroke: window.urnaMarca.COR.turno1, strokeWidth: 2, curve: "step", strokeDasharray: "6,3"}),
-    Plot.lineY(p2, {x: "hora", y: "pct", stroke: window.urnaMarca.COR.turno2, strokeWidth: 2, curve: "step"})
+    Plot.lineY(p2, {x: "hora", y: "pct", stroke: window.urnaMarca.COR.turno2, strokeWidth: 2, curve: "step"}),
+    eixoPct(),
+    eixoMilhar()
   ]
 })
+plotFora = Plot.plot({
+  ...marcaFluxo,
+  x: {type: "point", label: eixoLabel, domain: horasFora, ticks: [0, 4, 7, 17, 20, 23]},
+  marks: [
+    Plot.ruleY([0]),
+    Plot.lineY(foraDe(p1).filter(d => d.hora < 8), {x: "hora", y: "pct", stroke: window.urnaMarca.COR.turno1, strokeWidth: 2, curve: "step", strokeDasharray: "6,3"}),
+    Plot.lineY(foraDe(p1).filter(d => d.hora >= 17), {x: "hora", y: "pct", stroke: window.urnaMarca.COR.turno1, strokeWidth: 2, curve: "step", strokeDasharray: "6,3"}),
+    Plot.lineY(foraDe(p2).filter(d => d.hora < 8), {x: "hora", y: "pct", stroke: window.urnaMarca.COR.turno2, strokeWidth: 2, curve: "step"}),
+    Plot.lineY(foraDe(p2).filter(d => d.hora >= 17), {x: "hora", y: "pct", stroke: window.urnaMarca.COR.turno2, strokeWidth: 2, curve: "step"}),
+    eixoPct(),
+    eixoMilhar()
+  ]
+})
+html`<div class="fluxo-par"><div>${plotDia}</div><div>${plotFora}</div></div>`
 ```
 
-Cinza tracejado = 1º turno. Grafite contínuo = 2º turno. A linha vertical é 17h.
+Cinza tracejado = 1º turno. Grafite contínuo = 2º turno. No gráfico da esquerda, a linha cinza é 8h e a vermelha é 17h. O da direita repete só as horas fora desse intervalo, com a escala vertical dessas horas. A linha não liga 7h a 17h.
 
 ```{ojs}
 //| echo: false

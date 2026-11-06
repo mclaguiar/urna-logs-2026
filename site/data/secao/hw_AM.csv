@@ -2145,7 +2145,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,1,681,1,UE2015,fechada,ok
 2550,1,682,1,UE2020,fechada,ok
 2550,1,683,1,UE2015,fechada,ok
-2550,1,684,1,UE2015,falha,ok
+2550,1,684,1,UE2015,fechada,ok
 2550,1,685,1,UE2015,fechada,ok
 2550,1,686,1,UE2020,fechada,ok
 2550,1,687,1,UE2020,fechada,ok
@@ -2159,7 +2159,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,1,695,1,UE2020,fechada,ok
 2550,1,696,1,UE2015,fechada,ok
 2550,1,697,1,UE2015,fechada,ok
-2550,1,698,1,UE2015,falha,ok
+2550,1,698,1,UE2015,fechada,ok
 2550,1,699,1,UE2020,fechada,ok
 2550,1,700,1,UE2020,fechada,ok
 2550,1,701,1,UE2015,fechada,ok
@@ -2204,7 +2204,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,1,740,1,UE2015,fechada,ok
 2550,1,741,1,UE2020,fechada,ok
 2550,1,742,1,UE2020,fechada,ok
-2550,1,743,1,UE2015,falha,ok
+2550,1,743,1,UE2015,fechada,ok
 2550,1,744,1,UE2015,fechada,ok
 2550,1,745,1,UE2015,fechada,ok
 2550,1,746,1,UE2020,fechada,ok
@@ -2358,7 +2358,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,1,895,1,UE2015,fechada,ok
 2550,1,896,1,UE2020,fechada,ok
 2550,1,897,1,UE2020,fechada,ok
-2550,1,898,1,UE2015,falha,ok
+2550,1,898,1,UE2015,fechada,ok
 2550,1,899,1,UE2015,fechada,ok
 2550,1,900,1,UE2015,fechada,ok
 2550,1,901,1,UE2020,fechada,ok
@@ -2375,7 +2375,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,1,921,1,UE2015,fechada,ok
 2550,1,922,1,UE2015,fechada,ok
 2550,1,923,1,UE2015,fechada,ok
-2550,1,924,1,UE2015,falha,ok
+2550,1,924,1,UE2015,fechada,ok
 2550,1,925,1,UE2015,fechada,ok
 2550,1,926,1,UE2015,fechada,ok
 2550,1,927,1,UE2020,fechada,ok
@@ -2660,7 +2660,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,2,780,1,UE2015,fechada,ok
 2550,2,781,1,UE2020,fechada,ok
 2550,2,782,1,UE2015,fechada,ok
-2550,2,783,1,UE2015,falha,ok
+2550,2,783,1,UE2015,fechada,ok
 2550,2,784,1,UE2015,fechada,ok
 2550,2,785,1,UE2020,fechada,ok
 2550,2,786,1,UE2015,fechada,ok
@@ -2704,7 +2704,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,31,360,1,UE2020,fechada,ok
 2550,31,384,1,UE2015,fechada,ok
 2550,31,386,1,UE2015,fechada,ok
-2550,31,408,1,UE2015,falha,ok
+2550,31,408,1,UE2015,fechada,ok
 2550,31,424,1,UE2015,fechada,ok
 2550,31,425,1,UE2015,fechada,ok
 2550,31,427,1,UE2015,fechada,ok
@@ -2864,7 +2864,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,31,693,1,UE2020,fechada,ok
 2550,31,694,1,UE2020,fechada,ok
 2550,31,695,1,UE2015,fechada,ok
-2550,31,696,1,UE2015,falha,ok
+2550,31,696,1,UE2015,fechada,ok
 2550,31,697,1,UE2015,fechada,ok
 2550,31,698,1,UE2015,fechada,ok
 2550,31,699,1,UE2020,fechada,ok
@@ -3185,7 +3185,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,32,875,1,UE2015,fechada,ok
 2550,32,876,1,UE2020,fechada,ok
 2550,32,877,1,UE2015,fechada,ok
-2550,32,878,1,UE2015,falha,ok
+2550,32,878,1,UE2015,fechada,ok
 2550,32,879,1,UE2015,fechada,ok
 2550,32,880,1,UE2020,fechada,ok
 2550,32,881,1,UE2015,fechada,ok
@@ -3238,7 +3238,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,32,929,1,UE2015,fechada,ok
 2550,32,930,1,UE2015,fechada,ok
 2550,32,931,1,UE2020,fechada,ok
-2550,32,932,1,UE2015,falha,ok
+2550,32,932,1,UE2015,fechada,ok
 2550,32,933,1,UE2015,fechada,ok
 2550,32,934,1,UE2015,fechada,ok
 2550,32,935,1,UE2015,fechada,ok
@@ -3273,7 +3273,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,37,499,1,UE2020,fechada,ok
 2550,37,500,1,UE2015,fechada,ok
 2550,37,501,1,UE2015,fechada,ok
-2550,37,502,1,UE2015,falha,ok
+2550,37,502,1,UE2015,fechada,ok
 2550,37,503,1,UE2020,fechada,ok
 2550,37,504,1,UE2020,fechada,ok
 2550,37,505,1,UE2020,fechada,ok
@@ -3344,7 +3344,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,37,573,1,UE2020,fechada,ok
 2550,37,574,1,UE2015,fechada,ok
 2550,37,575,1,UE2020,fechada,ok
-2550,37,576,1,UE2015,falha,ok
+2550,37,576,1,UE2015,fechada,ok
 2550,37,577,1,UE2015,fechada,ok
 2550,37,578,1,UE2015,fechada,ok
 2550,37,579,1,UE2020,fechada,ok
@@ -3838,7 +3838,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,58,739,1,UE2015,fechada,ok
 2550,58,740,1,UE2022,fechada,ok
 2550,58,741,1,UE2015,fechada,ok
-2550,58,743,1,UE2015,falha,ok
+2550,58,743,1,UE2015,fechada,ok
 2550,58,745,1,UE2015,fechada,ok
 2550,58,746,1,UE2015,fechada,ok
 2550,58,747,1,UE2015,fechada,ok
@@ -3917,7 +3917,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,58,830,1,UE2022,fechada,ok
 2550,58,832,1,UE2015,fechada,ok
 2550,58,833,1,UE2022,fechada,ok
-2550,58,834,1,UE2015,falha,ok
+2550,58,834,1,UE2015,fechada,ok
 2550,58,835,1,UE2015,fechada,ok
 2550,58,836,1,UE2022,fechada,ok
 2550,58,838,1,UE2015,fechada,ok
@@ -4109,7 +4109,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,58,1049,1,UE2022,fechada,ok
 2550,58,1050,1,UE2015,fechada,ok
 2550,58,1051,1,UE2022,fechada,ok
-2550,58,1052,1,UE2015,falha,ok
+2550,58,1052,1,UE2015,fechada,ok
 2550,58,1053,1,UE2022,fechada,ok
 2550,58,1054,1,UE2015,fechada,ok
 2550,58,1055,1,UE2022,fechada,ok
@@ -4120,7 +4120,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,58,1060,1,UE2015,fechada,ok
 2550,58,1061,1,UE2015,fechada,ok
 2550,58,1062,1,UE2015,fechada,ok
-2550,58,1063,1,UE2015,falha,ok
+2550,58,1063,1,UE2015,fechada,ok
 2550,58,1064,1,UE2015,fechada,ok
 2550,58,1065,1,UE2022,fechada,ok
 2550,58,1066,1,UE2015,fechada,ok
@@ -4343,7 +4343,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,59,695,1,UE2015,fechada,ok
 2550,59,696,1,UE2015,fechada,ok
 2550,59,697,1,UE2015,fechada,ok
-2550,59,698,1,UE2015,falha,ok
+2550,59,698,1,UE2015,fechada,ok
 2550,59,699,1,UE2020,fechada,ok
 2550,59,700,1,UE2015,fechada,ok
 2550,59,701,1,UE2020,fechada,ok
@@ -4411,7 +4411,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,59,773,1,UE2015,fechada,ok
 2550,59,774,1,UE2015,fechada,ok
 2550,59,775,1,UE2015,fechada,ok
-2550,59,776,1,UE2015,falha,ok
+2550,59,776,1,UE2015,fechada,ok
 2550,59,777,1,UE2020,fechada,ok
 2550,59,778,1,UE2020,fechada,ok
 2550,59,779,1,UE2020,fechada,ok
@@ -4445,7 +4445,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,62,318,1,UE2020,fechada,ok
 2550,62,319,1,UE2015,fechada,ok
 2550,62,320,1,UE2015,fechada,ok
-2550,62,321,1,UE2015,falha,ok
+2550,62,321,1,UE2015,fechada,ok
 2550,62,322,1,UE2015,fechada,ok
 2550,62,323,1,UE2015,fechada,ok
 2550,62,324,1,UE2015,fechada,ok
@@ -4613,7 +4613,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,62,486,1,UE2015,fechada,ok
 2550,62,487,1,UE2015,fechada,ok
 2550,62,488,1,UE2015,fechada,ok
-2550,62,489,1,UE2015,falha,ok
+2550,62,489,1,UE2015,fechada,ok
 2550,62,490,1,UE2015,fechada,ok
 2550,62,491,1,UE2020,fechada,ok
 2550,62,492,1,UE2015,fechada,ok
@@ -4825,7 +4825,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,63,291,1,UE2015,fechada,ok
 2550,63,298,1,UE2022,fechada,ok
 2550,63,316,1,UE2015,fechada,ok
-2550,63,332,1,UE2015,falha,ok
+2550,63,332,1,UE2015,fechada,ok
 2550,63,340,1,UE2015,fechada,ok
 2550,63,343,1,UE2022,fechada,ok
 2550,63,378,1,UE2015,fechada,ok
@@ -5054,7 +5054,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,63,701,1,UE2015,fechada,ok
 2550,63,702,1,UE2015,fechada,ok
 2550,63,703,1,UE2020,fechada,ok
-2550,63,704,1,UE2015,falha,ok
+2550,63,704,1,UE2015,fechada,ok
 2550,63,705,1,UE2015,fechada,ok
 2550,63,706,1,UE2015,fechada,ok
 2550,63,707,1,UE2020,fechada,ok
@@ -5062,7 +5062,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,63,709,1,UE2015,fechada,ok
 2550,63,710,1,UE2020,fechada,ok
 2550,63,711,1,UE2020,fechada,ok
-2550,63,712,1,UE2015,falha,ok
+2550,63,712,1,UE2015,fechada,ok
 2550,63,713,1,UE2015,fechada,ok
 2550,63,714,1,UE2020,fechada,ok
 2550,63,715,1,UE2020,fechada,ok
@@ -5157,7 +5157,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,63,806,1,UE2020,fechada,ok
 2550,63,807,1,UE2020,fechada,ok
 2550,63,808,1,UE2020,fechada,ok
-2550,63,809,1,UE2015,falha,ok
+2550,63,809,1,UE2015,fechada,ok
 2550,63,810,1,UE2015,fechada,ok
 2550,63,811,1,UE2015,fechada,ok
 2550,63,812,1,UE2020,fechada,ok
@@ -5332,7 +5332,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,65,491,1,UE2020,fechada,ok
 2550,65,492,1,UE2015,fechada,ok
 2550,65,493,1,UE2015,fechada,ok
-2550,65,494,1,UE2015,falha,ok
+2550,65,494,1,UE2015,fechada,ok
 2550,65,495,1,UE2020,fechada,ok
 2550,65,496,1,UE2020,fechada,ok
 2550,65,497,1,UE2015,fechada,ok
@@ -5473,7 +5473,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,65,636,1,UE2020,fechada,ok
 2550,65,637,1,UE2015,fechada,ok
 2550,65,638,1,UE2015,fechada,ok
-2550,65,639,1,UE2015,falha,ok
+2550,65,639,1,UE2015,fechada,ok
 2550,65,640,1,UE2020,fechada,ok
 2550,65,641,1,UE2020,fechada,ok
 2550,65,642,1,UE2015,fechada,ok
@@ -5717,7 +5717,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,68,654,1,UE2015,fechada,ok
 2550,68,655,1,UE2015,fechada,ok
 2550,68,656,1,UE2015,fechada,ok
-2550,68,657,1,UE2015,falha,ok
+2550,68,657,1,UE2015,fechada,ok
 2550,68,658,1,UE2015,fechada,ok
 2550,68,659,1,UE2020,fechada,ok
 2550,68,660,1,UE2015,fechada,ok
@@ -5726,7 +5726,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,68,663,1,UE2015,fechada,ok
 2550,68,664,1,UE2015,fechada,ok
 2550,68,665,1,UE2015,fechada,ok
-2550,68,666,1,UE2015,falha,ok
+2550,68,666,1,UE2015,fechada,ok
 2550,68,667,1,UE2020,fechada,ok
 2550,68,668,1,UE2020,fechada,ok
 2550,68,669,1,UE2015,fechada,ok
@@ -6020,7 +6020,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,70,748,1,UE2015,fechada,ok
 2550,70,749,1,UE2020,fechada,ok
 2550,70,750,1,UE2020,fechada,ok
-2550,70,751,1,UE2015,falha,ok
+2550,70,751,1,UE2015,fechada,ok
 2550,70,752,1,UE2020,fechada,ok
 2550,70,753,1,UE2015,fechada,ok
 2550,70,754,1,UE2015,fechada,ok
@@ -10302,7 +10302,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,1,681,2,UE2015,fechada,ok
 2550,1,682,2,UE2020,fechada,ok
 2550,1,683,2,UE2015,fechada,ok
-2550,1,684,2,UE2015,falha,ok
+2550,1,684,2,UE2015,fechada,ok
 2550,1,685,2,UE2015,fechada,ok
 2550,1,686,2,UE2020,fechada,ok
 2550,1,687,2,UE2020,fechada,ok
@@ -10316,7 +10316,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,1,695,2,UE2020,fechada,ok
 2550,1,696,2,UE2015,fechada,ok
 2550,1,697,2,UE2015,fechada,ok
-2550,1,698,2,UE2015,falha,ok
+2550,1,698,2,UE2015,fechada,ok
 2550,1,699,2,UE2020,fechada,ok
 2550,1,700,2,UE2020,fechada,ok
 2550,1,701,2,UE2015,fechada,ok
@@ -10361,7 +10361,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,1,740,2,UE2015,fechada,ok
 2550,1,741,2,UE2020,fechada,ok
 2550,1,742,2,UE2020,fechada,ok
-2550,1,743,2,UE2015,falha,ok
+2550,1,743,2,UE2015,fechada,ok
 2550,1,744,2,UE2015,fechada,ok
 2550,1,745,2,UE2015,fechada,ok
 2550,1,746,2,UE2020,fechada,ok
@@ -10515,7 +10515,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,1,895,2,UE2015,fechada,ok
 2550,1,896,2,UE2020,fechada,ok
 2550,1,897,2,UE2020,fechada,ok
-2550,1,898,2,UE2015,falha,ok
+2550,1,898,2,UE2015,fechada,ok
 2550,1,899,2,UE2015,fechada,ok
 2550,1,900,2,UE2015,fechada,ok
 2550,1,901,2,UE2020,fechada,ok
@@ -10817,7 +10817,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,2,780,2,UE2015,fechada,ok
 2550,2,781,2,UE2020,fechada,ok
 2550,2,782,2,UE2015,fechada,ok
-2550,2,783,2,UE2015,falha,ok
+2550,2,783,2,UE2015,fechada,ok
 2550,2,784,2,UE2015,fechada,ok
 2550,2,785,2,UE2020,fechada,ok
 2550,2,786,2,UE2015,fechada,ok
@@ -10861,7 +10861,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,31,360,2,UE2020,fechada,ok
 2550,31,384,2,UE2015,fechada,ok
 2550,31,386,2,UE2015,fechada,ok
-2550,31,408,2,UE2015,falha,ok
+2550,31,408,2,UE2015,fechada,ok
 2550,31,424,2,UE2015,fechada,ok
 2550,31,425,2,UE2015,fechada,ok
 2550,31,427,2,UE2015,fechada,ok
@@ -11021,7 +11021,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,31,693,2,UE2020,fechada,ok
 2550,31,694,2,UE2020,fechada,ok
 2550,31,695,2,UE2015,fechada,ok
-2550,31,696,2,UE2015,falha,ok
+2550,31,696,2,UE2015,fechada,ok
 2550,31,697,2,UE2015,fechada,ok
 2550,31,698,2,UE2015,fechada,ok
 2550,31,699,2,UE2020,fechada,ok
@@ -11342,7 +11342,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,32,875,2,UE2015,fechada,ok
 2550,32,876,2,UE2020,fechada,ok
 2550,32,877,2,UE2015,fechada,ok
-2550,32,878,2,UE2015,falha,ok
+2550,32,878,2,UE2015,fechada,ok
 2550,32,879,2,UE2015,fechada,ok
 2550,32,880,2,UE2020,fechada,ok
 2550,32,881,2,UE2015,fechada,ok
@@ -11395,7 +11395,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,32,929,2,UE2015,fechada,ok
 2550,32,930,2,UE2015,fechada,ok
 2550,32,931,2,UE2020,fechada,ok
-2550,32,932,2,UE2015,falha,ok
+2550,32,932,2,UE2015,fechada,ok
 2550,32,933,2,UE2015,fechada,ok
 2550,32,934,2,UE2015,fechada,ok
 2550,32,935,2,UE2015,fechada,ok
@@ -11430,7 +11430,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,37,499,2,UE2020,fechada,ok
 2550,37,500,2,UE2015,fechada,ok
 2550,37,501,2,UE2015,fechada,ok
-2550,37,502,2,UE2015,falha,ok
+2550,37,502,2,UE2015,fechada,ok
 2550,37,503,2,UE2020,fechada,ok
 2550,37,504,2,UE2020,fechada,ok
 2550,37,505,2,UE2020,fechada,ok
@@ -11501,7 +11501,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,37,573,2,UE2020,fechada,ok
 2550,37,574,2,UE2015,fechada,ok
 2550,37,575,2,UE2020,fechada,ok
-2550,37,576,2,UE2015,falha,ok
+2550,37,576,2,UE2015,fechada,ok
 2550,37,577,2,UE2015,fechada,ok
 2550,37,578,2,UE2015,fechada,ok
 2550,37,579,2,UE2020,fechada,ok
@@ -11995,7 +11995,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,58,739,2,UE2015,fechada,ok
 2550,58,740,2,UE2022,fechada,ok
 2550,58,741,2,UE2015,fechada,ok
-2550,58,743,2,UE2015,falha,ok
+2550,58,743,2,UE2015,fechada,ok
 2550,58,745,2,UE2015,fechada,ok
 2550,58,746,2,UE2015,fechada,ok
 2550,58,747,2,UE2015,fechada,ok
@@ -12074,7 +12074,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,58,830,2,UE2022,fechada,ok
 2550,58,832,2,UE2015,fechada,ok
 2550,58,833,2,UE2022,fechada,ok
-2550,58,834,2,UE2015,falha,ok
+2550,58,834,2,UE2015,fechada,ok
 2550,58,835,2,UE2015,fechada,ok
 2550,58,836,2,UE2022,fechada,ok
 2550,58,838,2,UE2015,fechada,ok
@@ -12266,7 +12266,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,58,1049,2,UE2022,fechada,ok
 2550,58,1050,2,UE2015,fechada,ok
 2550,58,1051,2,UE2022,fechada,ok
-2550,58,1052,2,UE2015,falha,ok
+2550,58,1052,2,UE2015,fechada,ok
 2550,58,1053,2,UE2022,fechada,ok
 2550,58,1054,2,UE2015,fechada,ok
 2550,58,1055,2,UE2020,fechada,ok
@@ -12277,7 +12277,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,58,1060,2,UE2015,fechada,ok
 2550,58,1061,2,UE2015,fechada,ok
 2550,58,1062,2,UE2015,fechada,ok
-2550,58,1063,2,UE2015,falha,ok
+2550,58,1063,2,UE2015,fechada,ok
 2550,58,1064,2,UE2015,fechada,ok
 2550,58,1065,2,UE2022,fechada,ok
 2550,58,1066,2,UE2015,fechada,ok
@@ -12500,7 +12500,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,59,695,2,UE2015,fechada,ok
 2550,59,696,2,UE2015,fechada,ok
 2550,59,697,2,UE2015,fechada,ok
-2550,59,698,2,UE2015,falha,ok
+2550,59,698,2,UE2015,fechada,ok
 2550,59,699,2,UE2020,fechada,ok
 2550,59,700,2,UE2015,fechada,ok
 2550,59,701,2,UE2020,fechada,ok
@@ -12568,7 +12568,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,59,773,2,UE2015,fechada,ok
 2550,59,774,2,UE2015,fechada,ok
 2550,59,775,2,UE2015,fechada,ok
-2550,59,776,2,UE2015,falha,ok
+2550,59,776,2,UE2015,fechada,ok
 2550,59,777,2,UE2020,fechada,ok
 2550,59,778,2,UE2020,fechada,ok
 2550,59,779,2,UE2020,fechada,ok
@@ -12602,7 +12602,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,62,318,2,UE2020,fechada,ok
 2550,62,319,2,UE2015,fechada,ok
 2550,62,320,2,UE2015,fechada,ok
-2550,62,321,2,UE2015,falha,ok
+2550,62,321,2,UE2015,fechada,ok
 2550,62,322,2,UE2015,fechada,ok
 2550,62,323,2,UE2015,fechada,ok
 2550,62,324,2,UE2015,fechada,ok
@@ -12770,7 +12770,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,62,486,2,UE2015,fechada,ok
 2550,62,487,2,UE2015,fechada,ok
 2550,62,488,2,UE2015,fechada,ok
-2550,62,489,2,UE2015,falha,ok
+2550,62,489,2,UE2015,fechada,ok
 2550,62,490,2,UE2015,fechada,ok
 2550,62,491,2,UE2020,fechada,ok
 2550,62,492,2,UE2015,fechada,ok
@@ -12982,7 +12982,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,63,291,2,UE2015,fechada,ok
 2550,63,298,2,UE2022,fechada,ok
 2550,63,316,2,UE2015,fechada,ok
-2550,63,332,2,UE2015,falha,ok
+2550,63,332,2,UE2015,fechada,ok
 2550,63,340,2,UE2015,fechada,ok
 2550,63,343,2,UE2022,fechada,ok
 2550,63,378,2,UE2015,fechada,ok
@@ -13211,7 +13211,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,63,701,2,UE2015,fechada,ok
 2550,63,702,2,UE2015,fechada,ok
 2550,63,703,2,UE2020,fechada,ok
-2550,63,704,2,UE2015,falha,ok
+2550,63,704,2,UE2015,fechada,ok
 2550,63,705,2,UE2015,fechada,ok
 2550,63,706,2,UE2015,fechada,ok
 2550,63,707,2,UE2020,fechada,ok
@@ -13219,7 +13219,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,63,709,2,UE2015,fechada,ok
 2550,63,710,2,UE2020,fechada,ok
 2550,63,711,2,UE2020,fechada,ok
-2550,63,712,2,UE2015,falha,ok
+2550,63,712,2,UE2015,fechada,ok
 2550,63,713,2,UE2015,fechada,ok
 2550,63,714,2,UE2020,fechada,ok
 2550,63,715,2,UE2020,fechada,ok
@@ -13314,7 +13314,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,63,806,2,UE2020,fechada,ok
 2550,63,807,2,UE2020,fechada,ok
 2550,63,808,2,UE2020,fechada,ok
-2550,63,809,2,UE2015,falha,ok
+2550,63,809,2,UE2015,fechada,ok
 2550,63,810,2,UE2015,fechada,ok
 2550,63,811,2,UE2015,fechada,ok
 2550,63,812,2,UE2020,fechada,ok
@@ -13489,7 +13489,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,65,491,2,UE2020,fechada,ok
 2550,65,492,2,UE2015,fechada,ok
 2550,65,493,2,UE2015,fechada,ok
-2550,65,494,2,UE2015,falha,ok
+2550,65,494,2,UE2015,fechada,ok
 2550,65,495,2,UE2020,fechada,ok
 2550,65,496,2,UE2020,fechada,ok
 2550,65,497,2,UE2015,fechada,ok
@@ -13630,7 +13630,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,65,636,2,UE2020,fechada,ok
 2550,65,637,2,UE2015,fechada,ok
 2550,65,638,2,UE2015,fechada,ok
-2550,65,639,2,UE2015,falha,ok
+2550,65,639,2,UE2015,fechada,ok
 2550,65,640,2,UE2020,fechada,ok
 2550,65,641,2,UE2020,fechada,ok
 2550,65,642,2,UE2015,fechada,ok
@@ -13874,7 +13874,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,68,654,2,UE2015,fechada,ok
 2550,68,655,2,UE2015,fechada,ok
 2550,68,656,2,UE2015,fechada,ok
-2550,68,657,2,UE2015,falha,ok
+2550,68,657,2,UE2015,fechada,ok
 2550,68,658,2,UE2015,fechada,ok
 2550,68,659,2,UE2020,fechada,ok
 2550,68,660,2,UE2015,fechada,ok
@@ -13883,7 +13883,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,68,663,2,UE2015,fechada,ok
 2550,68,664,2,UE2015,fechada,ok
 2550,68,665,2,UE2015,fechada,ok
-2550,68,666,2,UE2015,falha,ok
+2550,68,666,2,UE2015,fechada,ok
 2550,68,667,2,UE2020,fechada,ok
 2550,68,668,2,UE2020,fechada,ok
 2550,68,669,2,UE2015,fechada,ok
@@ -14177,7 +14177,7 @@ municipio,zona,secao,turno,modelo,cadeia,hash
 2550,70,748,2,UE2015,fechada,ok
 2550,70,749,2,UE2020,fechada,ok
 2550,70,750,2,UE2020,fechada,ok
-2550,70,751,2,UE2015,falha,ok
+2550,70,751,2,UE2015,fechada,ok
 2550,70,752,2,UE2020,fechada,ok
 2550,70,753,2,UE2015,fechada,ok
 2550,70,754,2,UE2015,fechada,ok

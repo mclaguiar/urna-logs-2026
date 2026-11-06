@@ -50,6 +50,7 @@ def version() -> None:
 def download_cmd(
     ufs: Optional[str] = typer.Option("AC", "--ufs", help="UFs separadas por espaço/vírgula, ou ALL"),
     turno: int = typer.Option(1, "--turno", min=1, max=2),
+    ano: int = typer.Option(2026, "--ano", help="Ano da eleição. O padrão 2026 não muda os arquivos atuais."),
     force: bool = typer.Option(False, "--force", help="Baixa de novo mesmo se completo"),
     extract: bool = typer.Option(False, "--extract", help="Extrai .logjez após o download"),
 ) -> None:
@@ -57,7 +58,7 @@ def download_cmd(
     uf_list = _parse_ufs(ufs)
     console.print("[dim]Destino:[/dim] data/raw/ · se interromper, rode de novo para retomar")
     try:
-        paths = download_many(uf_list, turno, force=force)
+        paths = download_many(uf_list, turno, ano=ano, force=force)
     except FileNotFoundError as exc:
         console.print(f"[red]Indisponível:[/red] {exc}")
         raise typer.Exit(code=1) from exc
@@ -319,6 +320,19 @@ def verificar_vsc_cmd(
         f"{len(uf_list)} UF(s): {', '.join(uf_list)}"
     )
     run_verificar_vsc(uf_list, turno, nivel=nivel, limit=limit)
+
+
+@app.command("anomalias")
+def anomalias_cmd(
+    ufs: Optional[str] = typer.Option("AC", "--ufs"),
+    anos: str = typer.Option("2022,2026", "--anos", help="Anos separados por vírgula. O piloto é AC."),
+    force: bool = typer.Option(False, "--force", help="Refaz o parquet mesmo se já existir"),
+) -> None:
+    """Anomalias por seção. Baixa o que falta e grava o resumo numérico."""
+    from urna_logs.anomalias.run import run_anomalias
+
+    lista = [int(p.strip()) for p in anos.replace(";", ",").split(",") if p.strip()]
+    run_anomalias(_parse_ufs(ufs), lista, force=force)
 
 
 if __name__ == "__main__":

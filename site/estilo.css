@@ -49,3 +49,14 @@ tr.linha-total td {
   border-top: 2px solid #222;
   background: #f6f6f6;
 }
+.fluxo-par {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .fluxo-par {
+    grid-template-columns: 1fr;
+  }
+}

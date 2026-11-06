@@ -26,7 +26,7 @@ Arquivos listados na assinatura mas **ausentes** no ZIP público (jufa, wsq*, mr
 
 Arquivo ausente no pacote não é assinatura inválida: a conta não chegou a conferir a assinatura.
 
-- GUARULHOS (64777), zona 395, seção 298. Urna `o03221sp6477703950298`. Falta `log.jez` no pacote. Os hashes de `bu.dat` e `rdv.dat` fecharam. A assinatura de hardware não foi conferida. No ZIP: bu.dat, imgbu.dat, rdv.dat, vota.vsc. Comparecimento 268 de 350 aptos. Nominal 13: 135. Nominal 22: 125. Branco: 2. Nulo: 6. BU e RDV com os mesmos totais.
+- GUARULHOS (64777), zona 395, seção 298. Urna `o03221sp6477703950298`. Falta log.jez no pacote. O hash dos arquivos presentes fechou. A assinatura de hardware não foi conferida. O boletim declara urna de seção, arquivo de votação da urna e bloco de seção, fase oficial. No ZIP: bu.dat, imgbu.dat, rdv.dat, vota.vsc. Comparecimento 268 de 350 aptos. Nominal 13: 135. Nominal 22: 125. Branco: 2. Nulo: 6. BU e RDV com os mesmos totais.
 
 ## Arquivos
 

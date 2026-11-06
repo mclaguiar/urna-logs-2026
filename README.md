@@ -36,6 +36,7 @@ Cada comando lê o que o anterior gravou em `data/` / `reports/` e escreve Parqu
 | 7 | `achados` | Fichas A/B/C. |
 | 8 | `verificar-vsc` | `-vota.vsc`: hashes do ZIP e assinatura HW. `--nivel 1` só hashes; `--nivel 2` só HW (Ed521 ou ECDSA, conforme o modelo). |
 | 9 | `transferencia` | Matriz 1º→2º por cidade. Brown e Payne em cada seção, com intervalo de 95%. lphom na seção até 2.500 linhas; acima disso, por zona. No fim, leitura de cada estado e o consolidado do país. |
+| 10 | `anomalias` | Alertas por seção, com a mesma conta em 2022 e no 1º turno. `--ano` no `download` não altera o cache de 2026. |
 
 **Opcionais:** `viability` / `catalog` / `metrics`; `inspect`.
 
@@ -98,6 +99,10 @@ urna-logs achados --ufs "AC RR AP ZZ"
 urna-logs transferencia --ufs "AC RR AP ZZ"
 urna-logs verificar-vsc --ufs "AC RR AP ZZ" --turno 1
 urna-logs verificar-vsc --ufs "AC RR AP ZZ" --turno 2
+
+urna-logs download --ano 2022 --ufs AC --turno 1
+urna-logs download --ano 2022 --ufs AC --turno 2
+urna-logs anomalias --ufs AC --anos 2022,2026
 ```
 
 ## Pós-pipeline (sem baixar ZIP de novo)
@@ -106,6 +111,7 @@ urna-logs verificar-vsc --ufs "AC RR AP ZZ" --turno 2
 python scripts/relatorio_evidencia_nacional.py          # A/B/C + log×BU + .vsc resumo
 python scripts/relatorio_evidencia_nacional.py --site    # + painel
 python scripts/build_site_data.py                       # site/data/*.csv
+python scripts/build_site_data.py anomalias             # site/data/anomalias/*.csv
 ```
 
 Se `outliers_sem_digital.csv` estiver bloqueado no Windows, o build grava `outliers_sem_digital.new.csv` (fallback).

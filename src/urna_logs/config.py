@@ -8,6 +8,8 @@ DATA_DIR = PROJECT_ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
 EXTRACT_DIR = DATA_DIR / "extract"
 REPORTS_DIR = PROJECT_ROOT / "reports"
+ANOMALIAS_DIR = DATA_DIR / "anomalias"
+ANOMALIAS_REF_DIR = ANOMALIAS_DIR / "ref"
 
 ANO = 2026
 
@@ -15,10 +17,18 @@ ANO = 2026
 # Pacotes do 2º frequentemente trazem histórico do 1º no mesmo .jez —
 # datas fora da tolerância do dia oficial são "historico_outro_dia" (desprezadas
 # nas métricas do turno; ex.: 04/10 dentro do ZIP …_2t_*).
-DATA_TURNO: dict[int, date] = {
-    1: date(2026, 10, 4),
-    2: date(2026, 10, 25),
+# DATA_TURNO permanece o calendário de 2026. Outros anos ficam em DATA_TURNO_POR_ANO.
+DATA_TURNO_POR_ANO: dict[int, dict[int, date]] = {
+    2022: {
+        1: date(2022, 10, 2),
+        2: date(2022, 10, 30),
+    },
+    2026: {
+        1: date(2026, 10, 4),
+        2: date(2026, 10, 25),
+    },
 }
+DATA_TURNO: dict[int, date] = DATA_TURNO_POR_ANO[ANO]
 # ±N dias em torno de DATA_TURNO ainda contam como “deste turno”
 # (folga de relógio / virada de dia / desencargo). 04/10 vs 25/10 fica bem fora.
 DATA_TURNO_TOLERANCIA_DIAS = 3
@@ -29,8 +39,11 @@ HORA_ABERTURA_REF = 8
 HORA_ENCERRAMENTO_REF = 17
 
 
-def data_turno(turno: int) -> date | None:
-    return DATA_TURNO.get(int(turno))
+def data_turno(turno: int, ano: int | None = None) -> date | None:
+    """Dia oficial. Sem `ano`, permanece 2026."""
+    if ano is None:
+        return DATA_TURNO.get(int(turno))
+    return DATA_TURNO_POR_ANO.get(int(ano), {}).get(int(turno))
 
 
 def data_pertence_ao_turno(
@@ -38,11 +51,12 @@ def data_pertence_ao_turno(
     turno: int,
     *,
     tolerancia_dias: int | None = None,
+    ano: int | None = None,
 ) -> bool:
     """True se a data do log está na janela do dia oficial deste turno."""
     if data_evento is None:
         return False
-    d_of = data_turno(turno)
+    d_of = data_turno(turno, ano)
     if d_of is None:
         return False
     tol = (

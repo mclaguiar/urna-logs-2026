@@ -37,3 +37,21 @@ PROTOCOLO_NOTA = (
     "% após 17h no 1º ou no 2º. "
     "A cauda só conta se o percentil é maior que zero e a série varia."
 )
+
+# --- Anomalias por seção (2026.11.01, registrado antes da varredura) ---
+# Não alterar depois de ver o resultado do AC. A/B/C acima não muda.
+ANOMALIAS_VERSAO = "2026.11.01"
+FDR_Q = 0.05
+Z_LIMIAR = 3.5
+MAD_ESCALA = 0.6745
+MIN_SECOES_LOCAL = 3
+# Piso físico: um ciclo de confirmação na urna não cabe em menos de 2 s
+# com relógio em segundos inteiros. Um intervalo isolado não alerta.
+INTERVALO_MIN_S = 2
+SEQ_INTERVALO_MIN = 20
+BIN_PP = 5
+BIN_RAZAO = 3.0
+BIN_ESPERADO_MIN = 20
+RUIDO_RAZAO_LO = 0.5
+RUIDO_RAZAO_HI = 2.0
+CANDIDATOS_TURNO = ("13", "22")

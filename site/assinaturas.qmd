@@ -7,6 +7,7 @@ subtitle: "Autenticidade do pacote da urna — Eleições 2026"
 //| echo: false
 hw = FileAttachment("data/hw_cadeia.csv").csv({typed: true})
 cob = FileAttachment("data/hw_cobertura.csv").csv({typed: true})
+falhas = FileAttachment("data/hw_hash_falhou.csv").csv({typed: true})
 fmt = (n) => (n == null || n === "" || Number.isNaN(+n) ? "—" : Math.round(+n).toLocaleString("pt-BR"))
 pct = (num, den) => den ? (100 * num / den).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + "%" : "—"
 nomeUf = (uf) => uf === "ZZ" ? "Exterior" : uf
@@ -27,7 +28,7 @@ O hash de \`bu\`, \`rdv\` e \`log\` confere com o \`.vsc\` em ${fmt(nHash)} de $
 ```{ojs}
 //| echo: false
 nHashFail
-  ? md`<div class="aviso-falha"><strong>Hash não conferiu em ${fmt(nHashFail)} seções.</strong> Essas linhas estão na coluna de falha da tabela.</div>`
+  ? md`<div class="aviso-falha"><strong>${fmt(nHashFail)} seções não fecharam o hash de bu, rdv e log.</strong> Quais são, e o que isso significa, está abaixo da tabela.</div>`
   : md``
 ```
 
@@ -77,36 +78,17 @@ Seção cujo relatório ainda não foi refeito com esse certificado fica com o �
 
 Cadeia aberta é a seção UE2013/UE2015 cujo relatório ainda não confrontou o certificado da urna com a chave pública da AC URNA publicada em [acurna.tse.jus.br/crt/acurna.crt](http://acurna.tse.jus.br/crt/acurna.crt). É um limite da verificação, não indício de alteração. Esse certificado da AC venceu em 18/07/2026, antes da eleição; onde o relatório já o usa, a assinatura confere e a data fica de fora da conta.
 
-## Cobertura
+## Por UF
+
+A tabela é a cobertura: uma linha por UF e turno, com o resultado do hash e da cadeia.
 
 ```{ojs}
 //| echo: false
-ufs = [...new Set(cob.map(d => d.uf))].sort((a, b) => (a === "ZZ") - (b === "ZZ") || nomeUf(a).localeCompare(nomeUf(b), "pt"))
-par = uf => ({
-  a: cob.find(d => d.uf === uf && +d.turno === 1) || {secoes: 0},
-  b: cob.find(d => d.uf === uf && +d.turno === 2) || {secoes: 0}
-})
-comDado = ufs.filter(uf => +par(uf).a.secoes || +par(uf).b.secoes)
-semDado = ufs.filter(uf => !comDado.includes(uf))
-maxSec = Math.max(1, ...comDado.flatMap(uf => [+par(uf).a.secoes || 0, +par(uf).b.secoes || 0]))
-html`<p class="legenda"><span style="color:#9ca3af">■</span> 1º turno, cinza · <span style="color:#374151">■</span> 2º turno, grafite. O número na barra é a quantidade de seções verificadas.</p>
-<div>${comDado.map(uf => {
-  const {a, b} = par(uf)
-  const w = (n) => Math.max(+n ? 8 : 0, 100 * (+n || 0) / maxSec)
-  return html`<div class="cob-uf"><span>${nomeUf(uf)}</span><div class="trilha">
-    ${+a.secoes ? html`<div class="barra t1" style="width:${w(a.secoes)}%" title="1º turno"></div><span>${fmt(a.secoes)}</span>` : ""}
-    ${+b.secoes ? html`<div class="barra t2" style="width:${w(b.secoes)}%" title="2º turno"></div><span>${fmt(b.secoes)}</span>` : ""}
-  </div></div>`
-})}</div>
-<p>Ainda sem relatório: ${semDado.length ? semDado.map(nomeUf).join(", ") : "nenhuma"}.</p>`
-```
-
-```{ojs}
-//| echo: false
-porTurno = (turno) => cob.filter(d => +d.turno === turno && +d.secoes > 0)
-lista = (turno) => porTurno(turno).map(d => nomeUf(d.uf)).join(", ") || "nenhuma"
-secTurno = (turno) => porTurno(turno).reduce((s, d) => s + (+d.secoes || 0), 0)
-md`1º turno: ${fmt(porTurno(1).length)} de ${fmt(cob.filter(d => +d.turno === 1).length)} UFs, ${fmt(secTurno(1))} seções (${lista(1)}). 2º turno: ${fmt(porTurno(2).length)} de ${fmt(cob.filter(d => +d.turno === 2).length)} UFs, ${fmt(secTurno(2))} seções (${lista(2)}).`
+ufsCob = [...new Set(cob.map(d => d.uf))]
+semDado = ufsCob.filter(uf => !cob.some(d => d.uf === uf && +d.secoes > 0))
+semDado.length
+  ? md`Ainda sem relatório: ${semDado.map(nomeUf).join(", ")}.`
+  : md``
 ```
 
 ```{ojs}
@@ -173,16 +155,27 @@ nFora
   : md`Nenhuma seção verificada ficou fora das classes cadeia fechada, cadeia aberta e falha de hash.`
 ```
 
-## Por UF
-
 ```{ojs}
 //| echo: false
 novo.length
   ? html`${tabelaHw(novo)}
-<p>O total desta tabela é o verificador comparável: as seções e o percentual de cadeia fechada citados na visão geral.</p>
-${tabelaHw(hw, "Todas as verificadas", true)}
-<p>Todas as verificadas soma os dois blocos. Seções e hash ok são o total conferido. A cadeia fechada desta segunda linha mistura os verificadores; não é o percentual da visão geral.</p>`
+${outro.length ? html`<p>O total acima é o verificador comparável. A linha seguinte soma também os relatórios antigos. A cadeia fechada dessa soma mistura verificadores.</p>${tabelaHw(hw, "Todas as verificadas", true)}` : ""}`
   : md`Nenhuma UF foi gravada ainda com o certificado publicado da AC URNA.`
+```
+
+```{ojs}
+//| echo: false
+falhas.length
+  ? html`<p><strong>Hash falhou</strong> é a seção em que bu, rdv e log não fecharam juntos contra o <code>.vsc</code>. Há dois casos. O arquivo está no pacote e o SHA-512 não é o gravado na assinatura. Ou um dos três não está no pacote: o hash dos que estão pode ter fechado, e o trio não. A assinatura de hardware não é conferida nesse caso.</p>
+<div style="overflow-x:auto"><table class="table table-sm">
+<thead><tr><th>UF</th><th>Município</th><th>Zona</th><th>Seção</th><th>Turno</th><th>O que a conta viu</th></tr></thead>
+<tbody>${falhas.map(d => html`<tr>
+  <td>${nomeUf(d.uf)}</td>
+  <td><a href="secao.html?uf=${d.uf}&mun=${+d.municipio}&zona=${+d.zona}&secao=${+d.secao}">${d.nome || d.municipio}</a></td>
+  <td>${d.zona}</td><td>${d.secao}</td><td>${d.turno}º</td>
+  <td>${d.motivo}</td>
+</tr>`)}</tbody></table></div>`
+  : md``
 ```
 
 ```{ojs}

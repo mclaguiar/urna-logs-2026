@@ -64,5 +64,7 @@ reports/comparar_turnos_*.parquet
 
 # site/data/*.csv leve fica versionável
 !site/data/
+# Página de anomalias saiu. linha_*.csv passa de 2 GB.
+site/data/anomalias/
 .cursor
 reports/leitura_2t.md
