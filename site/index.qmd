@@ -45,13 +45,24 @@ linkSecao = jk => {
   const p = String(jk).split(":")
   return `secao.html?uf=${p[0]}&mun=${+p[1]}&zona=${+p[2]}&secao=${+p[3]}`
 }
-nSelo = hwSelo.reduce((s, d) => s + (+d.secoes || 0), 0)
-okSelo = hwSelo.reduce((s, d) => s + (+d.hash_ok || 0), 0)
+seloTurno = t => {
+  const rows = hwSelo.filter(d => +d.turno === t)
+  return {
+    secoes: rows.reduce((s, d) => s + (+d.secoes || 0), 0),
+    hashOk: rows.reduce((s, d) => s + (+d.hash_ok || 0), 0)
+  }
+}
+s1 = seloTurno(1)
+s2 = seloTurno(2)
 hwNovo = hwSelo.filter(d => d.bloco === "novo")
 secNovo = hwNovo.reduce((s, d) => s + (+d.secoes || 0), 0)
 fechNovo = hwNovo.reduce((s, d) => s + (+d.cadeia_fechada || 0), 0)
 nUfHash = new Set(hwSelo.filter(d => +d.secoes > 0).map(d => d.uf)).size
 nGrupos = new Set(painel.map(d => d.uf)).size
+fraseHash = t => {
+  const s = t === 1 ? s1 : s2
+  return `${fmt(s.hashOk)} de ${fmt(s.secoes)} (${pct(s.secoes ? s.hashOk / s.secoes : null)})`
+}
 ```
 
 <style>
@@ -85,7 +96,7 @@ html`<div class="kpi-grid">
 ```{ojs}
 //| echo: false
 html`<p><span class="selo">RDV ≡ BU ≡ CSV oficial em ${fmt(fecha)} de ${fmt(mSec)} seções</span></p>
-<p>Hash confere em ${fmt(okSelo)} de ${fmt(nSelo)} seções verificadas (${fmt(nUfHash)} de ${fmt(nGrupos)} grupos, ${pct(mSec ? nSelo / mSec : null)} das seções). <a href="assinaturas.html">Integridade dos arquivos</a>.</p>
+<p>Hash confere no 1º turno em ${fraseHash(1)} e no 2º em ${fraseHash(2)} (${fmt(nUfHash)} de ${fmt(nGrupos)} grupos). <a href="assinaturas.html">Integridade dos arquivos</a>.</p>
 <p>BU ≡ CSV oficial em todas as seções conferidas nos dois turnos (${fmt(divOficial)} divergências). ${sumA
   ? html`A cadeia quebra em ${fmt(sumA)} seção${sumA === 1 ? "" : "ões"}, em que RDV ≠ BU${fichaA.length ? html`: ${fichaA.map(d => html`<a href="${linkSecao(d.join_key)}">Achado A · ${d.join_key}</a>`)}` : ""}.`
   : "RDV, BU e CSV oficial fecham em todas as seções."} Nível B: <strong>${fmt(sumB)}</strong> seções com dois ou mais sinais no extremo da UF.</p>
